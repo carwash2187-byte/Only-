@@ -28,6 +28,27 @@ def load(name: str) -> dict:
         return json.load(fh)
 
 
+def performance_metrics(closed_trades: list) -> dict:
+    """Profit factor, expectancy, max drawdown -- see bots/journal.py's
+    TradeJournal.performance_metrics for why these beat win rate alone."""
+    if not closed_trades:
+        return {}
+    ordered = sorted(closed_trades, key=lambda t: t.get("exit_time") or "")
+    pnls = [t["pnl"] or 0.0 for t in ordered]
+    gross_profit = sum(p for p in pnls if p > 0)
+    gross_loss = -sum(p for p in pnls if p < 0)
+    cumulative = peak = max_dd = 0.0
+    for p in pnls:
+        cumulative += p
+        peak = max(peak, cumulative)
+        max_dd = max(max_dd, peak - cumulative)
+    return {
+        "profit_factor": gross_profit / gross_loss if gross_loss > 0 else float("inf"),
+        "expectancy": sum(pnls) / len(pnls),
+        "max_drawdown": max_dd,
+    }
+
+
 def load_account():
     """(cash, positions, broker_label, day_state_filename). Prefers the live
     Alpaca paper account when credentials are configured; falls back to the
@@ -177,6 +198,18 @@ def build() -> str:
     verdict_count = len(closed_trades)
     verdict_pct = min(100, round(verdict_count / VERDICT_TARGET * 100))
 
+    metrics = performance_metrics(closed_trades)
+    if metrics:
+        pf = metrics["profit_factor"]
+        pf_s = "∞" if pf == float("inf") else f"{pf:.2f}"
+        metrics_html = (
+            f'<span class="chip">PF {pf_s}</span> '
+            f'<span class="chip">Expectancy {fmt_money(metrics["expectancy"])}/trade</span> '
+            f'<span class="chip">Max DD {fmt_money(metrics["max_drawdown"])}</span>'
+        )
+    else:
+        metrics_html = '<span class="chip">not enough closed trades yet</span>'
+
     return TEMPLATE.format(
         generated=generated,
         broker_label=broker_label,
@@ -195,6 +228,7 @@ def build() -> str:
         verdict_count=verdict_count,
         verdict_target=VERDICT_TARGET,
         verdict_pct=verdict_pct,
+        metrics_html=metrics_html,
     )
 
 
@@ -541,6 +575,11 @@ footer strong {{ color: var(--ink); }}
       <div class="stat-value"><span class="chip">ARMED · 5% max daily loss</span></div>
     </div>
   </div>
+
+  <section>
+    <h2>Performance metrics (matter more than win rate alone)</h2>
+    <p class="progress-note">{metrics_html}</p>
+  </section>
 
   <section>
     <h2>Verdict progress</h2>

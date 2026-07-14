@@ -138,6 +138,39 @@ class TradeJournal:
             bucket["win_rate"] = bucket["wins"] / bucket["trades"]
         return stats
 
+    def performance_metrics(self) -> Dict[str, float]:
+        """Account-level metrics that matter more than win rate alone:
+
+        - profit_factor: gross profit / gross loss. Above 1 = net positive;
+          a 40%-win-rate system with big winners can still beat a 70%-win-rate
+          system with big losers.
+        - expectancy: average $ per trade -- the number that actually decides
+          whether trading more makes you richer or poorer.
+        - max_drawdown: worst peak-to-trough dip in cumulative PnL, in the
+          order trades closed. The "can you actually survive this" number.
+        """
+        closed = sorted(
+            (t for t in self.trades.values() if not t.is_open and t.pnl is not None),
+            key=lambda t: t.exit_time or "",
+        )
+        if not closed:
+            return {}
+        gross_profit = sum(t.pnl for t in closed if t.pnl > 0)
+        gross_loss = -sum(t.pnl for t in closed if t.pnl < 0)
+        cumulative = 0.0
+        peak = 0.0
+        max_dd = 0.0
+        for t in closed:
+            cumulative += t.pnl
+            peak = max(peak, cumulative)
+            max_dd = max(max_dd, peak - cumulative)
+        return {
+            "trades": len(closed),
+            "profit_factor": gross_profit / gross_loss if gross_loss > 0 else float("inf"),
+            "expectancy": sum(t.pnl for t in closed) / len(closed),
+            "max_drawdown": max_dd,
+        }
+
     def losing_setups(self, min_trades: int = MIN_TRADES_FOR_LESSON) -> List[str]:
         """Setups with enough history and a negative expectancy -- the desk
         refuses to take these again until their stats improve."""
@@ -186,6 +219,13 @@ class TradeJournal:
             total = sum(t.pnl or 0.0 for t in closed)
             wins = sum(1 for t in closed if (t.pnl or 0) > 0)
             lines.append(f"Total PnL: {total:+.2f} | Win rate: {wins / len(closed):.0%}")
+            m = self.performance_metrics()
+            pf = "inf" if m["profit_factor"] == float("inf") else f"{m['profit_factor']:.2f}"
+            lines.append(
+                f"Profit factor: {pf} (>1 is net positive) | "
+                f"Expectancy: {m['expectancy']:+.2f}/trade | "
+                f"Max drawdown: {m['max_drawdown']:.2f}"
+            )
         stats = self.setup_stats()
         if stats:
             lines.append("Per-setup performance:")

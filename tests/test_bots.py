@@ -433,6 +433,25 @@ def test_reconcile_closes_orphaned_journal_entries(price_df, tmp_path, journal):
     assert not record.is_open and record.pnl == pytest.approx(30.0)
 
 
+def test_performance_metrics(journal):
+    # 1 winner (+100), 2 losers (-30, -20) -> profit factor 100/50=2.0,
+    # expectancy (100-30-20)/3=+16.67, drawdown = worst peak-to-trough dip
+    for pnl_pairs in [(100.0, 200.0), (-30.0, 170.0), (-20.0, 150.0)]:
+        entry, exit_ = 100.0, 100.0 + pnl_pairs[0]
+        t = journal.open_trade("X", "long", 1, entry, setup="s")
+        journal.close_trade(t.trade_id, exit_)
+    m = journal.performance_metrics()
+    assert m["profit_factor"] == pytest.approx(2.0)
+    assert m["expectancy"] == pytest.approx(50.0 / 3)
+    assert m["max_drawdown"] == pytest.approx(50.0)  # peak 100 -> trough 50
+
+
+def test_performance_metrics_all_wins_is_infinite_profit_factor(journal):
+    t = journal.open_trade("X", "long", 1, 100.0, setup="s")
+    journal.close_trade(t.trade_id, 110.0)
+    assert journal.performance_metrics()["profit_factor"] == float("inf")
+
+
 def test_out_of_sample_backtest(price_df):
     from bots.learning.backtest import run_backtest
 
