@@ -553,11 +553,11 @@
       "entry_price": 313.01,
       "entry_time": "2026-07-14T19:03:28.799624+00:00",
       "setup": "copytrade",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "exit_price": 315.61,
+      "exit_time": "2026-07-14T19:30:19.845214+00:00",
+      "pnl": 122.89654000000107,
+      "pnl_pct": 0.8306443883582038,
+      "notes": "re-tracked at real Alpaca fill price after key reset | quant desk: RL agent says exit",
       "tags": [
         "admin"
       ]
