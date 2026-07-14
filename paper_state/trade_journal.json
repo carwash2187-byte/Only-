@@ -644,6 +644,21 @@
       "pnl_pct": -0.038885108392250345,
       "notes": "user watchlist | quant desk: RL agent says exit",
       "tags": []
+    },
+    {
+      "trade_id": "5afff1c6c804",
+      "symbol": "QQQ",
+      "side": "long",
+      "quantity": 21.0606,
+      "entry_price": 720.2,
+      "entry_time": "2026-07-14T19:51:22.723252+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 720.21,
+      "exit_time": "2026-07-14T19:56:29.344015+00:00",
+      "pnl": 0.21060599999980847,
+      "pnl_pct": 0.0013885031935556569,
+      "notes": "user watchlist | quant desk: RL agent says exit",
+      "tags": []
     }
   ]
 }
