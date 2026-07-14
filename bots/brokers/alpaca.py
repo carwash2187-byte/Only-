@@ -65,6 +65,16 @@ class AlpacaBroker(Broker):
         data = self._get(DATA_URL, f"/v2/stocks/{symbol.upper()}/trades/latest")
         return float(data["trade"]["p"])
 
+    def has_pending_order(self, symbol: str) -> bool:
+        # Market orders placed outside trading hours sit as "open" until the
+        # next session instead of filling immediately, so this catches the
+        # case positions() can't see yet.
+        orders = self._get(
+            self.base_url,
+            f"/v2/orders?status=open&symbols={symbol.upper()}",
+        )
+        return len(orders) > 0
+
     def _order(self, symbol: str, quantity: float, side: str) -> OrderResult:
         payload = {
             "symbol": symbol.upper(),

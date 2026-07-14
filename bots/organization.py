@@ -198,15 +198,28 @@ class TradingDesk:
             return report
 
         # 3. New entries from research + quant + committee, filtered by lessons.
+        # A "slot" is used by a filled position OR a trade the journal still
+        # considers open (which includes orders placed but not yet filled --
+        # e.g. a stock order queued outside market hours). Without counting
+        # those, max_positions only caps settled positions and a second cycle
+        # run before the first batch fills can commit well past the cap.
         candidates = self.research_candidates(symbols)
-        open_slots = cfg.max_positions - len(self.broker.positions())
+        committed_symbols = set(positions) | {
+            t.symbol for t in self.journal.trades.values() if t.is_open
+        }
+        open_slots = cfg.max_positions - len(committed_symbols)
         for symbol, info in candidates.items():
+            if symbol in committed_symbols:
+                continue
             if open_slots <= 0:
                 report.actions.append(
                     DeskAction("skip", symbol, "risk desk: max positions reached")
                 )
                 continue
-            if symbol in positions:
+            if self.broker.has_pending_order(symbol):
+                report.actions.append(
+                    DeskAction("skip", symbol, "order already pending fill, not resubmitting")
+                )
                 continue
             action = self._consider_entry(
                 symbol, info["reason"], equity,

@@ -52,3 +52,14 @@ class Broker(ABC):
             except Exception:
                 pass
         return total
+
+    def has_pending_order(self, symbol: str) -> bool:
+        """True if symbol has an order placed but not yet filled.
+
+        Matters for brokers that queue orders instead of filling them
+        instantly (e.g. a stock broker outside market hours): without this
+        check, running the desk twice before the first order fills submits a
+        second, duplicate order for the same symbol. Default False is
+        correct for brokers/venues that fill immediately (paper, crypto).
+        """
+        return False

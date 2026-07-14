@@ -224,6 +224,50 @@ def test_risk_per_trade_sizing(price_df, tmp_path, journal):
     assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
 
 
+def test_desk_skips_entry_with_pending_order(price_df, tmp_path, journal):
+    class FakePendingBroker(PaperBroker):
+        def has_pending_order(self, symbol):
+            return symbol.upper() == "DEMO"
+
+    broker = FakePendingBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(tmp_path, broker, journal, price_df, config=DeskConfig(min_copy_score=0))
+    report = desk.run_once(symbols=["DEMO"])
+    assert not [a for a in report.actions if a.action == "buy"]
+    assert any("pending fill" in a.reason for a in report.actions if a.symbol == "DEMO")
+    assert broker.positions() == {}
+
+
+def test_max_positions_counts_pending_journal_entries(price_df, tmp_path, journal):
+    # Simulate a broker that queues orders instead of filling them (like a
+    # stock order placed outside market hours): buy() succeeds and the
+    # journal opens a trade, but broker.positions() stays empty.
+    class QueuedFillBroker(PaperBroker):
+        def positions(self):
+            return {}
+
+    broker = QueuedFillBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={f"SYM{i}": 100.0 for i in range(6)},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(min_copy_score=0, max_positions=5),
+    )
+    report = desk.run_once(symbols=[f"SYM{i}" for i in range(6)])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 5, report.describe()
+    assert any(
+        a.action == "skip" and "max positions" in a.reason for a in report.actions
+    )
+    open_symbols = {t.symbol for t in journal.trades.values() if t.is_open}
+    assert len(open_symbols) == 5
+
+
 def test_market_hours_clock():
     from datetime import datetime
     from zoneinfo import ZoneInfo
