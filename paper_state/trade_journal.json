@@ -570,11 +570,11 @@
       "entry_price": 244.846582,
       "entry_time": "2026-07-14T19:03:28.801229+00:00",
       "setup": "copytrade",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "exit_price": 248.0,
+      "exit_time": "2026-07-14T19:46:10.107622+00:00",
+      "pnl": 191.25133294019926,
+      "pnl_pct": 1.2879158754194764,
+      "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
       ]
@@ -587,11 +587,11 @@
       "entry_price": 353.983105,
       "entry_time": "2026-07-14T19:03:28.802795+00:00",
       "setup": "copytrade",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "exit_price": 359.635,
+      "exit_time": "2026-07-14T19:46:11.284464+00:00",
+      "pnl": 240.5062183139986,
+      "pnl_pct": 1.5966567104946927,
+      "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
       ]
@@ -604,11 +604,11 @@
       "entry_price": 380.025754,
       "entry_time": "2026-07-14T19:03:28.804298+00:00",
       "setup": "copytrade",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "exit_price": 385.22,
+      "exit_time": "2026-07-14T19:46:12.425651+00:00",
+      "pnl": 199.47203201500082,
+      "pnl_pct": 1.3668142080707657,
+      "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
       ]
@@ -621,14 +621,29 @@
       "entry_price": 206.830283,
       "entry_time": "2026-07-14T19:03:28.805903+00:00",
       "setup": "copytrade",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "exit_price": 211.79,
+      "exit_time": "2026-07-14T19:46:13.548049+00:00",
+      "pnl": 365.6080185134988,
+      "pnl_pct": 2.397964615268644,
+      "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
       ]
+    },
+    {
+      "trade_id": "09e9ff7123f5",
+      "symbol": "QQQ",
+      "side": "long",
+      "quantity": 21.059,
+      "entry_price": 720.07,
+      "entry_time": "2026-07-14T19:35:50.668412+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 719.79,
+      "exit_time": "2026-07-14T19:41:04.304960+00:00",
+      "pnl": -5.89652000000182,
+      "pnl_pct": -0.038885108392250345,
+      "notes": "user watchlist | quant desk: RL agent says exit",
+      "tags": []
     }
   ]
 }
