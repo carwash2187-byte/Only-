@@ -14,6 +14,8 @@ import json
 import sys
 from datetime import datetime, timezone
 
+import os
+
 from bots import marketdata
 from bots.paths import data_path
 
@@ -26,6 +28,19 @@ def load(name: str) -> dict:
         return json.load(fh)
 
 
+def load_account():
+    """(cash, positions, broker_label, day_state_filename). Prefers the live
+    Alpaca paper account when credentials are configured; falls back to the
+    local simulated paper account otherwise."""
+    if os.environ.get("ALPACA_API_KEY_ID"):
+        from bots.brokers.alpaca import AlpacaBroker
+
+        broker = AlpacaBroker()
+        return broker.cash(), broker.positions(), "Alpaca paper account", f"day_state_{broker.name}.json"
+    acct = load("paper_account.json")
+    return acct["cash"], acct["positions"], "Local simulated account", "day_state_paper.json"
+
+
 def fmt_money(x: float) -> str:
     sign = "-" if x < 0 else ""
     return f"{sign}${abs(x):,.2f}"
@@ -36,12 +51,20 @@ def fmt_pct(x: float) -> str:
 
 
 def build() -> str:
-    acct = load("paper_account.json")
+    cash, positions, broker_label, day_state_file = load_account()
     journal = load("trade_journal.json")
-    day = load("day_state.json")
-
-    cash = acct["cash"]
-    positions = acct["positions"]
+    try:
+        day = load(day_state_file)
+    except FileNotFoundError:
+        # No baseline recorded yet (first run of the day) -- use current
+        # equity as the reference point so the delta starts at zero.
+        current_value = cash
+        for sym, qty in positions.items():
+            try:
+                current_value += qty * marketdata.get_price(sym)
+            except Exception:
+                pass
+        day = {"start_equity": current_value}
 
     open_trades = {t["symbol"]: t for t in journal["trades"] if t["exit_price"] is None}
     closed_trades = [t for t in journal["trades"] if t["exit_price"] is not None]
@@ -156,6 +179,7 @@ def build() -> str:
 
     return TEMPLATE.format(
         generated=generated,
+        broker_label=broker_label,
         equity=fmt_money(equity),
         change_s=fmt_money(change),
         change_pct=fmt_pct(change_pct),
@@ -488,7 +512,7 @@ footer strong {{ color: var(--ink); }}
     <div>
       <div class="eyebrow">Only- / Trading Desk</div>
       <h1>Paper Ledger</h1>
-      <span class="watermark">SIMULATED FUNDS · NO REAL MONEY</span>
+      <span class="watermark">{broker_label} · SIMULATED FUNDS · NO REAL MONEY</span>
     </div>
     <div class="updated">Last updated<br>{generated}</div>
   </header>

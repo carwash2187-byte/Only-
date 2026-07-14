@@ -82,7 +82,17 @@ class TradingDesk:
         self.config = config or DeskConfig()
         # history_fn(symbol) -> OHLCV DataFrame; injectable for offline tests
         self.history_fn = history_fn or _default_history
-        self.guard = guard or DrawdownGuard(max_daily_loss_pct=self.config.max_daily_loss_pct)
+        # The daily-loss baseline is equity-scale-specific, so it's namespaced
+        # per broker -- otherwise switching brokers (e.g. a $10k local paper
+        # account to a $100k Alpaca paper account) reads yesterday's baseline
+        # from a completely different equity scale and trips the breaker on
+        # a false "-900% drawdown".
+        from bots.paths import data_path
+
+        self.guard = guard or DrawdownGuard(
+            max_daily_loss_pct=self.config.max_daily_loss_pct,
+            state_path=data_path(f"day_state_{self.broker.name}.json"),
+        )
         from bots.copytrader import manual as manual_mod
 
         self.manual_signals_path = manual_signals_path or manual_mod.default_signals_path()
