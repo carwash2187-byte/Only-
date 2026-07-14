@@ -508,11 +508,11 @@
       "entry_price": 396.8800048828125,
       "entry_time": "2026-07-14T18:56:39.240899+00:00",
       "setup": "copytrade:trend-up|rsi-neutral|vwap-below|orb-in|tod-late|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 396.8349914550781,
+      "exit_time": "2026-07-14T19:02:56.743378+00:00",
+      "pnl": -0.1701282501220703,
+      "pnl_pct": -0.011341823014654473,
+      "notes": "user watchlist | switching day trading to the Alpaca account",
       "tags": []
     },
     {
@@ -523,12 +523,112 @@
       "entry_price": 315.5299987792969,
       "entry_time": "2026-07-14T18:56:41.134457+00:00",
       "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 315.1449890136719,
+      "exit_time": "2026-07-14T19:03:00.006429+00:00",
+      "pnl": -1.8302979248046873,
+      "pnl_pct": -0.12202001936884033,
+      "notes": "user watchlist | switching day trading to the Alpaca account",
+      "tags": []
+    },
+    {
+      "trade_id": "a19762312258",
+      "symbol": "QQQ",
+      "side": "long",
+      "quantity": 2.0827,
+      "entry_price": 720.25,
+      "entry_time": "2026-07-14T19:01:49.502893+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 720.0,
+      "exit_time": "2026-07-14T19:03:02.377572+00:00",
+      "pnl": -0.520675,
+      "pnl_pct": -0.03471017007983246,
+      "notes": "user watchlist | switching day trading to the Alpaca account",
+      "tags": []
+    },
+    {
+      "trade_id": "403508afd67c",
+      "symbol": "AAPL",
+      "side": "long",
+      "quantity": 47.2679,
+      "entry_price": 313.01,
+      "entry_time": "2026-07-14T19:03:28.799624+00:00",
+      "setup": "copytrade",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
-      "notes": "user watchlist",
-      "tags": []
+      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "trade_id": "211582f9d549",
+      "symbol": "AMZN",
+      "side": "long",
+      "quantity": 60.6489,
+      "entry_price": 244.846582,
+      "entry_time": "2026-07-14T19:03:28.801229+00:00",
+      "setup": "copytrade",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "trade_id": "b36013bcccf4",
+      "symbol": "GOOGL",
+      "side": "long",
+      "quantity": 42.5532,
+      "entry_price": 353.983105,
+      "entry_time": "2026-07-14T19:03:28.802795+00:00",
+      "setup": "copytrade",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "trade_id": "bb9c3992a7bb",
+      "symbol": "MSFT",
+      "side": "long",
+      "quantity": 38.4025,
+      "entry_price": 380.025754,
+      "entry_time": "2026-07-14T19:03:28.804298+00:00",
+      "setup": "copytrade",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "trade_id": "90914d75b5fa",
+      "symbol": "NVDA",
+      "side": "long",
+      "quantity": 73.7155,
+      "entry_price": 206.830283,
+      "entry_time": "2026-07-14T19:03:28.805903+00:00",
+      "setup": "copytrade",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "re-tracked at real Alpaca fill price after key reset",
+      "tags": [
+        "admin"
+      ]
     }
   ]
 }
