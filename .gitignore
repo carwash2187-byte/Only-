@@ -221,3 +221,6 @@ __marimo__/
 # Enterprise env file (secrets) and generated run reports
 .env.enterprise
 reports/
+
+# Bot stack local state (paper accounts, Q-tables, trade journals)
+bot_data/
