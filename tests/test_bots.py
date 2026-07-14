@@ -452,6 +452,31 @@ def test_performance_metrics_all_wins_is_infinite_profit_factor(journal):
     assert journal.performance_metrics()["profit_factor"] == float("inf")
 
 
+def test_extract_calls_buy_and_sell():
+    from bots.social.signals import extract_calls
+
+    calls = extract_calls("Just went LONG on $AAPL here, also might SELL TSLA soon")
+    by_symbol = {c.symbol: c.side for c in calls}
+    assert by_symbol.get("AAPL") == "buy"
+    assert by_symbol.get("TSLA") == "sell"
+
+
+def test_extract_calls_forex_and_stopwords():
+    from bots.social.signals import extract_calls
+
+    calls = extract_calls("BUY EURUSD now, I think it goes up. Also SHORT GBPJPY")
+    symbols = {c.symbol for c in calls}
+    assert "EURUSD" in symbols
+    assert "GBPJPY" in symbols
+    assert "I" not in symbols  # stopword filtered, not a real ticker
+
+
+def test_extract_calls_no_false_positive_on_plain_text():
+    from bots.social.signals import extract_calls
+
+    assert extract_calls("Market was choppy today, nothing exciting happened.") == []
+
+
 def test_out_of_sample_backtest(price_df):
     from bots.learning.backtest import run_backtest
 

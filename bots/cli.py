@@ -166,6 +166,68 @@ def cmd_autopilot(args) -> None:
     )
 
 
+def cmd_watch(args) -> None:
+    from bots.copytrader import manual
+    from bots.social import extract_calls
+
+    found_any = False
+
+    if args.youtube:
+        from bots.social import youtube
+
+        try:
+            channel_id = youtube.resolve_channel_id(args.youtube)
+            for video in youtube.recent_videos(channel_id, limit=args.limit):
+                text = youtube.transcript_text(video.video_id) or video.title
+                for call in extract_calls(text):
+                    found_any = True
+                    sig = manual.add_signal(
+                        call.symbol, side=call.side, source=f"youtube:{args.youtube}",
+                        note=f'"{video.title}": {call.snippet}',
+                    )
+                    print(f"[youtube] queued {sig.side.upper()} {sig.symbol} from '{video.title}'")
+        except Exception as exc:
+            print(f"[youtube] error: {exc}")
+
+    if args.twitter:
+        from bots.social import twitter
+
+        try:
+            for tweet in twitter.recent_tweets(args.twitter, limit=args.limit):
+                for call in extract_calls(tweet.text):
+                    found_any = True
+                    sig = manual.add_signal(
+                        call.symbol, side=call.side, source=f"twitter:{args.twitter}",
+                        note=call.snippet,
+                    )
+                    print(f"[twitter] queued {sig.side.upper()} {sig.symbol}: {call.snippet}")
+        except Exception as exc:
+            print(f"[twitter] error: {exc}")
+
+    if args.instagram:
+        from bots.social import instagram
+
+        try:
+            fetcher = instagram.recent_stories if args.stories else instagram.recent_posts
+            for post in fetcher(args.instagram):
+                for call in extract_calls(post.caption):
+                    found_any = True
+                    sig = manual.add_signal(
+                        call.symbol, side=call.side, source=f"instagram:{args.instagram}",
+                        note=call.snippet,
+                    )
+                    print(f"[instagram] queued {sig.side.upper()} {sig.symbol}: {call.snippet}")
+        except Exception as exc:
+            print(f"[instagram] error: {exc}")
+
+    if not (args.youtube or args.twitter or args.instagram):
+        print("Nothing to watch -- pass --youtube/--twitter/--instagram (a channel/handle).")
+    elif not found_any:
+        print("Checked all sources, no trade calls detected this pass.")
+    else:
+        print("Run `python -m bots trade` to execute queued calls under the desk's risk rules.")
+
+
 def cmd_mirror(args) -> None:
     from bots.copytrader import manual
 
@@ -236,6 +298,17 @@ def main() -> None:
     p_auto.add_argument("--timeframe", default=None,
                         help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
 
+    p_watch = sub.add_parser(
+        "watch", help="check YouTube/Twitter/Instagram for trade calls, auto-queue them"
+    )
+    p_watch.add_argument("--youtube", default="", help="channel ID or @handle")
+    p_watch.add_argument("--twitter", default="", help="X/Twitter @handle")
+    p_watch.add_argument("--instagram", default="", help="Instagram username")
+    p_watch.add_argument("--stories", action="store_true",
+                         help="check Instagram Stories instead of feed posts")
+    p_watch.add_argument("--limit", type=int, default=5,
+                         help="how many recent items to check per source")
+
     p_mirror = sub.add_parser(
         "mirror", help="record a trade call from a human you follow (IG/YT/Discord)"
     )
@@ -257,6 +330,7 @@ def main() -> None:
         "journal": cmd_journal,
         "backtest": cmd_backtest,
         "autopilot": cmd_autopilot,
+        "watch": cmd_watch,
         "mirror": cmd_mirror,
     }[args.command](args)
 
