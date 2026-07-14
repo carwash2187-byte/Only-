@@ -65,7 +65,7 @@ def cmd_demo(_args) -> None:
 def cmd_train(args) -> None:
     from bots.learning import train as train_mod
 
-    df = train_mod.fetch_history(args.symbol, args.period)
+    df = train_mod.fetch_history(args.symbol, args.period, args.interval)
     from bots.learning import QTraderAgent
 
     agent = QTraderAgent()
@@ -73,7 +73,7 @@ def cmd_train(args) -> None:
     stats = agent.train(df, episodes=args.episodes)
     agent.save()
     print(
-        f"Trained on {args.symbol}: {stats['trades']} trades, "
+        f"Trained on {args.symbol} ({args.interval} bars): {stats['trades']} trades, "
         f"win rate {stats['win_rate']:.0%}, return {stats['total_return_pct']:+.1f}% | "
         f"latest signal: {agent.signal(df)}"
     )
@@ -126,14 +126,23 @@ def cmd_autopilot(args) -> None:
             "Re-run with --live-i-understand-the-risk to proceed."
         )
     timeframe = args.timeframe or ("5m" if args.day_trading else "1d")
-    desk = TradingDesk(
-        broker=broker,
-        config=DeskConfig(
+    if args.day_trading:
+        # Scalper-shaped defaults (see docs/DAY-TRADING-NOTES.md): tight stop,
+        # 1:2 risk:reward, capped trade count, intraday candles.
+        config = DeskConfig(
             use_llm_committee=args.llm_committee,
-            day_trading=args.day_trading,
+            day_trading=True,
             timeframe=timeframe,
-        ),
-    )
+            stop_loss_pct=0.015,
+            take_profit_pct=0.03,
+            max_trades_per_day=10,
+        )
+    else:
+        config = DeskConfig(
+            use_llm_committee=args.llm_committee,
+            timeframe=timeframe,
+        )
+    desk = TradingDesk(broker=broker, config=config)
     run_autopilot(
         broker_name=args.broker,
         interval_minutes=args.interval,
@@ -176,6 +185,8 @@ def main() -> None:
     p_train = sub.add_parser("train", help="train the RL agent on real history")
     p_train.add_argument("--symbol", default="SPY")
     p_train.add_argument("--period", default="2y")
+    p_train.add_argument("--interval", default="1d",
+                         help="candle size, e.g. 1d (swing) or 5m/15m (day trading)")
     p_train.add_argument("--episodes", type=int, default=50)
 
     sub.add_parser("signals", help="show smart-money consensus buy signals")

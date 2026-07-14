@@ -268,6 +268,53 @@ def test_max_positions_counts_pending_journal_entries(price_df, tmp_path, journa
     assert len(open_symbols) == 5
 
 
+def test_intraday_state_features(tmp_path):
+    from bots.learning.agent import extract_state
+
+    rng = np.random.default_rng(3)
+    frames = []
+    for day in ("2026-07-08", "2026-07-09"):
+        idx = pd.date_range(f"{day} 09:30", periods=78, freq="5min")
+        px = 100 * np.exp(np.cumsum(rng.normal(0, 0.001, 78)))
+        frames.append(
+            pd.DataFrame(
+                {"open": px, "high": px * 1.001, "low": px * 0.999, "close": px,
+                 "volume": rng.integers(1000, 5000, 78)},
+                index=idx,
+            )
+        )
+    intraday = pd.concat(frames)
+    state = extract_state(intraday, 100, holding=False)
+    for part in ("trend-", "rsi-", "vwap-", "orb-", "tod-", "pos-out"):
+        assert part in state, state
+    # first bar of a session is inside the opening range and the open hour
+    state_open = extract_state(intraday, 78, holding=False)
+    assert "orb-in" in state_open and "tod-open" in state_open
+
+    daily = pd.DataFrame({"close": 100 + np.arange(60.0)})
+    daily_state = extract_state(daily, 50, holding=True)
+    assert "vwap-" not in daily_state  # daily states unchanged for old Q-tables
+    assert daily_state.endswith("pos-in")
+
+
+def test_daily_trade_cap(price_df, tmp_path, journal):
+    for i in range(3):
+        journal.open_trade(f"OLD{i}", "long", 1, 10.0, setup="s")  # opened today
+    broker = PaperBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"NEW1": 10.0, "NEW2": 10.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(min_copy_score=0, max_positions=99, max_trades_per_day=4),
+    )
+    report = desk.run_once(symbols=["NEW1", "NEW2"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    capped = [a for a in report.actions if "daily trade cap" in a.reason]
+    assert len(buys) == 1 and len(capped) == 1, report.describe()
+
+
 def test_flatten_all_closes_every_position(price_df, tmp_path, journal):
     broker = PaperBroker(
         starting_cash=10_000,

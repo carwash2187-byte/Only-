@@ -42,6 +42,7 @@ class DeskConfig:
     llm_trade_date: Optional[str] = None  # YYYY-MM-DD; defaults to today
     timeframe: str = "1d"  # candle size for signals: "1d" swing, "5m"/"15m" day trading
     day_trading: bool = False  # if True, autopilot flattens all positions before close
+    max_trades_per_day: int = 0  # scalper discipline: cap entries per day (0 = no cap)
 
 
 @dataclass
@@ -212,7 +213,17 @@ class TradingDesk:
             t.symbol for t in self.journal.trades.values() if t.is_open
         }
         open_slots = cfg.max_positions - len(committed_symbols)
+        trades_left_today = (
+            cfg.max_trades_per_day - self.journal.trades_opened_today()
+            if cfg.max_trades_per_day > 0
+            else None
+        )
         for symbol, info in candidates.items():
+            if trades_left_today is not None and trades_left_today <= 0:
+                report.actions.append(
+                    DeskAction("skip", symbol, "scalper discipline: daily trade cap reached")
+                )
+                continue
             if symbol in committed_symbols:
                 continue
             if open_slots <= 0:
@@ -233,6 +244,8 @@ class TradingDesk:
             report.actions.append(action)
             if action.action == "buy" and action.ok:
                 open_slots -= 1
+                if trades_left_today is not None:
+                    trades_left_today -= 1
         return report
 
     def flatten_all(self, reason: str = "day-trading: flatten before close") -> DeskReport:

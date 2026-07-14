@@ -34,24 +34,98 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
     return (100 - 100 / (1 + rs)).fillna(50.0)
 
 
-def extract_state(df: pd.DataFrame, index: int, holding: bool) -> str:
-    """Discretize the market at bar `index` into a small state string.
+def _is_intraday(df: pd.DataFrame) -> bool:
+    idx = df.index
+    if not isinstance(idx, pd.DatetimeIndex) or len(idx) < 3:
+        return False
+    spacing = pd.Series(idx[1:] - idx[:-1]).median()
+    return spacing < pd.Timedelta(hours=6)
 
-    State = trend (fast SMA vs slow SMA) x RSI bucket x whether we hold.
+
+def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Per-bar discretized features, computed once per DataFrame and cached
+    on it (training walks the same frame thousands of times).
+
+    Daily bars keep the original trend+RSI features so the existing Q-table
+    stays valid. Intraday bars add the day-trading features the evidence
+    supports (see docs/DAY-TRADING-NOTES.md): session VWAP side, opening
+    range position, and session phase.
     """
+    cached = df.attrs.get("_qstate_features")
+    if cached is not None and len(cached) == len(df):
+        return cached
+
     close = df["close"]
     fast = close.rolling(10).mean()
     slow = close.rolling(30).mean()
-    trend = "up" if fast.iloc[index] >= slow.iloc[index] else "down"
-    rsi_val = _rsi(close).iloc[index]
-    if rsi_val < 35:
-        rsi_bucket = "oversold"
-    elif rsi_val > 65:
-        rsi_bucket = "overbought"
-    else:
-        rsi_bucket = "neutral"
-    pos = "in" if holding else "out"
-    return f"trend-{trend}|rsi-{rsi_bucket}|pos-{pos}"
+    rsi = _rsi(close)
+    features = pd.DataFrame(index=df.index)
+    features["trend"] = np.where(fast >= slow, "up", "down")
+    features["rsi"] = np.select(
+        [rsi < 35, rsi > 65], ["oversold", "overbought"], default="neutral"
+    )
+
+    if _is_intraday(df):
+        high = df["high"] if "high" in df.columns else close
+        low = df["low"] if "low" in df.columns else close
+        volume = df["volume"] if "volume" in df.columns else pd.Series(0.0, index=df.index)
+        volume = volume.fillna(0.0)
+
+        session = df.index.normalize()
+        bar_minutes = max(
+            1, int(pd.Series(df.index[1:] - df.index[:-1]).median().total_seconds() // 60)
+        )
+        bars_30min = max(1, round(30 / bar_minutes))
+        bars_1h = max(1, round(60 / bar_minutes))
+        grouped = features.groupby(session, sort=False)
+        bar_of_day = grouped.cumcount()
+        bars_in_day = features.groupby(session, sort=False)["trend"].transform("size")
+
+        # Session VWAP (typical price weighted by volume); zero-volume feeds
+        # (e.g. Yahoo forex) fall back to the session's running average price.
+        typical = (high + low + close) / 3.0
+        cum_vol = volume.groupby(session).cumsum()
+        cum_pv = (typical * volume).groupby(session).cumsum()
+        anchor = np.where(
+            cum_vol > 0,
+            cum_pv / cum_vol.replace(0.0, np.nan),
+            typical.groupby(session).expanding().mean().reset_index(level=0, drop=True),
+        )
+        features["vwap"] = np.where(close.values >= anchor, "above", "below")
+
+        # Opening range: high/low of the first 30 minutes of each session.
+        in_or_window = bar_of_day < bars_30min
+        or_high = high.where(in_or_window).groupby(session).transform("max")
+        or_low = low.where(in_or_window).groupby(session).transform("min")
+        features["orb"] = np.select(
+            [in_or_window, close > or_high, close < or_low],
+            ["in", "up", "down"],
+            default="in",
+        )
+
+        # Session phase: opening hour / midday / final hour.
+        features["tod"] = np.select(
+            [bar_of_day < bars_1h, bar_of_day >= (bars_in_day - bars_1h)],
+            ["open", "late"],
+            default="mid",
+        )
+
+    df.attrs["_qstate_features"] = features
+    return features
+
+
+def extract_state(df: pd.DataFrame, index: int, holding: bool) -> str:
+    """Discretize the market at bar `index` into a small state string.
+
+    Daily candles: trend x RSI x position (unchanged from v1, so trained
+    daily states keep working). Intraday candles additionally carry VWAP
+    side, opening-range position, and session phase.
+    """
+    row = _feature_frame(df).iloc[index]
+    state = f"trend-{row['trend']}|rsi-{row['rsi']}"
+    if "vwap" in row.index:
+        state += f"|vwap-{row['vwap']}|orb-{row['orb']}|tod-{row['tod']}"
+    return state + f"|pos-{'in' if holding else 'out'}"
 
 
 class QTraderAgent:

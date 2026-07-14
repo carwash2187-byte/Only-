@@ -150,6 +150,11 @@ class TradeJournal:
     def should_avoid(self, setup: str, min_trades: int = MIN_TRADES_FOR_LESSON) -> bool:
         return setup in self.losing_setups(min_trades=min_trades)
 
+    def trades_opened_today(self) -> int:
+        """Entries opened today (UTC) -- scalper discipline's trade cap."""
+        today = datetime.now(timezone.utc).date().isoformat()
+        return sum(1 for t in self.trades.values() if t.entry_time.startswith(today))
+
     def day_trades_last_5_days(self) -> int:
         """Count same-day round trips in the last 5 calendar days (PDT guard)."""
         count = 0
