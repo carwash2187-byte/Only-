@@ -173,7 +173,7 @@ def main() -> None:
 
     p_trade = sub.add_parser("trade", help="run one trading-desk cycle")
     p_trade.add_argument("--broker", default="paper",
-                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda"])
+                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda", "tradelocker", "mt5"])
     p_trade.add_argument("--symbols", default="",
                          help="comma-separated watchlist (default: copy-trade signals)")
     p_trade.add_argument("--llm-committee", action="store_true",
@@ -184,7 +184,7 @@ def main() -> None:
 
     p_auto = sub.add_parser("autopilot", help="run desk cycles on a loop, hands-free")
     p_auto.add_argument("--broker", default="paper",
-                        choices=["paper", "alpaca", "robinhood", "crypto", "oanda"])
+                        choices=["paper", "alpaca", "robinhood", "crypto", "oanda", "tradelocker", "mt5"])
     p_auto.add_argument("--interval", type=int, default=30, help="minutes between cycles")
     p_auto.add_argument("--symbols", default="",
                         help="comma-separated watchlist (default: copy-trade signals)")

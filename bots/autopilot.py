@@ -31,6 +31,8 @@ BROKER_MARKET = {
     "alpaca": "stocks",
     "robinhood": "stocks",
     "oanda": "forex",
+    "tradelocker": "forex",
+    "mt5": "forex",
     "crypto": "crypto",
 }
 

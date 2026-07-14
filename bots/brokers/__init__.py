@@ -30,6 +30,15 @@ def get_broker(name: str = "paper", **kwargs) -> Broker:
         from bots.brokers.oanda import OandaBroker
 
         return OandaBroker(**kwargs)
+    if name == "tradelocker":
+        from bots.brokers.tradelocker_broker import TradeLockerBroker
+
+        return TradeLockerBroker(**kwargs)
+    if name in ("mt5", "metatrader5"):
+        from bots.brokers.metatrader5_broker import MetaTrader5Broker
+
+        return MetaTrader5Broker(**kwargs)
     raise ValueError(
-        f"Unknown broker '{name}'. Options: paper, alpaca, robinhood, crypto, oanda"
+        f"Unknown broker '{name}'. Options: paper, alpaca, robinhood, crypto, "
+        "oanda, tradelocker, mt5"
     )

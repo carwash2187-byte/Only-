@@ -69,6 +69,8 @@ performance still doesn't guarantee anything.
 | Robinhood | `--broker robinhood` | **Unofficial** (via [robin_stocks](https://github.com/jmfernandes/robin_stocks)) — Robinhood has no public API. Can break anytime, may violate their terms, has NO paper mode (all orders are real money). Set `ROBINHOOD_USERNAME`/`ROBINHOOD_PASSWORD`. Requires the `--live-i-understand-the-risk` flag. |
 | Crypto | `--broker crypto` | 100+ exchanges via [ccxt](https://github.com/ccxt/ccxt). Sandbox/testnet mode by default. Set `CRYPTO_EXCHANGE`, `CRYPTO_API_KEY`, `CRYPTO_API_SECRET`. |
 | **OANDA** (forex) | `--broker oanda` | Official free forex API with practice accounts (fake money, real prices) — the right place to try scalping styles. Set `OANDA_API_TOKEN` + `OANDA_ACCOUNT_ID`; stays on the practice server until `OANDA_LIVE=1`. |
+| **TradeLocker** (prop firms) | `--broker tradelocker` | The platform many prop firms use, via its official Python API (`pip install tradelocker`). Demo environment by default; set `TRADELOCKER_EMAIL`/`TRADELOCKER_PASSWORD`/`TRADELOCKER_SERVER`, and `TRADELOCKER_LIVE=1` only for real accounts. **Check your prop firm's automation rules first** — bots are usually allowed, cross-account copy trading often isn't, and violations forfeit funded accounts. |
+| **MetaTrader 5** | `--broker mt5` | Official MetaTrader5 Python package. **Windows only**, and the MT5 terminal must be installed, running, logged in (demo account first!), with "Allow algorithmic trading" enabled. Refuses real accounts unless `MT5_LIVE=1`. |
 
 ### 5. `bots/organization.py` — the trading firm
 One `run_once()` cycle works like a real desk:

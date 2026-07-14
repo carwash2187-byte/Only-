@@ -275,3 +275,16 @@ def test_oanda_symbol_normalization():
     assert _instrument("eur/usd") == "EUR_USD"
     assert _instrument("EUR_USD") == "EUR_USD"
     assert _instrument("GBPJPY") == "GBP_JPY"
+
+
+def test_tradelocker_lot_conversion():
+    from bots.brokers.tradelocker_broker import _units_to_lots
+
+    # forex: units -> lots at 100k/lot, floored to 2dp, 0.01 minimum
+    assert _units_to_lots("EURUSD", 100_000) == 1.0
+    assert _units_to_lots("EURUSD", 1_500) == pytest.approx(0.01)
+    assert _units_to_lots("EURUSD", 250_000) == pytest.approx(2.5)
+    assert _units_to_lots("GBPJPY", 100) == 0.01  # clamped to min lot
+    # non-forex instruments pass through unchanged
+    assert _units_to_lots("NAS100", 2.5) == 2.5
+    assert _units_to_lots("BTCUSD.X", 0.3) == 0.3
