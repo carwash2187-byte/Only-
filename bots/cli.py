@@ -117,19 +117,28 @@ def cmd_journal(_args) -> None:
 def cmd_autopilot(args) -> None:
     from bots.autopilot import run_autopilot
     from bots.brokers import get_broker
+    from bots.organization import DeskConfig, TradingDesk
 
-    # same live-money gate as `trade`
-    broker_probe = get_broker(args.broker)
-    if not broker_probe.is_paper and not args.live_i_understand_the_risk:
+    broker = get_broker(args.broker)
+    if not broker.is_paper and not args.live_i_understand_the_risk:
         raise SystemExit(
             f"Broker '{args.broker}' trades REAL money. "
             "Re-run with --live-i-understand-the-risk to proceed."
         )
+    timeframe = args.timeframe or ("5m" if args.day_trading else "1d")
+    desk = TradingDesk(
+        broker=broker,
+        config=DeskConfig(
+            use_llm_committee=args.llm_committee,
+            day_trading=args.day_trading,
+            timeframe=timeframe,
+        ),
+    )
     run_autopilot(
         broker_name=args.broker,
         interval_minutes=args.interval,
         symbols=args.symbols.split(",") if args.symbols else None,
-        use_llm_committee=args.llm_committee,
+        desk=desk,
     )
 
 
@@ -190,6 +199,10 @@ def main() -> None:
                         help="comma-separated watchlist (default: copy-trade signals)")
     p_auto.add_argument("--llm-committee", action="store_true")
     p_auto.add_argument("--live-i-understand-the-risk", action="store_true")
+    p_auto.add_argument("--day-trading", action="store_true",
+                        help="use intraday candles and flatten all positions before close")
+    p_auto.add_argument("--timeframe", default=None,
+                        help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
 
     p_mirror = sub.add_parser(
         "mirror", help="record a trade call from a human you follow (IG/YT/Discord)"

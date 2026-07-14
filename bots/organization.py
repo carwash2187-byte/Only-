@@ -40,6 +40,8 @@ class DeskConfig:
     pdt_equity_min: float = 25_000.0  # US pattern-day-trader rule threshold
     use_llm_committee: bool = False  # run TradingAgents graph per candidate
     llm_trade_date: Optional[str] = None  # YYYY-MM-DD; defaults to today
+    timeframe: str = "1d"  # candle size for signals: "1d" swing, "5m"/"15m" day trading
+    day_trading: bool = False  # if True, autopilot flattens all positions before close
 
 
 @dataclass
@@ -81,7 +83,9 @@ class TradingDesk:
         self.agent = agent or self._load_agent()
         self.config = config or DeskConfig()
         # history_fn(symbol) -> OHLCV DataFrame; injectable for offline tests
-        self.history_fn = history_fn or _default_history
+        self.history_fn = history_fn or (
+            lambda symbol: _default_history(symbol, timeframe=self.config.timeframe)
+        )
         # The daily-loss baseline is equity-scale-specific, so it's namespaced
         # per broker -- otherwise switching brokers (e.g. a $10k local paper
         # account to a $100k Alpaca paper account) reads yesterday's baseline
@@ -231,6 +235,18 @@ class TradingDesk:
                 open_slots -= 1
         return report
 
+    def flatten_all(self, reason: str = "day-trading: flatten before close") -> DeskReport:
+        """Close every open position. Real day traders don't hold overnight --
+        overnight moves aren't covered by the intraday stop-loss/take-profit
+        checks, so autopilot calls this near market close when day_trading
+        is on."""
+        report = DeskReport()
+        for symbol, quantity in list(self.broker.positions().items()):
+            self._manage_position(
+                symbol, quantity, report, force_exit=True, force_exit_reason=reason
+            )
+        return report
+
     def _manual_sell_symbols(self) -> set:
         from bots.copytrader import manual as manual_mod
 
@@ -241,7 +257,12 @@ class TradingDesk:
         }
 
     def _manage_position(
-        self, symbol: str, quantity: float, report: DeskReport, force_exit: bool = False
+        self,
+        symbol: str,
+        quantity: float,
+        report: DeskReport,
+        force_exit: bool = False,
+        force_exit_reason: str = "manual mirror call says exit",
     ) -> None:
         cfg = self.config
         record = self.journal.open_position_for(symbol)
@@ -253,7 +274,7 @@ class TradingDesk:
 
         reason = None
         if force_exit:
-            reason = "manual mirror call says exit"
+            reason = force_exit_reason
         elif record:
             change = price / record.entry_price - 1.0
             if change <= -cfg.stop_loss_pct:
@@ -353,7 +374,10 @@ class TradingDesk:
         )
 
 
-def _default_history(symbol: str):
+def _default_history(symbol: str, timeframe: str = "1d"):
     from bots import marketdata
 
-    return marketdata.get_history(symbol, period="6mo")
+    # Yahoo limits how far back intraday candles go; daily/weekly can go
+    # back much further, which the RL agent's SMA30 needs to warm up.
+    period = "6mo" if timeframe in ("1d", "1wk", "1mo") else "5d"
+    return marketdata.get_history(symbol, period=period, interval=timeframe)

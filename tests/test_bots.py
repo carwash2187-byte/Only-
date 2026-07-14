@@ -8,7 +8,7 @@ from bots.brokers import PaperBroker, get_broker
 from bots.copytrader import manual
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
-from bots.organization import DeskConfig, TradingDesk
+from bots.organization import DeskConfig, DeskReport, TradingDesk
 from bots.risk import DrawdownGuard
 
 
@@ -266,6 +266,75 @@ def test_max_positions_counts_pending_journal_entries(price_df, tmp_path, journa
     )
     open_symbols = {t.symbol for t in journal.trades.values() if t.is_open}
     assert len(open_symbols) == 5
+
+
+def test_flatten_all_closes_every_position(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"AAA": 50.0, "BBB": 20.0},
+    )
+    assert broker.buy("AAA", 10).ok
+    assert broker.buy("BBB", 25).ok
+    journal.open_trade("AAA", "long", 10, 50.0, setup="daytrade")
+    journal.open_trade("BBB", "long", 25, 20.0, setup="daytrade")
+
+    desk = make_desk(tmp_path, broker, journal, price_df)
+    report = desk.flatten_all(reason="end of day")
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert {a.symbol for a in sells} == {"AAA", "BBB"}
+    assert all("end of day" in a.reason for a in sells)
+    assert broker.positions() == {}
+    assert all(not t.is_open for t in journal.trades.values())
+
+
+def test_minutes_to_stock_close():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.autopilot import minutes_to_stock_close
+
+    ny = ZoneInfo("America/New_York")
+    assert minutes_to_stock_close(datetime(2026, 7, 14, 15, 50, tzinfo=ny)) == 10
+    assert minutes_to_stock_close(datetime(2026, 7, 14, 12, 0, tzinfo=ny)) == 240
+    assert minutes_to_stock_close(datetime(2026, 7, 14, 20, 0, tzinfo=ny)) is None
+    assert minutes_to_stock_close(datetime(2026, 7, 18, 12, 0, tzinfo=ny)) is None  # Saturday
+
+
+def test_autopilot_flattens_before_close(price_df, tmp_path, monkeypatch):
+    import bots.autopilot as ap
+    from bots.organization import DeskConfig, TradingDesk
+    from bots.risk import DrawdownGuard
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"AAA": 50.0},
+    )
+    assert broker.buy("AAA", 10).ok
+    journal = TradeJournal(path=str(tmp_path / "journal.json"))
+    journal.open_trade("AAA", "long", 10, 50.0, setup="daytrade")
+
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(min_copy_score=0, day_trading=True),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+
+    calls = []
+    monkeypatch.setattr(desk, "flatten_all", lambda **kw: calls.append("flatten") or DeskReport())
+    monkeypatch.setattr(desk, "run_once", lambda **kw: calls.append("run_once") or DeskReport())
+    monkeypatch.setattr(ap, "market_is_open", lambda _m, now=None: True)
+    # 10 minutes to close, under the default 15-minute flatten window
+    monkeypatch.setattr(ap, "minutes_to_stock_close", lambda now=None: 10)
+    monkeypatch.setattr(ap.time, "sleep", lambda _s: None)
+
+    ap.run_autopilot(broker_name="paper", interval_minutes=1, desk=desk, max_cycles=1)
+    assert calls == ["flatten"]
 
 
 def test_market_hours_clock():

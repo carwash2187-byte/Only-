@@ -59,6 +59,17 @@ def market_is_open(market: str, now: Optional[datetime] = None) -> bool:
     return 9 * 60 + 30 <= minutes < 16 * 60
 
 
+def minutes_to_stock_close(now: Optional[datetime] = None) -> Optional[int]:
+    """Minutes until the 4pm ET stock close, or None outside the session."""
+    now = (now or datetime.now(tz=NY)).astimezone(NY)
+    if now.weekday() >= 5:
+        return None
+    minutes = now.hour * 60 + now.minute
+    if not (9 * 60 + 30 <= minutes < 16 * 60):
+        return None
+    return 16 * 60 - minutes
+
+
 def run_autopilot(
     broker_name: str = "paper",
     interval_minutes: int = 30,
@@ -66,6 +77,7 @@ def run_autopilot(
     use_llm_committee: bool = False,
     max_cycles: Optional[int] = None,
     desk=None,
+    flatten_before_close_minutes: int = 15,
 ) -> None:
     market = BROKER_MARKET.get(broker_name, "stocks")
     if desk is None:
@@ -77,23 +89,41 @@ def run_autopilot(
             config=DeskConfig(use_llm_committee=use_llm_committee),
         )
     broker = desk.broker
+    day_trading = getattr(desk.config, "day_trading", False)
     print(
         f"Autopilot started: broker={broker_name} (paper={broker.is_paper}), "
-        f"cycle every {interval_minutes} min, market clock: {market}. Ctrl+C to stop."
+        f"cycle every {interval_minutes} min, market clock: {market}, "
+        f"timeframe={getattr(desk.config, 'timeframe', '1d')}, "
+        f"day_trading={day_trading}. Ctrl+C to stop."
     )
 
     cycles = 0
+    flattened_today = None  # date already flattened, so it only fires once
     while max_cycles is None or cycles < max_cycles:
-        stamp = datetime.now(tz=NY).strftime("%Y-%m-%d %H:%M ET")
+        now = datetime.now(tz=NY)
+        stamp = now.strftime("%Y-%m-%d %H:%M ET")
         if market_is_open(market):
+            mins_left = minutes_to_stock_close(now) if market == "stocks" else None
             try:
-                report = desk.run_once(symbols=symbols)
-                print(f"\n[{stamp}] cycle {cycles + 1}:")
-                print(report.describe())
+                if (
+                    day_trading
+                    and mins_left is not None
+                    and mins_left <= flatten_before_close_minutes
+                    and flattened_today != now.date()
+                ):
+                    report = desk.flatten_all()
+                    flattened_today = now.date()
+                    print(f"\n[{stamp}] day-trading flatten ({mins_left} min to close):")
+                    print(report.describe())
+                else:
+                    report = desk.run_once(symbols=symbols)
+                    print(f"\n[{stamp}] cycle {cycles + 1}:")
+                    print(report.describe())
             except Exception as exc:
                 print(f"\n[{stamp}] cycle failed (will retry next interval): {exc}")
             cycles += 1
         else:
+            flattened_today = None  # reset the guard once the session ends
             print(f"[{stamp}] market closed, sleeping...")
         try:
             time.sleep(interval_minutes * 60)

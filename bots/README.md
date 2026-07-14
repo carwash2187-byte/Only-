@@ -18,6 +18,33 @@ python -m bots journal      # results + lessons learned so far
 python -m bots autopilot    # hands-free: full desk cycle every 30 min
 ```
 
+### Day trading vs swing trading
+
+By default the desk looks at daily candles and holds positions across days
+(swing trading). For day trading -- many trades a session, everything closed
+before the close -- pass `--day-trading`:
+
+```bash
+python -m bots autopilot --broker paper --day-trading --interval 5
+```
+
+This switches signals to 5-minute candles and, in the last 15 minutes before
+the 4pm ET close, automatically sells every open position instead of running
+a normal cycle (`TradingDesk.flatten_all()`) -- real day traders don't hold
+overnight, since the stop-loss/take-profit checks only run while the desk is
+awake and can't react to an overnight gap. Use `--timeframe 15m` / `1h` etc.
+to pick a different candle size.
+
+### Running it yourself, all day, for free
+
+`python -m bots autopilot` is plain Python in a loop -- no LLM calls, no
+Claude usage, just broker + market-data API calls on a timer. Run it on any
+computer that stays on (your laptop, a $5/mo VPS, a Raspberry Pi) and it
+trades completely on its own for as long as that machine is up, at zero
+ongoing cost beyond electricity. Close the terminal and it stops; all state
+(journal, trained model, day baseline) is saved after every action, so
+starting it again later picks up exactly where it left off.
+
 ### Hands-free mode
 
 `python -m bots autopilot --broker alpaca` keeps running desk cycles on its
