@@ -13,11 +13,23 @@
       "skillPath": "plugins/quantitative-trading/skills/backtesting-frameworks/SKILL.md",
       "computedHash": "c186baf4119dafbf2e457abef8c6aebc10177074c4be4b8118edbbb3c396f869"
     },
+    "cost-compact-context": {
+      "source": "ruvnet/ruflo",
+      "sourceType": "github",
+      "skillPath": "plugins/ruflo-cost-tracker/skills/cost-compact-context/SKILL.md",
+      "computedHash": "5c2d4d35feb38e334989650992ea7051452305fa51e6f61e5fde609e9321ffb2"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "prompt-caching": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/ai-research/prompt-caching/SKILL.md",
+      "computedHash": "151439aa8bad7b1e7e82e21bb9aa48ff40c36de3da99c83dc0d152305a68a222"
     },
     "trading-signal": {
       "source": "binance/binance-skills-hub",
