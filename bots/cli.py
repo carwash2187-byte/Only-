@@ -43,12 +43,16 @@ def cmd_demo(_args) -> None:
         price_overrides={"DEMO": last},
     )
     journal = TradeJournal(path="bot_data/demo_journal.json")
+    from bots.risk import DrawdownGuard
+
     desk = TradingDesk(
         broker=broker,
         journal=journal,
         agent=agent,
         config=DeskConfig(min_copy_score=0),
         history_fn=lambda _symbol: df,
+        guard=DrawdownGuard(state_path="bot_data/demo_day_state.json"),
+        manual_signals_path="bot_data/demo_manual_signals.json",
     )
     report = desk.run_once(symbols=["DEMO"])
     print(report.describe())
@@ -110,6 +114,31 @@ def cmd_journal(_args) -> None:
     print(TradeJournal().summary() or "Journal is empty.")
 
 
+def cmd_mirror(args) -> None:
+    from bots.copytrader import manual
+
+    if args.list or not args.symbol:
+        pending = manual.pending_signals()
+        if not pending:
+            print("No pending mirror calls. Record one with: "
+                  "python -m bots mirror EURUSD --side buy --source mambafx")
+            return
+        for s in pending:
+            print(f"  {s.side.upper():4s} {s.symbol:8s} from '{s.source}' ({s.added[:10]}) {s.note}")
+        return
+    if args.clear:
+        manual.consume_signal(args.symbol)
+        print(f"Cleared mirror call for {args.symbol.upper()}.")
+        return
+    signal = manual.add_signal(args.symbol, side=args.side, source=args.source, note=args.note)
+    print(
+        f"Recorded: {signal.side.upper()} {signal.symbol} from '{signal.source}'.\n"
+        f"Next `python -m bots trade` will execute it under the desk's risk rules\n"
+        f"(1% risk per trade, 5% daily circuit breaker), and the journal will track\n"
+        f"'{signal.setup}' performance -- if this source keeps losing, it gets blocked."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="bots", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -125,7 +154,7 @@ def main() -> None:
 
     p_trade = sub.add_parser("trade", help="run one trading-desk cycle")
     p_trade.add_argument("--broker", default="paper",
-                         choices=["paper", "alpaca", "robinhood", "crypto"])
+                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda"])
     p_trade.add_argument("--symbols", default="",
                          help="comma-separated watchlist (default: copy-trade signals)")
     p_trade.add_argument("--llm-committee", action="store_true",
@@ -134,6 +163,18 @@ def main() -> None:
 
     sub.add_parser("journal", help="show performance and lessons learned")
 
+    p_mirror = sub.add_parser(
+        "mirror", help="record a trade call from a human you follow (IG/YT/Discord)"
+    )
+    p_mirror.add_argument("symbol", nargs="?", default="")
+    p_mirror.add_argument("--side", default="buy", choices=["buy", "sell"])
+    p_mirror.add_argument("--source", default="manual",
+                          help="who called it, e.g. mambafx")
+    p_mirror.add_argument("--note", default="")
+    p_mirror.add_argument("--list", action="store_true", help="show pending calls")
+    p_mirror.add_argument("--clear", action="store_true",
+                          help="remove the pending call for SYMBOL")
+
     args = parser.parse_args()
     {
         "demo": cmd_demo,
@@ -141,6 +182,7 @@ def main() -> None:
         "signals": cmd_signals,
         "trade": cmd_trade,
         "journal": cmd_journal,
+        "mirror": cmd_mirror,
     }[args.command](args)
 
 

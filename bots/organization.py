@@ -25,12 +25,15 @@ from typing import Callable, Dict, List, Optional
 from bots.brokers import Broker, PaperBroker
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
+from bots.risk import DrawdownGuard
 
 
 @dataclass
 class DeskConfig:
     max_positions: int = 5
     max_position_pct: float = 0.15  # max 15% of equity per position
+    risk_per_trade_pct: float = 0.01  # risk at most 1% of equity per trade
+    max_daily_loss_pct: float = 0.05  # circuit breaker: stop after -5% on the day
     stop_loss_pct: float = 0.05  # exit at -5%
     take_profit_pct: float = 0.15  # exit at +15%
     min_copy_score: float = 2.0  # require at least ~2 independent sources
@@ -70,6 +73,8 @@ class TradingDesk:
         agent: Optional[QTraderAgent] = None,
         config: Optional[DeskConfig] = None,
         history_fn: Optional[Callable[[str], "object"]] = None,
+        guard: Optional[DrawdownGuard] = None,
+        manual_signals_path: Optional[str] = None,
     ):
         self.broker = broker or PaperBroker()
         self.journal = journal or TradeJournal()
@@ -77,6 +82,10 @@ class TradingDesk:
         self.config = config or DeskConfig()
         # history_fn(symbol) -> OHLCV DataFrame; injectable for offline tests
         self.history_fn = history_fn or _default_history
+        self.guard = guard or DrawdownGuard(max_daily_loss_pct=self.config.max_daily_loss_pct)
+        from bots.copytrader import manual as manual_mod
+
+        self.manual_signals_path = manual_signals_path or manual_mod.DEFAULT_SIGNALS_PATH
 
     @staticmethod
     def _load_agent() -> QTraderAgent:
@@ -86,19 +95,41 @@ class TradingDesk:
 
     # -- research desk ---------------------------------------------------------
 
-    def research_candidates(self, symbols: Optional[List[str]] = None) -> Dict[str, str]:
-        """Buy candidates as {symbol: reason}."""
+    def research_candidates(self, symbols: Optional[List[str]] = None) -> Dict[str, Dict[str, str]]:
+        """Buy candidates as {symbol: {"reason": ..., "setup": ...}}.
+
+        Sources, in priority order: manual mirror signals (trades you recorded
+        from a human you follow), then the user watchlist, then the automatic
+        smart-money consensus.
+        """
+        from bots.copytrader import manual as manual_mod
+
+        candidates: Dict[str, Dict[str, str]] = {}
+        for signal in manual_mod.pending_signals(self.manual_signals_path):
+            if signal.side == "buy":
+                candidates[signal.symbol] = {
+                    "reason": f"mirror call from '{signal.source}' {signal.note}".strip(),
+                    "setup": signal.setup,
+                    "manual": "1",
+                }
+
         if symbols:
-            return {s.upper(): "user watchlist" for s in symbols}
+            for s in symbols:
+                candidates.setdefault(
+                    s.upper(), {"reason": "user watchlist", "setup": "copytrade"}
+                )
+            return candidates
+
         from bots.copytrader import consensus_signals
 
-        candidates: Dict[str, str] = {}
         try:
             for signal in consensus_signals():
                 if signal.score >= self.config.min_copy_score:
-                    candidates[signal.symbol] = signal.describe()
+                    candidates.setdefault(
+                        signal.symbol,
+                        {"reason": signal.describe(), "setup": "copytrade"},
+                    )
         except Exception as exc:
-            candidates = {}
             print(f"[research] copy-trading feeds unavailable: {exc}")
         return candidates
 
@@ -143,14 +174,23 @@ class TradingDesk:
                 )
                 return report
 
-        # 1. Manage existing positions first (risk desk owns exits).
+        # 1. Manage existing positions first (risk desk owns exits), honoring
+        #    any manual mirror "sell" calls you recorded.
+        manual_sells = self._manual_sell_symbols()
         for symbol, quantity in list(positions.items()):
-            self._manage_position(symbol, quantity, report)
+            self._manage_position(symbol, quantity, report, force_exit=symbol in manual_sells)
 
-        # 2. New entries from research + quant + committee, filtered by lessons.
+        # 2. Daily-loss circuit breaker: after -max_daily_loss_pct on the day,
+        #    no new entries until tomorrow (exits above still ran).
+        halted, guard_msg = self.guard.check(self.broker.equity())
+        report.notes.append(f"[risk] {guard_msg}")
+        if halted:
+            return report
+
+        # 3. New entries from research + quant + committee, filtered by lessons.
         candidates = self.research_candidates(symbols)
         open_slots = cfg.max_positions - len(self.broker.positions())
-        for symbol, reason in candidates.items():
+        for symbol, info in candidates.items():
             if open_slots <= 0:
                 report.actions.append(
                     DeskAction("skip", symbol, "risk desk: max positions reached")
@@ -158,13 +198,28 @@ class TradingDesk:
                 continue
             if symbol in positions:
                 continue
-            action = self._consider_entry(symbol, reason, equity)
+            action = self._consider_entry(
+                symbol, info["reason"], equity,
+                setup_base=info.get("setup", "copytrade"),
+                manual=bool(info.get("manual")),
+            )
             report.actions.append(action)
             if action.action == "buy" and action.ok:
                 open_slots -= 1
         return report
 
-    def _manage_position(self, symbol: str, quantity: float, report: DeskReport) -> None:
+    def _manual_sell_symbols(self) -> set:
+        from bots.copytrader import manual as manual_mod
+
+        return {
+            s.symbol
+            for s in manual_mod.pending_signals(self.manual_signals_path)
+            if s.side == "sell"
+        }
+
+    def _manage_position(
+        self, symbol: str, quantity: float, report: DeskReport, force_exit: bool = False
+    ) -> None:
         cfg = self.config
         record = self.journal.open_position_for(symbol)
         try:
@@ -174,7 +229,9 @@ class TradingDesk:
             return
 
         reason = None
-        if record:
+        if force_exit:
+            reason = "manual mirror call says exit"
+        elif record:
             change = price / record.entry_price - 1.0
             if change <= -cfg.stop_loss_pct:
                 reason = f"stop loss hit ({change:+.1%})"
@@ -197,25 +254,39 @@ class TradingDesk:
                 record.trade_id, result.fill_price or price, notes=reason
             )
             reason += f" | realized PnL {closed.pnl:+.2f}"
+        if result.ok and force_exit:
+            from bots.copytrader import manual as manual_mod
+
+            manual_mod.consume_signal(symbol, self.manual_signals_path)
         report.actions.append(
             DeskAction("sell", symbol, reason, quantity=quantity, ok=result.ok)
         )
 
-    def _consider_entry(self, symbol: str, reason: str, equity: float) -> DeskAction:
+    def _consider_entry(
+        self,
+        symbol: str,
+        reason: str,
+        equity: float,
+        setup_base: str = "copytrade",
+        manual: bool = False,
+    ) -> DeskAction:
         cfg = self.config
 
-        # Quant desk vote (needs history; a missing feed means no veto).
+        # Quant desk vote (needs history; a missing feed means no veto). Manual
+        # mirror calls carry the caller's setup tag so the journal can grade
+        # that human's real performance separately.
         setup_suffix = ""
         try:
             df = self.history_fn(symbol)
             vote = self.agent.signal(df, holding=False)
-            setup_suffix = ":" + self.agent.current_state(df, holding=False)
-            if vote == "sell":
+            if not manual:
+                setup_suffix = ":" + self.agent.current_state(df, holding=False)
+            if vote == "sell" and not manual:
                 return DeskAction("skip", symbol, "quant desk: RL agent is bearish here")
         except Exception:
             pass
 
-        setup = f"copytrade{setup_suffix}"
+        setup = f"{setup_base}{setup_suffix}"
 
         # Lessons learned: refuse setups with proven negative expectancy.
         if self.journal.should_avoid(setup):
@@ -233,7 +304,11 @@ class TradingDesk:
         except Exception as exc:
             return DeskAction("skip", symbol, f"no price data: {exc}")
 
-        budget = min(equity * cfg.max_position_pct, self.broker.cash())
+        # Position sizing, scalper style: risk at most risk_per_trade_pct of
+        # equity if the stop-loss gets hit, and never more than
+        # max_position_pct of equity in one name regardless.
+        risk_budget = equity * cfg.risk_per_trade_pct / max(cfg.stop_loss_pct, 1e-6)
+        budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0
         if quantity <= 0:
             return DeskAction("skip", symbol, "risk desk: no budget available")
@@ -244,6 +319,10 @@ class TradingDesk:
                 symbol, "long", quantity, result.fill_price or price, setup=setup,
                 notes=reason,
             )
+            if manual:
+                from bots.copytrader import manual as manual_mod
+
+                manual_mod.consume_signal(symbol, self.manual_signals_path)
         return DeskAction(
             "buy", symbol,
             reason if result.ok else f"order failed: {result.error}",
@@ -254,4 +333,13 @@ class TradingDesk:
 def _default_history(symbol: str):
     import yfinance as yf
 
-    return yf.Ticker(symbol).history(period="6mo")
+    candidates = [symbol]
+    compact = symbol.upper().replace("_", "").replace("/", "").replace("-", "")
+    if len(compact) == 6 and compact.isalpha() and compact != symbol.upper():
+        # forex pair like EUR_USD -> yfinance's EURUSD=X
+        candidates.insert(0, f"{compact}=X")
+    for candidate in candidates:
+        df = yf.Ticker(candidate).history(period="6mo")
+        if not df.empty:
+            return df
+    return df

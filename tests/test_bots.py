@@ -5,9 +5,23 @@ import pandas as pd
 import pytest
 
 from bots.brokers import PaperBroker, get_broker
+from bots.copytrader import manual
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
 from bots.organization import DeskConfig, TradingDesk
+from bots.risk import DrawdownGuard
+
+
+def make_desk(tmp_path, broker, journal, price_df, config=None, agent=None):
+    return TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=agent or QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=config or DeskConfig(min_copy_score=0),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day_state.json")),
+        manual_signals_path=str(tmp_path / "manual_signals.json"),
+    )
 
 
 @pytest.fixture
@@ -103,13 +117,7 @@ def test_desk_cycle_buys_and_respects_lessons(price_df, tmp_path, journal):
     )
     agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
     agent.train(price_df, episodes=5)
-    desk = TradingDesk(
-        broker=broker,
-        journal=journal,
-        agent=agent,
-        config=DeskConfig(min_copy_score=0),
-        history_fn=lambda _s: price_df,
-    )
+    desk = make_desk(tmp_path, broker, journal, price_df, agent=agent)
     report = desk.run_once(symbols=["DEMO"])
     actions = {a.symbol: a for a in report.actions}
     assert "DEMO" in actions
@@ -128,23 +136,98 @@ def test_desk_stop_loss_closes_position(price_df, tmp_path, journal):
     broker = PaperBroker(
         starting_cash=10_000,
         state_path=str(tmp_path / "acct.json"),
-        price_overrides={"DEMO": entry_price},
+        price_overrides={"DEMO": entry_price, "UNRELATED": 50.0},
     )
     assert broker.buy("DEMO", 10).ok
     journal.open_trade("DEMO", "long", 10, entry_price, setup="test")
     broker.price_overrides["DEMO"] = crashed
 
-    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
-    desk = TradingDesk(
-        broker=broker,
-        journal=journal,
-        agent=agent,
-        config=DeskConfig(min_copy_score=99),  # no new entries
-        history_fn=lambda _s: price_df,
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        # risk budget 0 -> no new entries, keeps the test offline
+        config=DeskConfig(min_copy_score=99, risk_per_trade_pct=0.0),
     )
-    report = desk.run_once(symbols=[])
+    report = desk.run_once(symbols=["UNRELATED"])
     sells = [a for a in report.actions if a.action == "sell"]
     assert sells and sells[0].ok
     assert broker.positions() == {}
     closed = [t for t in journal.trades.values() if not t.is_open]
     assert closed and closed[0].pnl == pytest.approx((crashed - entry_price) * 10)
+
+
+def test_circuit_breaker_blocks_new_entries(price_df, tmp_path, journal):
+    guard = DrawdownGuard(max_daily_loss_pct=0.05, state_path=str(tmp_path / "day.json"))
+    assert guard.check(10_000)[0] is False  # records the day-start baseline
+    halted, msg = guard.check(9_400)  # down 6% -> breaker trips
+    assert halted and "CIRCUIT BREAKER" in msg
+
+    broker = PaperBroker(
+        starting_cash=9_400,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(min_copy_score=0),
+        history_fn=lambda _s: price_df,
+        guard=guard,
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    assert not [a for a in report.actions if a.action == "buy"]
+    assert any("CIRCUIT BREAKER" in n for n in report.notes)
+
+
+def test_mirror_signal_executes_under_risk_rules_and_consumes(price_df, tmp_path, journal):
+    sig_path = str(tmp_path / "manual_signals.json")
+    manual.add_signal("DEMO", side="buy", source="mambafx", path=sig_path)
+
+    last = float(price_df["close"].iloc[-1])
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": last},
+    )
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(min_copy_score=99),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=sig_path,
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    record = journal.open_position_for("DEMO")
+    assert record is not None and record.setup == "mirror:mambafx"
+    assert manual.pending_signals(sig_path) == []  # consumed after execution
+
+
+def test_risk_per_trade_sizing(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        # risking 0.5% with a 5% stop -> position value = 10000*0.005/0.05 = 1000
+        config=DeskConfig(min_copy_score=0, risk_per_trade_pct=0.005, stop_loss_pct=0.05),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
+
+
+def test_oanda_symbol_normalization():
+    from bots.brokers.oanda import _instrument
+
+    assert _instrument("EURUSD") == "EUR_USD"
+    assert _instrument("eur/usd") == "EUR_USD"
+    assert _instrument("EUR_USD") == "EUR_USD"
+    assert _instrument("GBPJPY") == "GBP_JPY"

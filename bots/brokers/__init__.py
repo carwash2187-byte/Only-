@@ -26,4 +26,10 @@ def get_broker(name: str = "paper", **kwargs) -> Broker:
         from bots.brokers.crypto import CryptoBroker
 
         return CryptoBroker(**kwargs)
-    raise ValueError(f"Unknown broker '{name}'. Options: paper, alpaca, robinhood, crypto")
+    if name == "oanda":
+        from bots.brokers.oanda import OandaBroker
+
+        return OandaBroker(**kwargs)
+    raise ValueError(
+        f"Unknown broker '{name}'. Options: paper, alpaca, robinhood, crypto, oanda"
+    )

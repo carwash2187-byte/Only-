@@ -58,6 +58,7 @@ performance still doesn't guarantee anything.
 | **Alpaca** (recommended) | `python -m bots trade --broker alpaca` | Official free API for US stocks with a built-in fake-money mode. Sign up at alpaca.markets, set `ALPACA_API_KEY_ID` + `ALPACA_API_SECRET_KEY`. Stays in paper mode until you set `ALPACA_LIVE=1`. |
 | Robinhood | `--broker robinhood` | **Unofficial** (via [robin_stocks](https://github.com/jmfernandes/robin_stocks)) — Robinhood has no public API. Can break anytime, may violate their terms, has NO paper mode (all orders are real money). Set `ROBINHOOD_USERNAME`/`ROBINHOOD_PASSWORD`. Requires the `--live-i-understand-the-risk` flag. |
 | Crypto | `--broker crypto` | 100+ exchanges via [ccxt](https://github.com/ccxt/ccxt). Sandbox/testnet mode by default. Set `CRYPTO_EXCHANGE`, `CRYPTO_API_KEY`, `CRYPTO_API_SECRET`. |
+| **OANDA** (forex) | `--broker oanda` | Official free forex API with practice accounts (fake money, real prices) — the right place to try scalping styles. Set `OANDA_API_TOKEN` + `OANDA_ACCOUNT_ID`; stays on the practice server until `OANDA_LIVE=1`. |
 
 ### 5. `bots/organization.py` — the trading firm
 One `run_once()` cycle works like a real desk:
@@ -70,6 +71,30 @@ One `run_once()` cycle works like a real desk:
    enforces stop-loss (-5%) / take-profit (+15%), blocks setups the journal
    says lose money, and applies the PDT guard.
 5. **Execution desk** sends orders to your chosen broker and journals them.
+
+## Copying a human trader you follow (Instagram / YouTube / Discord)
+
+There is no API for an influencer's Instagram stories, and win-rate claims
+("he only loses 5% of trades") from social media are unverifiable marketing —
+many influencer traders earn from courses and signal groups, not from trading.
+So the mirror mode works the honest way around:
+
+```bash
+python -m bots mirror EURUSD --side buy --source mambafx --note "IG story"
+python -m bots trade --broker oanda     # executes it on a practice account
+python -m bots journal                  # shows mirror:mambafx real performance
+```
+
+Three protections apply automatically to every mirrored call:
+1. **Risk-per-trade cap** — position sized so a stopped-out trade costs at most
+   1% of the account (`risk_per_trade_pct`).
+2. **Daily circuit breaker** — if the account is down 5% on the day, the desk
+   stops opening trades until tomorrow (`max_daily_loss_pct`). Code-enforced
+   discipline, no willpower needed.
+3. **Source grading** — the journal tracks each source's real results in YOUR
+   account. If `mirror:someguy` averages a loss after 5+ trades, the desk
+   auto-blocks that source. You find out for real whether the influencer's
+   calls make money.
 
 ## Day-trading reality check (US stocks)
 

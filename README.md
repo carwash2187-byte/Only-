@@ -30,10 +30,12 @@
 > **This fork adds a full bot stack in [`bots/`](bots/README.md):** a
 > reinforcement-learning agent that learns from its mistakes, a copy-trader
 > that follows SEC 13F whales (Buffett, Burry, Ackman, ...) and Congress
-> trades, broker connectors (paper trading by default, plus Alpaca, Robinhood,
-> and crypto exchanges), and a trading-desk orchestrator that runs them
-> together like a firm. Try `python -m bots demo`. Nothing in it guarantees
-> profit — read [`bots/README.md`](bots/README.md) before risking money.
+> trades, a mirror mode for calls from human traders you follow (with a 5%
+> daily-loss circuit breaker and per-source performance grading), and broker
+> connectors (paper trading by default, plus Alpaca, Robinhood, OANDA forex,
+> and crypto exchanges), all run together by a trading-desk orchestrator.
+> Try `python -m bots demo`. Nothing in it guarantees profit — read
+> [`bots/README.md`](bots/README.md) before risking money.
 
 ## News
 - [2026-07] **TradingAgents v0.3.1** released with correctness and stability fixes: Alpha Vantage look-ahead filtering, graph-router crash-safety, graph-shape-aware checkpoint resume, working crypto sentiment sources, a configurable LLM retry budget, Bedrock API-key auth, and Claude Sonnet 5 / Fable 5 support. See [CHANGELOG.md](CHANGELOG.md) for the full list.
