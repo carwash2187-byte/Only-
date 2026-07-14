@@ -13,7 +13,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | migrated to Alpaca paper account, flat close",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "9a231aa98169",
@@ -28,7 +30,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | migrated to Alpaca paper account, flat close",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "2baa10ff9c1d",
@@ -43,7 +47,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | migrated to Alpaca paper account, flat close",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "f0eb0b02651c",
@@ -58,7 +64,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | migrated to Alpaca paper account, flat close",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "41c823b5920e",
@@ -73,7 +81,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "ETHB (score 3.1): Duquesne Family Office (Stanley Druckenmiller) top-4 holding; Duquesne Family Office (Stanley Druckenmiller) top-7 holding | migrated to Alpaca paper account, flat close",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "ce4c6f18206b",
@@ -88,7 +98,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "9ea7368550e8",
@@ -103,7 +115,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "4e4e48445853",
@@ -118,7 +132,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "f5e8853537c9",
@@ -133,7 +149,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "2c285161220a",
@@ -148,7 +166,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "1aafe0469d56",
@@ -163,7 +183,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "cafa03bfedeb",
@@ -178,7 +200,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "3d2df0143802",
@@ -193,7 +217,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "0e03e916f749",
@@ -208,7 +234,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "e614d2e97b98",
@@ -223,7 +251,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "a87c014ac028",
@@ -238,7 +268,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "e90b6a7a767b",
@@ -253,7 +285,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "2023be44224b",
@@ -268,7 +302,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "a721f76da22a",
@@ -283,7 +319,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "1b9a1d85a30b",
@@ -298,7 +336,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "62693dedf848",
@@ -313,7 +353,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "0f118ad5d20a",
@@ -328,7 +370,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AXP (score 2.0): Berkshire Hathaway (Warren Buffett) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "eaf3aa28f0f6",
@@ -343,7 +387,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "PLTR (score 2.0): Scion Asset Management (Michael Burry) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "685b1a5ab27a",
@@ -358,7 +404,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "ece896113991",
@@ -373,7 +421,9 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
-      "tags": []
+      "tags": [
+        "admin"
+      ]
     },
     {
       "trade_id": "6b185b82b665",
@@ -383,11 +433,11 @@
       "entry_price": 317.34,
       "entry_time": "2026-07-14T11:33:40.143132+00:00",
       "setup": "copytrade:trend-up|rsi-neutral|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding",
+      "exit_price": 317.34,
+      "exit_time": "2026-07-14T18:56:18.568617+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
       "tags": []
     },
     {
@@ -398,11 +448,11 @@
       "entry_price": 352.5,
       "entry_time": "2026-07-14T11:33:42.852808+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding",
+      "exit_price": 352.5,
+      "exit_time": "2026-07-14T18:56:18.570576+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
       "tags": []
     },
     {
@@ -413,11 +463,11 @@
       "entry_price": 247.325,
       "entry_time": "2026-07-14T11:33:45.153134+00:00",
       "setup": "copytrade:trend-down|rsi-overbought|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding",
+      "exit_price": 247.325,
+      "exit_time": "2026-07-14T18:56:18.572050+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
       "tags": []
     },
     {
@@ -428,11 +478,11 @@
       "entry_price": 203.485,
       "entry_time": "2026-07-14T11:33:48.070990+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding",
+      "exit_price": 203.485,
+      "exit_time": "2026-07-14T18:56:18.574194+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
       "tags": []
     },
     {
@@ -443,11 +493,41 @@
       "entry_price": 390.6,
       "entry_time": "2026-07-14T11:33:51.627186+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|pos-out",
+      "exit_price": 390.6,
+      "exit_time": "2026-07-14T18:56:18.575354+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
+      "tags": []
+    },
+    {
+      "trade_id": "86759797552d",
+      "symbol": "TSLA",
+      "side": "long",
+      "quantity": 3.7795,
+      "entry_price": 396.8800048828125,
+      "entry_time": "2026-07-14T18:56:39.240899+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|orb-in|tod-late|pos-out",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
-      "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding",
+      "notes": "user watchlist",
+      "tags": []
+    },
+    {
+      "trade_id": "73eab8b7cf90",
+      "symbol": "AAPL",
+      "side": "long",
+      "quantity": 4.7539,
+      "entry_price": 315.5299987792969,
+      "entry_time": "2026-07-14T18:56:41.134457+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
       "tags": []
     }
   ]

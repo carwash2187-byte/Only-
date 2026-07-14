@@ -151,9 +151,17 @@ class TradeJournal:
         return setup in self.losing_setups(min_trades=min_trades)
 
     def trades_opened_today(self) -> int:
-        """Entries opened today (UTC) -- scalper discipline's trade cap."""
+        """Entries opened today (UTC) -- scalper discipline's trade cap.
+
+        Records tagged 'admin' (canceled never-filled orders, account
+        migrations) are bookkeeping, not trading activity, and don't count.
+        """
         today = datetime.now(timezone.utc).date().isoformat()
-        return sum(1 for t in self.trades.values() if t.entry_time.startswith(today))
+        return sum(
+            1
+            for t in self.trades.values()
+            if t.entry_time.startswith(today) and "admin" not in t.tags
+        )
 
     def day_trades_last_5_days(self) -> int:
         """Count same-day round trips in the last 5 calendar days (PDT guard)."""
