@@ -224,6 +224,50 @@ def test_risk_per_trade_sizing(price_df, tmp_path, journal):
     assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
 
 
+def test_market_hours_clock():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.autopilot import market_is_open
+
+    ny = ZoneInfo("America/New_York")
+    tuesday_noon = datetime(2026, 7, 14, 12, 0, tzinfo=ny)
+    tuesday_night = datetime(2026, 7, 14, 20, 0, tzinfo=ny)
+    saturday = datetime(2026, 7, 18, 12, 0, tzinfo=ny)
+    sunday_evening = datetime(2026, 7, 19, 18, 0, tzinfo=ny)
+
+    assert market_is_open("stocks", tuesday_noon)
+    assert not market_is_open("stocks", tuesday_night)
+    assert not market_is_open("stocks", saturday)
+    assert market_is_open("forex", tuesday_night)
+    assert not market_is_open("forex", saturday)
+    assert market_is_open("forex", sunday_evening)
+    assert market_is_open("crypto", saturday)
+
+
+def test_autopilot_runs_cycles_offline(price_df, tmp_path, monkeypatch, capsys):
+    import bots.autopilot as ap
+
+    monkeypatch.setattr(ap.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(ap, "market_is_open", lambda _m, now=None: True)
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": float(price_df["close"].iloc[-1])},
+    )
+    journal = TradeJournal(path=str(tmp_path / "journal.json"))
+    desk = make_desk(tmp_path, broker, journal, price_df)
+
+    ap.run_autopilot(
+        broker_name="paper", interval_minutes=1, symbols=["DEMO"],
+        max_cycles=2, desk=desk,
+    )
+    out = capsys.readouterr().out
+    assert "Autopilot started" in out
+    assert "cycle 2" in out
+
+
 def test_oanda_symbol_normalization():
     from bots.brokers.oanda import _instrument
 

@@ -114,6 +114,25 @@ def cmd_journal(_args) -> None:
     print(TradeJournal().summary() or "Journal is empty.")
 
 
+def cmd_autopilot(args) -> None:
+    from bots.autopilot import run_autopilot
+    from bots.brokers import get_broker
+
+    # same live-money gate as `trade`
+    broker_probe = get_broker(args.broker)
+    if not broker_probe.is_paper and not args.live_i_understand_the_risk:
+        raise SystemExit(
+            f"Broker '{args.broker}' trades REAL money. "
+            "Re-run with --live-i-understand-the-risk to proceed."
+        )
+    run_autopilot(
+        broker_name=args.broker,
+        interval_minutes=args.interval,
+        symbols=args.symbols.split(",") if args.symbols else None,
+        use_llm_committee=args.llm_committee,
+    )
+
+
 def cmd_mirror(args) -> None:
     from bots.copytrader import manual
 
@@ -163,6 +182,15 @@ def main() -> None:
 
     sub.add_parser("journal", help="show performance and lessons learned")
 
+    p_auto = sub.add_parser("autopilot", help="run desk cycles on a loop, hands-free")
+    p_auto.add_argument("--broker", default="paper",
+                        choices=["paper", "alpaca", "robinhood", "crypto", "oanda"])
+    p_auto.add_argument("--interval", type=int, default=30, help="minutes between cycles")
+    p_auto.add_argument("--symbols", default="",
+                        help="comma-separated watchlist (default: copy-trade signals)")
+    p_auto.add_argument("--llm-committee", action="store_true")
+    p_auto.add_argument("--live-i-understand-the-risk", action="store_true")
+
     p_mirror = sub.add_parser(
         "mirror", help="record a trade call from a human you follow (IG/YT/Discord)"
     )
@@ -182,6 +210,7 @@ def main() -> None:
         "signals": cmd_signals,
         "trade": cmd_trade,
         "journal": cmd_journal,
+        "autopilot": cmd_autopilot,
         "mirror": cmd_mirror,
     }[args.command](args)
 

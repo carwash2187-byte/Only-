@@ -15,7 +15,17 @@ python -m bots train --symbol SPY --period 2y    # train the RL agent
 python -m bots signals      # what the smart money is buying right now
 python -m bots trade        # one trading-desk cycle on the paper account
 python -m bots journal      # results + lessons learned so far
+python -m bots autopilot    # hands-free: full desk cycle every 30 min
 ```
+
+### Hands-free mode
+
+`python -m bots autopilot --broker alpaca` keeps running desk cycles on its
+own: it respects market hours (stocks 9:30-16:00 ET, forex 24/5, crypto 24/7),
+applies the daily 5% circuit breaker and per-trade risk caps every cycle, and
+journals everything. Leave it running on any computer that stays on (an old
+laptop, a $5 VPS, a Raspberry Pi). Check `python -m bots journal` weekly --
+autopilot automates the discipline, not the profit.
 
 ## What each piece does
 
