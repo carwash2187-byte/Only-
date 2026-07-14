@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "backtest": {
+      "source": "marketcalls/vectorbt-backtesting-skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/backtest/SKILL.md",
+      "computedHash": "13f76c5ab7968c459b1714aef058f69a4271d8067e580f7902f356c2db8f5ccf"
+    },
+    "backtesting-frameworks": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/quantitative-trading/skills/backtesting-frameworks/SKILL.md",
+      "computedHash": "c186baf4119dafbf2e457abef8c6aebc10177074c4be4b8118edbbb3c396f869"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "trading-signal": {
+      "source": "binance/binance-skills-hub",
+      "sourceType": "github",
+      "skillPath": "skills/binance-web3/trading-signal/SKILL.md",
+      "computedHash": "3c68477564ce42bec4e8db6602a96e5ed4b780119f872f7ac74b9ed0f9fe7e05"
+    }
+  }
+}
