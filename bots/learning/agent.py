@@ -21,8 +21,9 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from bots.paths import data_path
+
 ACTIONS = ("hold", "buy", "sell")
-DEFAULT_MODEL_PATH = os.path.join("bot_data", "qtable.json")
 
 
 def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
@@ -60,13 +61,13 @@ class QTraderAgent:
         discount: float = 0.95,
         epsilon: float = 0.1,
         transaction_cost_pct: float = 0.001,
-        model_path: str = DEFAULT_MODEL_PATH,
+        model_path: Optional[str] = None,
     ):
         self.lr = learning_rate
         self.discount = discount
         self.epsilon = epsilon
         self.cost = transaction_cost_pct
-        self.model_path = model_path
+        self.model_path = model_path or data_path("qtable.json")
         self.q: Dict[str, Dict[str, float]] = {}
         self.trained_episodes = 0
 

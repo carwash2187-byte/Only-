@@ -12,8 +12,7 @@ import os
 from typing import Dict, Optional
 
 from bots.brokers.base import Broker, OrderResult
-
-DEFAULT_STATE_PATH = os.path.join("bot_data", "paper_account.json")
+from bots.paths import data_path
 
 
 class PaperBroker(Broker):
@@ -23,10 +22,10 @@ class PaperBroker(Broker):
     def __init__(
         self,
         starting_cash: float = 10_000.0,
-        state_path: str = DEFAULT_STATE_PATH,
+        state_path: Optional[str] = None,
         price_overrides: Optional[Dict[str, float]] = None,
     ):
-        self.state_path = state_path
+        self.state_path = state_path or data_path("paper_account.json")
         self.price_overrides = price_overrides or {}
         self._cash = starting_cash
         self._positions: Dict[str, float] = {}
@@ -57,12 +56,9 @@ class PaperBroker(Broker):
         symbol = symbol.upper()
         if symbol in self.price_overrides:
             return self.price_overrides[symbol]
-        import yfinance as yf
+        from bots import marketdata
 
-        data = yf.Ticker(symbol).history(period="1d")
-        if data.empty:
-            raise ValueError(f"No price data for {symbol}")
-        return float(data["Close"].iloc[-1])
+        return marketdata.get_price(symbol)
 
     def buy(self, symbol: str, quantity: float) -> OrderResult:
         symbol = symbol.upper()

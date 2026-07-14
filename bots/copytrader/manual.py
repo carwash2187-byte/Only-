@@ -19,9 +19,13 @@ import json
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
-DEFAULT_SIGNALS_PATH = os.path.join("bot_data", "manual_signals.json")
+from bots.paths import data_path
+
+
+def default_signals_path() -> str:
+    return data_path("manual_signals.json")
 
 
 @dataclass
@@ -55,8 +59,9 @@ def add_signal(
     side: str = "buy",
     source: str = "manual",
     note: str = "",
-    path: str = DEFAULT_SIGNALS_PATH,
+    path: Optional[str] = None,
 ) -> ManualSignal:
+    path = path or default_signals_path()
     signal = ManualSignal(
         symbol=symbol.upper(),
         side=side.lower(),
@@ -70,9 +75,10 @@ def add_signal(
     return signal
 
 
-def pending_signals(path: str = DEFAULT_SIGNALS_PATH) -> List[ManualSignal]:
-    return _load(path)
+def pending_signals(path: Optional[str] = None) -> List[ManualSignal]:
+    return _load(path or default_signals_path())
 
 
-def consume_signal(symbol: str, path: str = DEFAULT_SIGNALS_PATH) -> None:
+def consume_signal(symbol: str, path: Optional[str] = None) -> None:
+    path = path or default_signals_path()
     _save([s for s in _load(path) if s.symbol != symbol.upper()], path)

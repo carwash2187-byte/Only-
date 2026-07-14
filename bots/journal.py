@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-DEFAULT_JOURNAL_PATH = os.path.join("bot_data", "trade_journal.json")
+from bots.paths import data_path
 
 # A setup needs at least this many closed trades before its stats are trusted
 # enough to veto new entries.
@@ -51,8 +51,8 @@ class TradeRecord:
 class TradeJournal:
     """Append-only journal persisted to JSON."""
 
-    def __init__(self, path: str = DEFAULT_JOURNAL_PATH):
-        self.path = path
+    def __init__(self, path: Optional[str] = None):
+        self.path = path or data_path("trade_journal.json")
         self.trades: Dict[str, TradeRecord] = {}
         self._load()
 

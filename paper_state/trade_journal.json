@@ -1,0 +1,79 @@
+{
+  "trades": [
+    {
+      "trade_id": "6a80aef43b0f",
+      "symbol": "AAPL",
+      "side": "long",
+      "quantity": 4.7272,
+      "entry_price": 317.30999755859375,
+      "entry_time": "2026-07-14T10:05:32.491034+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding",
+      "tags": []
+    },
+    {
+      "trade_id": "9a231aa98169",
+      "symbol": "GOOGL",
+      "side": "long",
+      "quantity": 4.2552,
+      "entry_price": 352.510009765625,
+      "entry_time": "2026-07-14T10:05:34.260988+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding",
+      "tags": []
+    },
+    {
+      "trade_id": "2baa10ff9c1d",
+      "symbol": "AMZN",
+      "side": "long",
+      "quantity": 6.0653,
+      "entry_price": 247.30999755859375,
+      "entry_time": "2026-07-14T10:05:37.045988+00:00",
+      "setup": "copytrade:trend-down|rsi-overbought|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding",
+      "tags": []
+    },
+    {
+      "trade_id": "f0eb0b02651c",
+      "symbol": "NVDA",
+      "side": "long",
+      "quantity": 7.3699,
+      "entry_price": 203.52999877929688,
+      "entry_time": "2026-07-14T10:05:38.525618+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding",
+      "tags": []
+    },
+    {
+      "trade_id": "41c823b5920e",
+      "symbol": "ETHB",
+      "side": "long",
+      "quantity": 65.7895,
+      "entry_price": 22.799999237060547,
+      "entry_time": "2026-07-14T10:05:40.399161+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "ETHB (score 3.1): Duquesne Family Office (Stanley Druckenmiller) top-4 holding; Duquesne Family Office (Stanley Druckenmiller) top-7 holding",
+      "tags": []
+    }
+  ]
+}

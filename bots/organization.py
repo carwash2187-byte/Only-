@@ -85,7 +85,7 @@ class TradingDesk:
         self.guard = guard or DrawdownGuard(max_daily_loss_pct=self.config.max_daily_loss_pct)
         from bots.copytrader import manual as manual_mod
 
-        self.manual_signals_path = manual_signals_path or manual_mod.DEFAULT_SIGNALS_PATH
+        self.manual_signals_path = manual_signals_path or manual_mod.default_signals_path()
 
     @staticmethod
     def _load_agent() -> QTraderAgent:
@@ -331,15 +331,6 @@ class TradingDesk:
 
 
 def _default_history(symbol: str):
-    import yfinance as yf
+    from bots import marketdata
 
-    candidates = [symbol]
-    compact = symbol.upper().replace("_", "").replace("/", "").replace("-", "")
-    if len(compact) == 6 and compact.isalpha() and compact != symbol.upper():
-        # forex pair like EUR_USD -> yfinance's EURUSD=X
-        candidates.insert(0, f"{compact}=X")
-    for candidate in candidates:
-        df = yf.Ticker(candidate).history(period="6mo")
-        if not df.empty:
-            return df
-    return df
+    return marketdata.get_history(symbol, period="6mo")

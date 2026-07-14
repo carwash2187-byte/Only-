@@ -12,19 +12,19 @@ from __future__ import annotations
 import json
 import os
 from datetime import date
-from typing import Tuple
+from typing import Optional, Tuple
 
-DEFAULT_STATE_PATH = os.path.join("bot_data", "day_state.json")
+from bots.paths import data_path
 
 
 class DrawdownGuard:
     def __init__(
         self,
         max_daily_loss_pct: float = 0.05,
-        state_path: str = DEFAULT_STATE_PATH,
+        state_path: Optional[str] = None,
     ):
         self.max_daily_loss_pct = max_daily_loss_pct
-        self.state_path = state_path
+        self.state_path = state_path or data_path("day_state.json")
 
     def _load(self) -> dict:
         if not os.path.exists(self.state_path):

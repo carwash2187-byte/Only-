@@ -12,12 +12,12 @@ from bots.learning.agent import QTraderAgent
 
 
 def fetch_history(symbol: str, period: str = "2y", interval: str = "1d"):
-    import yfinance as yf
+    from bots import marketdata
 
-    df = yf.Ticker(symbol).history(period=period, interval=interval)
-    if df.empty:
-        raise SystemExit(f"No data returned for {symbol}")
-    return df
+    try:
+        return marketdata.get_history(symbol, period=period, interval=interval)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def main() -> None:

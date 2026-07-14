@@ -128,7 +128,11 @@ def resolve_ticker(issuer: str) -> Optional[str]:
     normalized = _normalize_name(issuer)
     if normalized in mapping:
         return mapping[normalized]
-    # fall back to a prefix match (e.g. "APPLE" vs "APPLE INC")
+    # Prefix fallback (e.g. "TAIWAN SEMICONDUCTOR MANUFAC" vs the full name),
+    # but only for reasonably specific names -- short generic ones like
+    # "ISHARES" would fuzzy-match the wrong fund in a family of hundreds.
+    if len(normalized) < 8:
+        return None
     for name, ticker in mapping.items():
         if name.startswith(normalized) or normalized.startswith(name):
             return ticker

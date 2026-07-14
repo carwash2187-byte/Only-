@@ -108,6 +108,14 @@ Three protections apply automatically to every mirrored call:
    auto-blocks that source. You find out for real whether the influencer's
    calls make money.
 
+## Where the bot's memory lives
+
+All state (trade journal, trained Q-table, paper account, day baseline) sits in
+the directory named by `BOT_DATA_DIR` (default `bot_data/`, git-ignored). The
+committed `paper_state/` directory is the shared cloud paper-trading account:
+run with `BOT_DATA_DIR=paper_state` and commit the changes so the track record
+and everything the bot has learned survive across machines and sessions.
+
 ## Day-trading reality check (US stocks)
 
 The **pattern day trader (PDT) rule**: with less than $25,000 of equity in a
