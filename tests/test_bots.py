@@ -384,6 +384,67 @@ def test_autopilot_flattens_before_close(price_df, tmp_path, monkeypatch):
     assert calls == ["flatten"]
 
 
+def test_buy_bracket_fallback_and_desk_uses_it(price_df, tmp_path, journal):
+    calls = {}
+
+    class BracketBroker(PaperBroker):
+        def buy_bracket(self, symbol, quantity, stop_loss_pct, take_profit_pct):
+            calls["args"] = (symbol, stop_loss_pct, take_profit_pct)
+            return super().buy(symbol, quantity)
+
+    broker = BracketBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(min_copy_score=0, stop_loss_pct=0.015, take_profit_pct=0.03),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    assert [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert calls["args"] == ("DEMO", 0.015, 0.03)
+
+    # base-class fallback: plain broker still works through buy_bracket
+    plain = PaperBroker(
+        starting_cash=1_000, state_path=str(tmp_path / "b.json"),
+        price_overrides={"XYZ": 10.0},
+    )
+    assert plain.buy_bracket("XYZ", 5, 0.015, 0.03).ok
+
+
+def test_reconcile_closes_orphaned_journal_entries(price_df, tmp_path, journal):
+    # journal thinks we hold GONE, but the broker has no such position and no
+    # pending order -> a bracket stop/target must have filled between cycles
+    journal.open_trade("GONE", "long", 10, 100.0, setup="daytrade")
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"GONE": 103.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(min_copy_score=99, max_positions=0),
+    )
+    report = desk.run_once(symbols=["GONE"])
+    reconciled = [a for a in report.actions if "reconciled" in a.reason]
+    assert reconciled, report.describe()
+    record = [t for t in journal.trades.values() if t.symbol == "GONE"][0]
+    assert not record.is_open and record.pnl == pytest.approx(30.0)
+
+
+def test_out_of_sample_backtest(price_df):
+    from bots.learning.backtest import run_backtest
+
+    result = run_backtest(price_df, train_fraction=0.7, episodes=5)
+    assert result["train_bars"] + result["test_bars"] == len(price_df)
+    assert result["test_bars"] < result["train_bars"]
+    assert "edge_vs_buy_hold_pct" in result
+    assert result["edge_vs_buy_hold_pct"] == pytest.approx(
+        result["agent_return_pct"] - result["buy_hold_return_pct"]
+    )
+
+
 def test_market_hours_clock():
     from datetime import datetime
     from zoneinfo import ZoneInfo

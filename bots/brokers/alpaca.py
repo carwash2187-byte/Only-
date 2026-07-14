@@ -104,5 +104,62 @@ class AlpacaBroker(Broker):
     def buy(self, symbol: str, quantity: float) -> OrderResult:
         return self._order(symbol, quantity, "buy")
 
+    def buy_bracket(
+        self, symbol: str, quantity: float, stop_loss_pct: float, take_profit_pct: float
+    ) -> OrderResult:
+        """Entry with exchange-side stop-loss + take-profit (OCO bracket).
+
+        Alpaca gotchas handled here: brackets require whole-share quantities
+        (fractional falls back to a plain buy plus the desk's polled stops),
+        and stop/limit prices must be penny-rounded or the order is rejected.
+        """
+        whole = int(quantity)
+        if whole < 1:
+            return self.buy(symbol, quantity)
+        try:
+            ref = self.price(symbol)
+        except Exception as exc:
+            return OrderResult(False, symbol.upper(), "buy", quantity, error=str(exc))
+        payload = {
+            "symbol": symbol.upper(),
+            "qty": str(whole),
+            "side": "buy",
+            "type": "market",
+            "time_in_force": "day",
+            "order_class": "bracket",
+            "take_profit": {"limit_price": str(round(ref * (1 + take_profit_pct), 2))},
+            "stop_loss": {"stop_price": str(round(ref * (1 - stop_loss_pct), 2))},
+        }
+        try:
+            resp = requests.post(
+                self.base_url + "/v2/orders",
+                headers=self._headers(),
+                json=payload,
+                timeout=TIMEOUT,
+            )
+            resp.raise_for_status()
+            order = resp.json()
+            return OrderResult(True, symbol.upper(), "buy", whole, order_id=order.get("id"))
+        except requests.RequestException as exc:
+            detail = ""
+            if getattr(exc, "response", None) is not None:
+                detail = f" ({exc.response.text[:200]})"
+            return OrderResult(False, symbol.upper(), "buy", whole, error=str(exc) + detail)
+
+    def _cancel_open_orders(self, symbol: str) -> None:
+        # Bracket legs hold the shares; selling without canceling them first
+        # gets rejected with "insufficient qty available".
+        try:
+            orders = self._get(self.base_url, f"/v2/orders?status=open&symbols={symbol.upper()}")
+            for order in orders:
+                requests.delete(
+                    f"{self.base_url}/v2/orders/{order['id']}",
+                    headers=self._headers(),
+                    timeout=TIMEOUT,
+                )
+        except requests.RequestException:
+            pass
+
     def sell(self, symbol: str, quantity: float) -> OrderResult:
+        self._cancel_open_orders(symbol)
         return self._order(symbol, quantity, "sell")

@@ -53,6 +53,18 @@ class Broker(ABC):
                 pass
         return total
 
+    def buy_bracket(
+        self, symbol: str, quantity: float, stop_loss_pct: float, take_profit_pct: float
+    ) -> OrderResult:
+        """Market buy with an exchange-side stop-loss and take-profit attached.
+
+        On brokers that support it (Alpaca), protection is enforced by the
+        exchange the moment the entry fills -- no gap between desk cycles.
+        Default falls back to a plain buy; the desk's polled stop/target
+        checks remain the safety net there.
+        """
+        return self.buy(symbol, quantity)
+
     def has_pending_order(self, symbol: str) -> bool:
         """True if symbol has an order placed but not yet filled.
 

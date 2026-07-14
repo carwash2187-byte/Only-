@@ -60,6 +60,25 @@ you feed them in. Trust the journal, not the marketing.
   and match the funded-account rules discussed (3%/5% limits get configured
   per account when one is connected).
 
+## Session 2 findings (bracket orders + honest testing)
+
+- **Exchange-side stop losses**: polling stops every 5 minutes leaves gaps; the
+  professional pattern is a [bracket order](https://docs.alpaca.markets/us/docs/orders-at-alpaca) —
+  entry + stop-loss + take-profit submitted together, enforced by the broker
+  the instant the entry fills, one leg auto-cancels the other. Gotchas from
+  [Alpaca's docs](https://alpaca.markets/learn/placing-bracket-orders): whole
+  shares only (no fractional brackets), penny-rounded prices, and in fast
+  markets both legs can fill before cancellation. Implemented in
+  `AlpacaBroker.buy_bracket`; the desk reconciles journal entries when a
+  bracket leg fires between cycles.
+- **Out-of-sample backtesting** (`python -m bots backtest`): train on 70% of
+  history, test on the 30% the agent never saw — the same walk-forward
+  principle behind freqtrade backtesting / vectorbt / backtesting.py. First
+  honest results (5m bars, 1 month): SPY LOST to buy-hold by 1.8%, NVDA LOST
+  by 12.0%, TSLA BEAT by 1.2%. **Conclusion: the edge is not proven yet.**
+  In-sample training numbers flatter; this is the number that gates real
+  money, and right now it says keep training.
+
 ## What a "trained enough" bot looks like
 
 Judge on the journal, nothing else: 25+ closed trades, positive average

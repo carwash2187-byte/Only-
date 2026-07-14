@@ -108,6 +108,21 @@ def cmd_trade(args) -> None:
     print(report.describe())
 
 
+def cmd_backtest(args) -> None:
+    from bots.learning.backtest import run_backtest
+    from bots.learning.train import fetch_history
+
+    df = fetch_history(args.symbol, args.period, args.interval)
+    r = run_backtest(df, episodes=args.episodes)
+    verdict = "BEAT" if r["edge_vs_buy_hold_pct"] > 0 else "LOST TO"
+    print(
+        f"{args.symbol} ({args.interval}) out-of-sample: {r['trades']} trades, "
+        f"win rate {r['win_rate']:.0%}, agent {r['agent_return_pct']:+.2f}% vs "
+        f"buy-hold {r['buy_hold_return_pct']:+.2f}% -> {verdict} by "
+        f"{abs(r['edge_vs_buy_hold_pct']):.2f}%"
+    )
+
+
 def cmd_journal(_args) -> None:
     from bots.journal import TradeJournal
 
@@ -202,6 +217,12 @@ def main() -> None:
 
     sub.add_parser("journal", help="show performance and lessons learned")
 
+    p_bt = sub.add_parser("backtest", help="honest out-of-sample test on unseen data")
+    p_bt.add_argument("--symbol", default="SPY")
+    p_bt.add_argument("--period", default="3mo")
+    p_bt.add_argument("--interval", default="1d")
+    p_bt.add_argument("--episodes", type=int, default=40)
+
     p_auto = sub.add_parser("autopilot", help="run desk cycles on a loop, hands-free")
     p_auto.add_argument("--broker", default="paper",
                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda", "tradelocker", "mt5"])
@@ -234,6 +255,7 @@ def main() -> None:
         "signals": cmd_signals,
         "trade": cmd_trade,
         "journal": cmd_journal,
+        "backtest": cmd_backtest,
         "autopilot": cmd_autopilot,
         "mirror": cmd_mirror,
     }[args.command](args)

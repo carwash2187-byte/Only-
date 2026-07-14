@@ -189,6 +189,11 @@ class TradingDesk:
                 )
                 return report
 
+        # 0. Reconcile: journal entries whose position vanished at the broker
+        #    (an exchange-side bracket stop/target filled between cycles, or a
+        #    manual close in the broker app) get closed at the current price.
+        self._reconcile_closed_positions(positions, report)
+
         # 1. Manage existing positions first (risk desk owns exits), honoring
         #    any manual mirror "sell" calls you recorded.
         manual_sells = self._manual_sell_symbols()
@@ -259,6 +264,28 @@ class TradingDesk:
                 symbol, quantity, report, force_exit=True, force_exit_reason=reason
             )
         return report
+
+    def _reconcile_closed_positions(self, positions: Dict[str, float], report: DeskReport) -> None:
+        for record in list(self.journal.trades.values()):
+            if not record.is_open or record.symbol in positions:
+                continue
+            if self.broker.has_pending_order(record.symbol):
+                continue  # entry order not filled yet, not a closed position
+            try:
+                price = self.broker.price(record.symbol)
+            except Exception:
+                continue
+            closed = self.journal.close_trade(
+                record.trade_id, price,
+                notes="reconciled: closed at broker (bracket stop/target or manual)",
+            )
+            report.actions.append(
+                DeskAction(
+                    "sell", record.symbol,
+                    f"bracket/manual exit reconciled | realized PnL {closed.pnl:+.2f}",
+                    quantity=record.quantity,
+                )
+            )
 
     def _manual_sell_symbols(self) -> set:
         from bots.copytrader import manual as manual_mod
@@ -370,11 +397,13 @@ class TradingDesk:
         if quantity <= 0:
             return DeskAction("skip", symbol, "risk desk: no budget available")
 
-        result = self.broker.buy(symbol, quantity)
+        result = self.broker.buy_bracket(
+            symbol, quantity, cfg.stop_loss_pct, cfg.take_profit_pct
+        )
         if result.ok:
             self.journal.open_trade(
-                symbol, "long", quantity, result.fill_price or price, setup=setup,
-                notes=reason,
+                symbol, "long", result.quantity or quantity,
+                result.fill_price or price, setup=setup, notes=reason,
             )
             if manual:
                 from bots.copytrader import manual as manual_mod
