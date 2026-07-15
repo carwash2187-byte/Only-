@@ -42,6 +42,11 @@ class TradeRecord:
     pnl_pct: Optional[float] = None
     notes: str = ""
     tags: List[str] = field(default_factory=list)
+    # per-trade stop distance (fraction of entry). None -> the desk's fixed
+    # config stop applies. Set by ATR-based sizing so volatile instruments
+    # (gold) get wider stops than calm ones (SPY), with size scaled down to
+    # keep dollar risk identical.
+    stop_pct: Optional[float] = None
 
     @property
     def is_open(self) -> bool:
@@ -83,6 +88,7 @@ class TradeJournal:
         entry_price: float,
         setup: str,
         notes: str = "",
+        stop_pct: Optional[float] = None,
     ) -> TradeRecord:
         record = TradeRecord(
             trade_id=uuid.uuid4().hex[:12],
@@ -93,6 +99,7 @@ class TradeJournal:
             entry_time=_utcnow(),
             setup=setup,
             notes=notes,
+            stop_pct=stop_pct,
         )
         self.trades[record.trade_id] = record
         self.save()
@@ -195,6 +202,33 @@ class TradeJournal:
             for t in self.trades.values()
             if t.entry_time.startswith(today) and "admin" not in t.tags
         )
+
+    def consecutive_losses_today(self) -> int:
+        """Trailing streak of losing closed trades today (UTC), newest first.
+
+        The "2-loss rule": after consecutive losses, judgment (human or
+        model-driven) degrades and revenge-trading risk spikes -- the desk
+        stops opening trades for the day once the streak hits the cap.
+        Admin-tagged records don't count.
+        """
+        today = datetime.now(timezone.utc).date().isoformat()
+        closed_today = sorted(
+            (
+                t for t in self.trades.values()
+                if not t.is_open and t.pnl is not None
+                and (t.exit_time or "").startswith(today)
+                and "admin" not in t.tags
+            ),
+            key=lambda t: t.exit_time or "",
+            reverse=True,
+        )
+        streak = 0
+        for t in closed_today:
+            if t.pnl < 0:
+                streak += 1
+            else:
+                break
+        return streak
 
     def day_trades_last_5_days(self) -> int:
         """Count same-day round trips in the last 5 calendar days (PDT guard)."""

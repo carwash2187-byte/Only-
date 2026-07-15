@@ -34,6 +34,16 @@ def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
     return (100 - 100 / (1 + rs)).fillna(50.0)
 
 
+class _FeatureCache:
+    """Plain holder so the cached frame never participates in pandas'
+    attrs-equality checks (object identity compares to a clean bool)."""
+
+    __slots__ = ("frame",)
+
+    def __init__(self, frame: pd.DataFrame):
+        self.frame = frame
+
+
 def _is_intraday(df: pd.DataFrame) -> bool:
     idx = df.index
     if not isinstance(idx, pd.DatetimeIndex) or len(idx) < 3:
@@ -51,9 +61,13 @@ def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
     supports (see docs/DAY-TRADING-NOTES.md): session VWAP side, opening
     range position, and session phase.
     """
+    # The cache is wrapped in a plain holder object rather than stored as a
+    # bare DataFrame: pandas compares df.attrs dicts during concat/finalize,
+    # and a DataFrame value there raises "truth value is ambiguous" in ANY
+    # later pd.concat involving this frame.
     cached = df.attrs.get("_qstate_features")
-    if cached is not None and len(cached) == len(df):
-        return cached
+    if isinstance(cached, _FeatureCache) and len(cached.frame) == len(df):
+        return cached.frame
 
     close = df["close"]
     fast = close.rolling(10).mean()
@@ -110,7 +124,7 @@ def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
             default="mid",
         )
 
-    df.attrs["_qstate_features"] = features
+    df.attrs["_qstate_features"] = _FeatureCache(features)
     return features
 
 

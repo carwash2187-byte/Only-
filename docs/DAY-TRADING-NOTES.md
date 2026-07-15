@@ -154,3 +154,31 @@ with `max_per_correlation_group=2` (default on).
 **Transcript access note:** YouTube blocks caption fetches from datacenter
 IPs -- education-channel discovery works from this environment (titles/RSS),
 full transcripts need a residential connection.
+
+## Session 5 findings (volatility-adaptive risk + psychology guards)
+
+**ATR (volatility-adjusted) stops/sizing:** fixed % stops treat gold and SPY
+identically -- wrong: gold's daily range is ~5x wider. Standard practice is
+stop = 1.5x ATR(14) for day trades, with position size = dollar risk / stop
+distance, so volatile instruments automatically get wider stops AND smaller
+size (same dollars at risk everywhere).
+([LuxAlgo](https://www.luxalgo.com/blog/how-to-use-atr-for-volatility-based-stop-losses/),
+[QuantifiedStrategies](https://www.quantifiedstrategies.com/volatility-based-position-sizing/))
+Implemented: `atr_stops` (on in day-trading mode), per-trade stop stored on
+the journal record, 1:2 R:R shape preserved, clamped 0.3%-5%.
+
+**Revenge trading / the 2-loss rule:** after consecutive losses, judgment is
+measurably impaired and the urge to "win it back" produces oversized,
+low-quality trades. Standard pro rule: 2 straight losses = done for the day.
+([TradeZella](https://www.tradezella.com/blog/revenge-trading),
+[CrossTrade](https://crosstrade.io/learn/trading-psychology/revenge-trading))
+Implemented: `max_consecutive_losses` (2 in day-trading mode, 3 default);
+the desk stops opening trades for the day once the streak hits the cap --
+a winner resets it. A bot doesn't feel revenge, but a model having a bad
+regime day produces the same loss streak; stopping is right either way.
+
+**Bug found during implementation (worth recording):** the agent's feature
+cache stored a DataFrame inside df.attrs; pandas compares attrs dicts during
+any later pd.concat and a DataFrame there raises "truth value is ambiguous".
+Fixed with a plain holder object + concat-free ATR. Lesson: hidden state on
+shared data structures bites later, far from where it was planted.

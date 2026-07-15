@@ -47,6 +47,8 @@ class DeskConfig:
     news_currencies: tuple = ("USD",)
     max_per_correlation_group: int = 2  # cap positions per correlated cluster
     breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
+    max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
+    atr_stops: bool = False  # volatility-adaptive stops: 1.5x ATR(14) instead of fixed %
 
 
 # Correlated clusters: N positions inside one cluster are effectively ONE
@@ -60,6 +62,33 @@ CORRELATION_GROUPS = {
     "oil": {"CL=F", "USO", "XLE"},
     "usd-fx": {"EURUSD", "GBPUSD", "USDJPY", "EUR_USD", "GBP_USD", "USD_JPY"},
 }
+
+
+def atr_pct(df, period: int = 14) -> Optional[float]:
+    """ATR(14) as a fraction of the last close, or None if the data can't
+    support it (missing high/low columns or too few bars)."""
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if "high" not in cols or "low" not in cols or "close" not in cols:
+            return None
+        high, low, close = df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        if len(close) < period + 1:
+            return None
+        prev_close = close.shift(1)
+        import numpy as np
+
+        # element-wise max without pd.concat (concat compares df.attrs
+        # across frames, which breaks on frames carrying non-trivial attrs)
+        true_range = np.maximum(
+            high - low, np.maximum((high - prev_close).abs(), (low - prev_close).abs())
+        )
+        atr = float(true_range.rolling(period).mean().iloc[-1])
+        last = float(close.iloc[-1])
+        if not (atr > 0 and last > 0):
+            return None
+        return atr / last
+    except Exception:
+        return None
 
 
 def correlation_group(symbol: str) -> Optional[str]:
@@ -245,6 +274,17 @@ class TradingDesk:
             if news_blocked:
                 return report
 
+        # 2c. Loss-streak rule: consecutive losses today mean something is
+        #     off (regime shift, bad model day) -- stop entering, keep exits.
+        if cfg.max_consecutive_losses > 0:
+            streak = self.journal.consecutive_losses_today()
+            if streak >= cfg.max_consecutive_losses:
+                report.notes.append(
+                    f"[risk] loss-streak rule: {streak} consecutive losses today "
+                    f"(cap {cfg.max_consecutive_losses}) -- no new entries until tomorrow"
+                )
+                return report
+
         # 3. New entries from research + quant + committee, filtered by lessons.
         # A "slot" is used by a filled position OR a trade the journal still
         # considers open (which includes orders placed but not yet filled --
@@ -376,22 +416,26 @@ class TradingDesk:
             reason = force_exit_reason
         elif record:
             change = price / record.entry_price - 1.0
+            # ATR-sized trades carry their own stop distance; 1:2 R:R shape
+            # is preserved by scaling the target with it.
+            stop_pct = record.stop_pct or cfg.stop_loss_pct
+            target_pct = 2.0 * record.stop_pct if record.stop_pct else cfg.take_profit_pct
             breakeven_armed = "breakeven-armed" in record.tags
             # Once the trade is up 1R (one stop-distance), the worst case
             # becomes "out at entry" instead of a loss -- the trade is
             # risk-free from here (standard professional trade management).
-            if cfg.breakeven_at_1r and not breakeven_armed and change >= cfg.stop_loss_pct:
+            if cfg.breakeven_at_1r and not breakeven_armed and change >= stop_pct:
                 record.tags.append("breakeven-armed")
                 self.journal.save()
                 breakeven_armed = True
                 report.notes.append(
                     f"[manage] {symbol} reached +1R ({change:+.1%}) -- stop moved to breakeven"
                 )
-            if change <= -cfg.stop_loss_pct:
+            if change <= -stop_pct:
                 reason = f"stop loss hit ({change:+.1%})"
             elif breakeven_armed and change <= 0.0:
                 reason = f"breakeven stop hit (was +1R, now {change:+.1%}) -- risk-free exit"
-            elif change >= cfg.take_profit_pct:
+            elif change >= target_pct:
                 reason = f"take profit hit ({change:+.1%})"
         if reason is None:
             try:
@@ -432,6 +476,7 @@ class TradingDesk:
         # mirror calls carry the caller's setup tag so the journal can grade
         # that human's real performance separately.
         setup_suffix = ""
+        symbol_atr = None
         try:
             df = self.history_fn(symbol)
             vote = self.agent.signal(df, holding=False)
@@ -439,6 +484,8 @@ class TradingDesk:
                 setup_suffix = ":" + self.agent.current_state(df, holding=False)
             if vote == "sell" and not manual:
                 return DeskAction("skip", symbol, "quant desk: RL agent is bearish here")
+            if cfg.atr_stops:
+                symbol_atr = atr_pct(df)
         except Exception:
             pass
 
@@ -462,20 +509,29 @@ class TradingDesk:
 
         # Position sizing, scalper style: risk at most risk_per_trade_pct of
         # equity if the stop-loss gets hit, and never more than
-        # max_position_pct of equity in one name regardless.
-        risk_budget = equity * cfg.risk_per_trade_pct / max(cfg.stop_loss_pct, 1e-6)
+        # max_position_pct of equity in one name regardless. With atr_stops
+        # on, the stop distance adapts to the instrument's volatility
+        # (1.5x ATR14, clamped) and the size shrinks in proportion, so a
+        # gold trade and an SPY trade risk the same dollars.
+        stop_pct = cfg.stop_loss_pct
+        take_profit_pct = cfg.take_profit_pct
+        record_stop = None
+        if cfg.atr_stops and symbol_atr:
+            stop_pct = min(max(1.5 * symbol_atr, 0.003), 0.05)
+            take_profit_pct = 2.0 * stop_pct  # keep the 1:2 risk:reward shape
+            record_stop = stop_pct
+        risk_budget = equity * cfg.risk_per_trade_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0
         if quantity <= 0:
             return DeskAction("skip", symbol, "risk desk: no budget available")
 
-        result = self.broker.buy_bracket(
-            symbol, quantity, cfg.stop_loss_pct, cfg.take_profit_pct
-        )
+        result = self.broker.buy_bracket(symbol, quantity, stop_pct, take_profit_pct)
         if result.ok:
             self.journal.open_trade(
                 symbol, "long", result.quantity or quantity,
                 result.fill_price or price, setup=setup, notes=reason,
+                stop_pct=record_stop,
             )
             if manual:
                 from bots.copytrader import manual as manual_mod

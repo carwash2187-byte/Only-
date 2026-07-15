@@ -151,6 +151,8 @@ def cmd_autopilot(args) -> None:
             stop_loss_pct=0.015,
             take_profit_pct=0.03,
             max_trades_per_day=10,
+            max_consecutive_losses=2,
+            atr_stops=True,
         )
     else:
         config = DeskConfig(

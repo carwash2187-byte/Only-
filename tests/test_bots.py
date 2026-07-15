@@ -639,3 +639,71 @@ def test_breakeven_stop_after_1r(price_df, tmp_path, journal):
     assert sells and "breakeven" in sells[0].reason, report2.describe()
     closed = journal.trades[record.trade_id]
     assert not closed.is_open and closed.pnl == pytest.approx(-1.0, abs=0.01)
+
+
+def test_loss_streak_rule_blocks_entries(price_df, tmp_path, journal):
+    for i in range(3):
+        t = journal.open_trade(f"L{i}", "long", 1, 100.0, setup="s")
+        journal.close_trade(t.trade_id, 99.0)  # 3 straight losses today
+    assert journal.consecutive_losses_today() == 3
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_consecutive_losses=3),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    assert not [a for a in report.actions if a.action == "buy"]
+    assert any("loss-streak" in n for n in report.notes)
+
+    # a winner resets the streak
+    w = journal.open_trade("W", "long", 1, 100.0, setup="s")
+    journal.close_trade(w.trade_id, 105.0)
+    assert journal.consecutive_losses_today() == 0
+
+
+def test_atr_stops_size_by_volatility(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    def make_ohlc(vol):
+        rng = np.random.default_rng(9)
+        close = 100 + np.cumsum(rng.normal(0, vol, 100))
+        return pd.DataFrame({
+            "high": close + vol * 2, "low": close - vol * 2, "close": close,
+        })
+
+    calm, wild = make_ohlc(0.05), make_ohlc(2.0)
+
+    from bots.organization import atr_pct
+
+    calm_atr, wild_atr = atr_pct(calm), atr_pct(wild)
+    assert calm_atr and wild_atr and wild_atr > calm_atr * 5
+
+    # desk sizing: wild instrument gets a wider stop and a smaller position
+    quantities = {}
+    for name, df in (("CALM", calm), ("WILD", wild)):
+        broker = PaperBroker(
+            starting_cash=100_000,
+            state_path=str(tmp_path / f"acct-{name}.json"),
+            price_overrides={name: 100.0},
+        )
+        desk = make_desk(
+            tmp_path, broker, journal, df,
+            config=DeskConfig(news_blackout=False, min_copy_score=0,
+                              atr_stops=True, max_per_correlation_group=0,
+                              max_position_pct=1.0),
+        )
+        report = desk.run_once(symbols=[name])
+        buys = [a for a in report.actions if a.action == "buy" and a.ok]
+        if buys:
+            quantities[name] = buys[0].quantity
+            record = [t for t in journal.trades.values() if t.symbol == name][-1]
+            assert record.stop_pct is not None
+    if "CALM" in quantities and "WILD" in quantities:
+        assert quantities["WILD"] < quantities["CALM"]
