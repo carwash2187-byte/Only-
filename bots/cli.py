@@ -140,8 +140,12 @@ def cmd_autopilot(args) -> None:
             f"Broker '{args.broker}' trades REAL money. "
             "Re-run with --live-i-understand-the-risk to proceed."
         )
-    timeframe = args.timeframe or ("5m" if args.day_trading else "1d")
-    if args.day_trading:
+    timeframe = args.timeframe or ("5m" if (args.day_trading or args.funded) else "1d")
+    if args.funded:
+        from bots.organization import funded_account_config
+
+        config = funded_account_config(use_llm_committee=args.llm_committee, timeframe=timeframe)
+    elif args.day_trading:
         # Scalper-shaped defaults (see docs/DAY-TRADING-NOTES.md): tight stop,
         # 1:2 risk:reward, capped trade count, intraday candles.
         config = DeskConfig(
@@ -298,6 +302,9 @@ def main() -> None:
     p_auto.add_argument("--live-i-understand-the-risk", action="store_true")
     p_auto.add_argument("--day-trading", action="store_true",
                         help="use intraday candles and flatten all positions before close")
+    p_auto.add_argument("--funded", action="store_true",
+                        help="funded-account rules: 3%% daily loss limit, 5%% max total drawdown, "
+                             "day-trading+ATR+correlation+news-blackout all on")
     p_auto.add_argument("--timeframe", default=None,
                         help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
     p_auto.add_argument("--market", default=None, choices=["stocks", "forex", "crypto"],

@@ -57,3 +57,47 @@ class DrawdownGuard:
                 f"{self.max_daily_loss_pct:.0%} -- no new trades until tomorrow"
             )
         return False, f"daily drawdown {loss_pct:+.1%} (limit {self.max_daily_loss_pct:.0%})"
+
+
+class MaxDrawdownGuard:
+    """The other funded-account limit: total drawdown from the account's
+    all-time peak equity (not reset daily like DrawdownGuard). Breaching
+    this is typically permanent account termination at real prop firms --
+    the guard halts ALL new entries once breached, not just for the day,
+    until manually cleared (reset the state file after reviewing what
+    happened)."""
+
+    def __init__(self, max_total_drawdown_pct: float = 0.05, state_path: Optional[str] = None):
+        self.max_total_drawdown_pct = max_total_drawdown_pct
+        self.state_path = state_path or data_path("max_drawdown_state.json")
+
+    def _load(self) -> dict:
+        if not os.path.exists(self.state_path):
+            return {}
+        with open(self.state_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def _save(self, state: dict) -> None:
+        os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)
+        with open(self.state_path, "w", encoding="utf-8") as fh:
+            json.dump(state, fh, indent=2)
+
+    def check(self, equity: float) -> Tuple[bool, str]:
+        state = self._load()
+        if state.get("breached"):
+            return True, (
+                f"ACCOUNT HALTED: max drawdown of {self.max_total_drawdown_pct:.0%} was "
+                f"breached at peak {state['peak_equity']:.2f} -- clear "
+                f"{os.path.basename(self.state_path)} after reviewing what happened"
+            )
+        peak = max(float(state.get("peak_equity", equity)), equity)
+        drawdown = 1.0 - equity / peak if peak > 0 else 0.0
+        breached = drawdown >= self.max_total_drawdown_pct
+        self._save({"peak_equity": peak, "breached": breached})
+        if breached:
+            return True, (
+                f"ACCOUNT HALTED: total drawdown {drawdown:.1%} from peak {peak:.2f} "
+                f"breached the {self.max_total_drawdown_pct:.0%} max -- this is how "
+                f"funded accounts get terminated, no new trades until manually reviewed"
+            )
+        return False, f"total drawdown from peak: {drawdown:.1%} (limit {self.max_total_drawdown_pct:.0%})"

@@ -25,7 +25,7 @@ from typing import Callable, Dict, List, Optional
 from bots.brokers import Broker, PaperBroker
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
-from bots.risk import DrawdownGuard
+from bots.risk import DrawdownGuard, MaxDrawdownGuard
 
 
 @dataclass
@@ -49,6 +49,30 @@ class DeskConfig:
     breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
     max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
     atr_stops: bool = False  # volatility-adaptive stops: 1.5x ATR(14) instead of fixed %
+    max_total_drawdown_pct: float = 0.0  # 0 = off; e.g. 0.05 = funded-account 5% max loss limit
+
+
+def funded_account_config(**overrides) -> "DeskConfig":
+    """Preset matching a typical funded/prop-firm rule sheet: 3% daily loss
+    limit, 5% max total drawdown, day-trading with ATR stops and the
+    loss-streak/news/correlation guards all on. Pass overrides to match
+    your specific firm's numbers exactly."""
+    base = dict(
+        max_daily_loss_pct=0.03,
+        max_total_drawdown_pct=0.05,
+        day_trading=True,
+        timeframe="5m",
+        stop_loss_pct=0.015,
+        take_profit_pct=0.03,
+        max_trades_per_day=10,
+        max_consecutive_losses=2,
+        atr_stops=True,
+        max_per_correlation_group=2,
+        news_blackout=True,
+        breakeven_at_1r=True,
+    )
+    base.update(overrides)
+    return DeskConfig(**base)
 
 
 # Correlated clusters: N positions inside one cluster are effectively ONE
@@ -132,6 +156,7 @@ class TradingDesk:
         history_fn: Optional[Callable[[str], "object"]] = None,
         guard: Optional[DrawdownGuard] = None,
         manual_signals_path: Optional[str] = None,
+        max_drawdown_guard: Optional[MaxDrawdownGuard] = None,
     ):
         self.broker = broker or PaperBroker()
         self.journal = journal or TradeJournal()
@@ -151,6 +176,14 @@ class TradingDesk:
         self.guard = guard or DrawdownGuard(
             max_daily_loss_pct=self.config.max_daily_loss_pct,
             state_path=data_path(f"day_state_{self.broker.name}.json"),
+        )
+        self.max_drawdown_guard = max_drawdown_guard or (
+            MaxDrawdownGuard(
+                max_total_drawdown_pct=self.config.max_total_drawdown_pct,
+                state_path=data_path(f"max_drawdown_state_{self.broker.name}.json"),
+            )
+            if self.config.max_total_drawdown_pct > 0
+            else None
         )
         from bots.copytrader import manual as manual_mod
 
@@ -260,6 +293,12 @@ class TradingDesk:
         report.notes.append(f"[risk] {guard_msg}")
         if halted:
             return report
+
+        if self.max_drawdown_guard is not None:
+            max_dd_halted, max_dd_msg = self.max_drawdown_guard.check(self.broker.equity())
+            report.notes.append(f"[risk] {max_dd_msg}")
+            if max_dd_halted:
+                return report
 
         # 2b. News blackout: high-impact releases (NFP/CPI/FOMC) blow spreads
         #     out and are hard-prohibited windows on most funded accounts.

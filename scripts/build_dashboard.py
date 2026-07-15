@@ -49,6 +49,51 @@ def performance_metrics(closed_trades: list) -> dict:
     }
 
 
+def equity_curve_svg(closed_trades: list, start_equity: float, current_equity: float,
+                     width: int = 640, height: int = 160) -> str:
+    """Line chart of cumulative account equity over time, built from closed
+    trades in order, ending at the live current equity (including whatever
+    is still open right now)."""
+    ordered = sorted(closed_trades, key=lambda t: t.get("exit_time") or "")
+    points = [start_equity]
+    labels = ["start"]
+    running = start_equity
+    for t in ordered:
+        running += t["pnl"] or 0.0
+        points.append(running)
+        labels.append((t.get("exit_time") or "")[:16].replace("T", " "))
+    points.append(current_equity)
+    labels.append("now")
+
+    lo, hi = min(points), max(points)
+    pad = (hi - lo) * 0.1 or max(hi * 0.02, 1.0)
+    lo, hi = lo - pad, hi + pad
+    margin = 8
+    n = len(points)
+
+    def xy(i: int, v: float):
+        x = margin + (width - 2 * margin) * (i / max(n - 1, 1))
+        y = margin + (height - 2 * margin) * (1 - (v - lo) / max(hi - lo, 1e-9))
+        return x, y
+
+    coords = [xy(i, v) for i, v in enumerate(points)]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
+    area = f"{margin},{height - margin} " + line + f" {width - margin},{height - margin}"
+    trend = "gain" if points[-1] >= points[0] else "loss"
+    last_x, last_y = coords[-1]
+    baseline_y = xy(0, start_equity)[1]
+
+    return f"""
+    <svg viewBox="0 0 {width} {height}" class="equity-chart chart-{trend}"
+         role="img" aria-label="Account equity over time, {fmt_pct((current_equity/start_equity-1)*100 if start_equity else 0)} since start">
+      <line x1="{margin}" y1="{baseline_y:.1f}" x2="{width - margin}" y2="{baseline_y:.1f}"
+            class="chart-baseline" />
+      <polygon points="{area}" class="chart-area" />
+      <polyline points="{line}" class="chart-line" />
+      <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3.5" class="chart-dot" />
+    </svg>"""
+
+
 def load_account():
     """(cash, positions, broker_label, day_state_filename). Prefers the live
     Alpaca paper account when credentials are configured; falls back to the
@@ -198,6 +243,8 @@ def build() -> str:
     verdict_count = len(closed_trades)
     verdict_pct = min(100, round(verdict_count / VERDICT_TARGET * 100))
 
+    chart_svg = equity_curve_svg(closed_trades, start_equity, equity)
+
     metrics = performance_metrics(closed_trades)
     if metrics:
         pf = metrics["profit_factor"]
@@ -229,6 +276,7 @@ def build() -> str:
         verdict_target=VERDICT_TARGET,
         verdict_pct=verdict_pct,
         metrics_html=metrics_html,
+        chart_svg=chart_svg,
     )
 
 
@@ -370,6 +418,27 @@ h1 {{
 .hero-delta.gain, .num.gain {{ color: var(--gain); }}
 .hero-delta.loss, .num.loss {{ color: var(--loss); }}
 .hero-delta.flat, .num.flat {{ color: var(--ink-soft); }}
+
+.equity-chart {{
+  width: 100%;
+  height: auto;
+  margin-top: 0.9rem;
+  overflow: visible;
+}}
+.chart-baseline {{ stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }}
+.chart-area {{ fill: var(--accent); opacity: 0.08; stroke: none; }}
+.chart-line {{ fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }}
+.chart-dot {{ fill: var(--accent); }}
+.chart-gain .chart-area {{ fill: var(--gain); }}
+.chart-gain .chart-line {{ stroke: var(--gain); }}
+.chart-gain .chart-dot {{ fill: var(--gain); }}
+.chart-loss .chart-area {{ fill: var(--loss); }}
+.chart-loss .chart-line {{ stroke: var(--loss); }}
+.chart-loss .chart-dot {{ fill: var(--loss); }}
+@media (prefers-reduced-motion: no-preference) {{
+  .chart-line {{ stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw-line 1.1s ease-out forwards; }}
+}}
+@keyframes draw-line {{ to {{ stroke-dashoffset: 0; }} }}
 
 .stat-grid {{
   display: grid;
@@ -555,6 +624,7 @@ footer strong {{ color: var(--ink); }}
     <div class="hero-label">Account equity</div>
     <div class="hero-value">{equity}</div>
     <div class="hero-delta {trend_class}">{change_s} ({change_pct}) since trial start</div>
+    {chart_svg}
   </div>
 
   <div class="stat-grid">

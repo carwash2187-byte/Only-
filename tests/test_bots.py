@@ -707,3 +707,52 @@ def test_atr_stops_size_by_volatility(tmp_path, journal):
             assert record.stop_pct is not None
     if "CALM" in quantities and "WILD" in quantities:
         assert quantities["WILD"] < quantities["CALM"]
+
+
+def test_max_drawdown_guard_halts_and_stays_halted(tmp_path):
+    from bots.risk import MaxDrawdownGuard
+
+    guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=str(tmp_path / "dd.json"))
+    assert guard.check(10_000)[0] is False  # peak = 10000
+    assert guard.check(10_500)[0] is False  # new peak = 10500, no drawdown
+    halted, msg = guard.check(9_900)  # down 5.7% from peak 10500 -> breach
+    assert halted and "HALTED" in msg
+    # stays halted even if equity recovers -- funded accounts don't un-terminate
+    still_halted, _ = guard.check(10_600)
+    assert still_halted
+
+
+def test_funded_account_config_matches_screenshot_numbers():
+    from bots.organization import funded_account_config
+
+    cfg = funded_account_config()
+    assert cfg.max_daily_loss_pct == 0.03
+    assert cfg.max_total_drawdown_pct == 0.05
+    assert cfg.day_trading and cfg.atr_stops and cfg.news_blackout
+
+
+def test_desk_halts_on_total_drawdown_breach(price_df, tmp_path, journal):
+    from bots.risk import MaxDrawdownGuard
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    dd_guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=str(tmp_path / "dd.json"))
+    dd_guard.check(10_000)  # establish peak
+    dd_guard.check(9_400)  # pre-breach the guard directly (down 6%)
+
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_total_drawdown_pct=0.05),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=str(tmp_path / "manual.json"),
+        max_drawdown_guard=dd_guard,
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    assert not [a for a in report.actions if a.action == "buy"]
+    assert any("HALTED" in n for n in report.notes)

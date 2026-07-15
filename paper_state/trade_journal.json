@@ -708,12 +708,14 @@
       "entry_price": 64952.0,
       "entry_time": "2026-07-15T06:21:42.271146+00:00",
       "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
-      "tags": [],
+      "exit_price": 64952.0,
+      "exit_time": "2026-07-15T06:31:20.916194+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "user watchlist | account reset to $5,000 for funded-account trial; position never carried real fill against new balance",
+      "tags": [
+        "admin"
+      ],
       "stop_pct": 0.003
     },
     {
@@ -723,6 +725,40 @@
       "quantity": 0.7957,
       "entry_price": 1885.22998046875,
       "entry_time": "2026-07-15T06:21:44.173446+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 1885.22998046875,
+      "exit_time": "2026-07-15T06:31:20.918380+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "user watchlist | account reset to $5,000 for funded-account trial; position never carried real fill against new balance",
+      "tags": [
+        "admin"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "24b60daa6524",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0116,
+      "entry_price": 64929.921875,
+      "entry_time": "2026-07-15T06:31:27.874014+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "3f7bfd7d692b",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.3982,
+      "entry_price": 1883.6099853515625,
+      "entry_time": "2026-07-15T06:31:29.843691+00:00",
       "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
       "exit_price": null,
       "exit_time": null,
