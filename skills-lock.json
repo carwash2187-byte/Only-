@@ -13,6 +13,18 @@
       "skillPath": "plugins/quantitative-trading/skills/backtesting-frameworks/SKILL.md",
       "computedHash": "c186baf4119dafbf2e457abef8c6aebc10177074c4be4b8118edbbb3c396f869"
     },
+    "compact-chat-history": {
+      "source": "dtyq/magic",
+      "sourceType": "github",
+      "skillPath": "backend/super-magic/agents/skills/compact-chat-history/SKILL.md",
+      "computedHash": "ae16f0889060d4c91ef1746dc3d4a6a6e1e0ead981195168faf483b620e83f9b"
+    },
+    "context-window-management": {
+      "source": "archieindian/openclaw-superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/openclaw-native/context-window-management/SKILL.md",
+      "computedHash": "2687cff3d709ea9abeaf78a881b39899d32d7f8a60439aed432674fa49ba7377"
+    },
     "cost-compact-context": {
       "source": "ruvnet/ruflo",
       "sourceType": "github",
@@ -24,6 +36,12 @@
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "morph-warpgrep": {
+      "source": "letta-ai/skills",
+      "sourceType": "github",
+      "skillPath": "tools/morph-warpgrep/SKILL.md",
+      "computedHash": "ce5ae391b9e069f052b3f8e4cb70cf905f26f9b6dda51ba3ea498581de7d703c"
     },
     "prompt-caching": {
       "source": "davila7/claude-code-templates",
