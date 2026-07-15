@@ -12,7 +12,7 @@ from bots.organization import DeskConfig, DeskReport, TradingDesk
 from bots.risk import DrawdownGuard
 
 
-def make_desk(tmp_path, broker, journal, price_df, config=None, agent=None):
+def make_desk(tmp_path, broker, journal, price_df, config=None, agent=None, htf_history_fn=None):
     return TradingDesk(
         broker=broker,
         journal=journal,
@@ -21,6 +21,7 @@ def make_desk(tmp_path, broker, journal, price_df, config=None, agent=None):
         history_fn=lambda _s: price_df,
         guard=DrawdownGuard(state_path=str(tmp_path / "day_state.json")),
         manual_signals_path=str(tmp_path / "manual_signals.json"),
+        htf_history_fn=htf_history_fn,
     )
 
 
@@ -657,6 +658,45 @@ def test_session_aware_forex_skips_off_session_pairs(price_df, tmp_path, journal
     # EURUSD isn't active in the asian session -> skipped; USDJPY is -> traded
     assert any(a.symbol == "EURUSD" for a in skipped), report.describe()
     assert all(a.symbol != "EURUSD" for a in buys), report.describe()
+
+
+def test_htf_confirm_blocks_entry_against_higher_timeframe_downtrend(price_df, tmp_path, journal):
+    from bots.organization import trend_direction
+
+    downtrend_htf = pd.DataFrame({"close": np.linspace(120, 80, 60)})
+    uptrend_htf = pd.DataFrame({"close": np.linspace(80, 120, 60)})
+    assert trend_direction(downtrend_htf) == "down"
+    assert trend_direction(uptrend_htf) == "up"
+
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0, timeframe="5m", htf_confirm=True)
+    desk = make_desk(
+        tmp_path, broker, journal, price_df, config=config,
+        htf_history_fn=lambda _s, _tf: downtrend_htf,
+    )
+    report = desk.run_once(symbols=["EURUSD"])
+    blocked = [a for a in report.actions if "higher-timeframe filter" in a.reason]
+    assert len(blocked) == 1, report.describe()
+    assert not any(a.action == "buy" and a.ok for a in report.actions), report.describe()
+
+
+def test_htf_confirm_allows_entry_with_higher_timeframe_uptrend(price_df, tmp_path, journal):
+    uptrend_htf = pd.DataFrame({"close": np.linspace(80, 120, 60)})
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0, timeframe="5m", htf_confirm=True)
+    desk = make_desk(
+        tmp_path, broker, journal, price_df, config=config,
+        htf_history_fn=lambda _s, _tf: uptrend_htf,
+    )
+    report = desk.run_once(symbols=["EURUSD"])
+    blocked = [a for a in report.actions if "higher-timeframe filter" in a.reason]
+    assert len(blocked) == 0, report.describe()
 
 
 def test_breakeven_stop_after_1r(price_df, tmp_path, journal):

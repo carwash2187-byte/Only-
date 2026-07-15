@@ -322,3 +322,50 @@ the open slots. Non-FX symbols are unaffected. Added
 `test_forex_session_score_overlap_is_highest` and
 `test_session_aware_forex_skips_off_session_pairs` to
 `tests/test_bots.py` (48 tests passing).
+
+## Session 10 findings (higher-timeframe confirmation, chasing consistency toward a daily target)
+
+Asked for $100/day minimum. On the $5,000 practice size that's 2% a day --
+which is exactly what `daily_profit_target_pct` in `funded_account_config()`
+already locks in and cashes out at once hit. So the target mechanism
+already existed; the honest gap is *consistency* -- actually winning
+enough, often enough, to reach it regularly. No bot guarantees a fixed
+dollar amount every single day; the lever that's actually researchable and
+implementable is raising win rate/expectancy on the entries it does take.
+
+**Researched:** multi-timeframe confirmation -- taking the entry signal on
+a fast timeframe (this bot scalps 1m/5m) but only acting on it if a slower,
+bigger-picture timeframe agrees with the direction. Cited results: signals
+aligned across at least two timeframes ran ~58% win rate vs. ~39% for
+non-aligned trades; higher-timeframe-filtered setups commonly move from
+~50% win rate standalone to ~65-70% filtered. Standard spacing is a 4:1-5:1
+ratio between entry and confirmation timeframe (e.g. 5m entries confirmed
+on 1h, 15m entries confirmed on 1h-4h).
+([Signal Pilot](https://blog.signalpilot.io/articles/multi-timeframe-confirmation/),
+[Mind Math Money](https://www.mindmathmoney.com/articles/multi-timeframe-analysis-trading-strategy-the-complete-guide-to-trading-multiple-timeframes))
+
+**Implemented:** `bots/organization.py` gained `trend_direction(df)` (the
+same fast/slow SMA-cross rule the Q-agent's own "trend" feature already
+uses, reused here so the filter agrees methodologically with what the
+agent trained on), an `HTF_MAP` (1m->15m, 5m->1h, 15m->1h, 30m->4h), and a
+new `DeskConfig.htf_confirm` flag (on by default in
+`funded_account_config()`). When set, `_consider_entry()` fetches the
+mapped higher timeframe and skips the buy if that bigger-picture trend is
+down -- logged the same transparent way as every other risk-desk veto
+("higher-timeframe filter: 1h trend is down"). Manual mirror calls (a
+human's actual trade) are exempt, same as the existing ADX/quant-desk
+vetoes -- this filter only applies to the bot's own automated entries.
+`TradingDesk` gained an injectable `htf_history_fn` (separate from the
+existing `history_fn`, since it needs a different timeframe) so this is
+fully testable offline. Added
+`test_htf_confirm_blocks_entry_against_higher_timeframe_downtrend` and
+`test_htf_confirm_allows_entry_with_higher_timeframe_uptrend` to
+`tests/test_bots.py` (50 tests passing).
+
+**Autopsy of today's loss-streak trigger (4 straight losses -> desk
+paused):** all 4 were crypto positions (ETH/BTC/SOL) opened before session
+8's switch to forex, finally stopping out today -- not new losses from the
+current forex desk, which hasn't taken a single trade yet today. The
+pause is real and correctly triggered by the rule as written (it doesn't
+distinguish "old position, new close"), but it's tail-end cleanup, not a
+live forex trading problem.
