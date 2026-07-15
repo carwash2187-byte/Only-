@@ -15,7 +15,8 @@
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | migrated to Alpaca paper account, flat close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "9a231aa98169",
@@ -32,7 +33,8 @@
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | migrated to Alpaca paper account, flat close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "2baa10ff9c1d",
@@ -49,7 +51,8 @@
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | migrated to Alpaca paper account, flat close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "f0eb0b02651c",
@@ -66,7 +69,8 @@
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | migrated to Alpaca paper account, flat close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "41c823b5920e",
@@ -83,7 +87,8 @@
       "notes": "ETHB (score 3.1): Duquesne Family Office (Stanley Druckenmiller) top-4 holding; Duquesne Family Office (Stanley Druckenmiller) top-7 holding | migrated to Alpaca paper account, flat close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "ce4c6f18206b",
@@ -100,7 +105,8 @@
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "9ea7368550e8",
@@ -117,7 +123,8 @@
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "4e4e48445853",
@@ -134,7 +141,8 @@
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "f5e8853537c9",
@@ -151,7 +159,8 @@
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "2c285161220a",
@@ -168,7 +177,8 @@
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "1aafe0469d56",
@@ -185,7 +195,8 @@
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "cafa03bfedeb",
@@ -202,7 +213,8 @@
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "3d2df0143802",
@@ -219,7 +231,8 @@
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "0e03e916f749",
@@ -236,7 +249,8 @@
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "e614d2e97b98",
@@ -253,7 +267,8 @@
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: duplicate order from double-run bug, never filled (market was closed)",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "a87c014ac028",
@@ -270,7 +285,8 @@
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "e90b6a7a767b",
@@ -287,7 +303,8 @@
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "2023be44224b",
@@ -304,7 +321,8 @@
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "a721f76da22a",
@@ -321,7 +339,8 @@
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "1b9a1d85a30b",
@@ -338,7 +357,8 @@
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "62693dedf848",
@@ -355,7 +375,8 @@
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "0f118ad5d20a",
@@ -372,7 +393,8 @@
       "notes": "AXP (score 2.0): Berkshire Hathaway (Warren Buffett) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "eaf3aa28f0f6",
@@ -389,7 +411,8 @@
       "notes": "PLTR (score 2.0): Scion Asset Management (Michael Burry) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "685b1a5ab27a",
@@ -406,7 +429,8 @@
       "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "ece896113991",
@@ -423,7 +447,8 @@
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding | canceled: over-limit duplicate from a second bug (max-positions not counting pending orders), never filled",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "6b185b82b665",
@@ -438,7 +463,8 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AAPL (score 4.5): Berkshire Hathaway (Warren Buffett) top-3 holding; Berkshire Hathaway (Warren Buffett) top-5 holding; Berkshire Hathaway (Warren Buffett) top-10 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "400dae144f0c",
@@ -453,7 +479,8 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "f6d7e65c0477",
@@ -468,7 +495,8 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "a8fd4d8fc8d2",
@@ -483,7 +511,8 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "NVDA (score 3.6): Scion Asset Management (Michael Burry) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-4 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "fd399b323a4f",
@@ -498,7 +527,8 @@
       "pnl": 0.0,
       "pnl_pct": 0.0,
       "notes": "MSFT (score 3.0): Pershing Square (Bill Ackman) top-4 holding; Bridgewater Associates (Ray Dalio's firm) top-8 holding | journal detached: Alpaca keys lost; position remains on the Alpaca paper account, retrack when keys return",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "86759797552d",
@@ -513,7 +543,8 @@
       "pnl": -0.1701282501220703,
       "pnl_pct": -0.011341823014654473,
       "notes": "user watchlist | switching day trading to the Alpaca account",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "73eab8b7cf90",
@@ -528,7 +559,8 @@
       "pnl": -1.8302979248046873,
       "pnl_pct": -0.12202001936884033,
       "notes": "user watchlist | switching day trading to the Alpaca account",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "a19762312258",
@@ -543,7 +575,8 @@
       "pnl": -0.520675,
       "pnl_pct": -0.03471017007983246,
       "notes": "user watchlist | switching day trading to the Alpaca account",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "403508afd67c",
@@ -560,7 +593,8 @@
       "notes": "re-tracked at real Alpaca fill price after key reset | quant desk: RL agent says exit",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "211582f9d549",
@@ -577,7 +611,8 @@
       "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "b36013bcccf4",
@@ -594,7 +629,8 @@
       "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "bb9c3992a7bb",
@@ -611,7 +647,8 @@
       "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "90914d75b5fa",
@@ -628,7 +665,8 @@
       "notes": "re-tracked at real Alpaca fill price after key reset | day-trading: flatten before close",
       "tags": [
         "admin"
-      ]
+      ],
+      "stop_pct": null
     },
     {
       "trade_id": "09e9ff7123f5",
@@ -643,7 +681,8 @@
       "pnl": -5.89652000000182,
       "pnl_pct": -0.038885108392250345,
       "notes": "user watchlist | quant desk: RL agent says exit",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
     },
     {
       "trade_id": "5afff1c6c804",
@@ -658,7 +697,40 @@
       "pnl": 0.21060599999980847,
       "pnl_pct": 0.0013885031935556569,
       "notes": "user watchlist | quant desk: RL agent says exit",
-      "tags": []
+      "tags": [],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "18b0696bc485",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0231,
+      "entry_price": 64952.0,
+      "entry_time": "2026-07-15T06:21:42.271146+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "25b2eef2c804",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.7957,
+      "entry_price": 1885.22998046875,
+      "entry_time": "2026-07-15T06:21:44.173446+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
