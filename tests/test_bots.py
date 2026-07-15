@@ -591,3 +591,51 @@ def test_news_guard_fails_safe_on_broken_feed():
     guard = NewsGuard(fetch_fn=broken)
     blocked, why = guard.blackout()
     assert not blocked  # never lock the desk because a feed is down
+
+
+def test_correlation_guard_caps_cluster_exposure(price_df, tmp_path, journal):
+    # 3 mega-cap tech candidates, cluster cap 2 -> third is skipped even
+    # though position slots remain
+    broker = PaperBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"AAPL": 100.0, "MSFT": 100.0, "NVDA": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_positions=99, max_per_correlation_group=2),
+    )
+    report = desk.run_once(symbols=["AAPL", "MSFT", "NVDA"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    skipped = [a for a in report.actions if "correlation guard" in a.reason]
+    assert len(buys) == 2 and len(skipped) == 1, report.describe()
+
+
+def test_breakeven_stop_after_1r(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    record = journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade")
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                        take_profit_pct=0.03)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+
+    # +2% (>= 1R of 1.5%, below 3% target) -> stop arms at breakeven, holds
+    broker.price_overrides["DEMO"] = 102.0
+    report1 = desk.run_once(symbols=[])
+    assert any("breakeven" in n for n in report1.notes), report1.describe()
+    assert "breakeven-armed" in journal.trades[record.trade_id].tags
+    assert broker.positions() == {"DEMO": 10}
+
+    # pullback to entry -> risk-free exit at ~zero instead of riding to -1.5%
+    broker.price_overrides["DEMO"] = 99.9
+    report2 = desk.run_once(symbols=[])
+    sells = [a for a in report2.actions if a.action == "sell" and a.ok]
+    assert sells and "breakeven" in sells[0].reason, report2.describe()
+    closed = journal.trades[record.trade_id]
+    assert not closed.is_open and closed.pnl == pytest.approx(-1.0, abs=0.01)

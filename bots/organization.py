@@ -45,6 +45,29 @@ class DeskConfig:
     max_trades_per_day: int = 0  # scalper discipline: cap entries per day (0 = no cap)
     news_blackout: bool = True  # no new entries +/-10min around high-impact USD news
     news_currencies: tuple = ("USD",)
+    max_per_correlation_group: int = 2  # cap positions per correlated cluster
+    breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
+
+
+# Correlated clusters: N positions inside one cluster are effectively ONE
+# bet at N-times size ("hidden leverage"), because these names move together
+# intraday. The desk caps entries per cluster.
+CORRELATION_GROUPS = {
+    "us-tech": {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "GOOG", "META",
+                "TSLA", "AVGO", "AMD", "QQQ", "NQ=F"},
+    "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F"},
+    "gold": {"GC=F", "GLD", "IAU", "XAUUSD"},
+    "oil": {"CL=F", "USO", "XLE"},
+    "usd-fx": {"EURUSD", "GBPUSD", "USDJPY", "EUR_USD", "GBP_USD", "USD_JPY"},
+}
+
+
+def correlation_group(symbol: str) -> Optional[str]:
+    symbol = symbol.upper()
+    for name, members in CORRELATION_GROUPS.items():
+        if symbol in members:
+            return name
+    return None
 
 
 @dataclass
@@ -238,6 +261,11 @@ class TradingDesk:
             if cfg.max_trades_per_day > 0
             else None
         )
+        group_counts: Dict[str, int] = {}
+        for held in committed_symbols:
+            group = correlation_group(held)
+            if group:
+                group_counts[group] = group_counts.get(group, 0) + 1
         for symbol, info in candidates.items():
             if trades_left_today is not None and trades_left_today <= 0:
                 report.actions.append(
@@ -256,6 +284,20 @@ class TradingDesk:
                     DeskAction("skip", symbol, "order already pending fill, not resubmitting")
                 )
                 continue
+            group = correlation_group(symbol)
+            if (
+                cfg.max_per_correlation_group > 0
+                and group
+                and group_counts.get(group, 0) >= cfg.max_per_correlation_group
+            ):
+                report.actions.append(
+                    DeskAction(
+                        "skip", symbol,
+                        f"correlation guard: already {group_counts[group]} positions in "
+                        f"the '{group}' cluster -- more would be hidden leverage on one bet",
+                    )
+                )
+                continue
             action = self._consider_entry(
                 symbol, info["reason"], equity,
                 setup_base=info.get("setup", "copytrade"),
@@ -266,6 +308,8 @@ class TradingDesk:
                 open_slots -= 1
                 if trades_left_today is not None:
                     trades_left_today -= 1
+                if group:
+                    group_counts[group] = group_counts.get(group, 0) + 1
         return report
 
     def flatten_all(self, reason: str = "day-trading: flatten before close") -> DeskReport:
@@ -332,8 +376,21 @@ class TradingDesk:
             reason = force_exit_reason
         elif record:
             change = price / record.entry_price - 1.0
+            breakeven_armed = "breakeven-armed" in record.tags
+            # Once the trade is up 1R (one stop-distance), the worst case
+            # becomes "out at entry" instead of a loss -- the trade is
+            # risk-free from here (standard professional trade management).
+            if cfg.breakeven_at_1r and not breakeven_armed and change >= cfg.stop_loss_pct:
+                record.tags.append("breakeven-armed")
+                self.journal.save()
+                breakeven_armed = True
+                report.notes.append(
+                    f"[manage] {symbol} reached +1R ({change:+.1%}) -- stop moved to breakeven"
+                )
             if change <= -cfg.stop_loss_pct:
                 reason = f"stop loss hit ({change:+.1%})"
+            elif breakeven_armed and change <= 0.0:
+                reason = f"breakeven stop hit (was +1R, now {change:+.1%}) -- risk-free exit"
             elif change >= cfg.take_profit_pct:
                 reason = f"take profit hit ({change:+.1%})"
         if reason is None:

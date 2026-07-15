@@ -130,3 +130,27 @@ the textbook-correct choice. ([CrossTrade](https://crosstrade.io/learn/risk-mana
 - Trained on gold (GC=F), NASDAQ (NQ=F), Dow (YM=F), GBPUSD 5m bars.
 - Fixed YouTube channel resolution (externalId) -- education channels
   now watchable via python -m bots watch.
+
+## Session 4 findings (trade management + hidden leverage)
+
+**Break-even stops:** standard professional practice -- once a trade reaches
++1R (one stop-distance in profit), move the stop to entry: worst case
+becomes "out flat" instead of a loss. Known tradeoff: normal pullbacks
+sometimes stop out trades that would have worked; research on trailing
+stops still shows positive excess returns even after transaction costs.
+([Trading Heroes](https://www.tradingheroes.com/move-stoploss-breakeven/),
+[PM Research](https://www.pm-research.com/content/iijindinv/14/1/29))
+Implemented: `breakeven_at_1r` (default on) in the desk.
+
+**The correlation trap ("hidden leverage"):** five 1%-risk positions in
+correlated names is not 5 bets, it's ONE 5% bet -- intraday correlations
+run especially hot because everyone reacts to the same news at once. The
+bot's own day-1 basket (AAPL/MSFT/NVDA/AMZN/GOOGL) was exactly this
+mistake. ([TradingPub](https://thetradingpub.com/kane-shieh/the-hidden-correlation-trap-in-multi-stock-day-trading/),
+[TradeThatSwing](https://tradethatswing.com/how-do-i-size-positions-when-trading-multiple-correlated-assets/))
+Implemented: correlation clusters (us-tech, us-broad, gold, oil, usd-fx)
+with `max_per_correlation_group=2` (default on).
+
+**Transcript access note:** YouTube blocks caption fetches from datacenter
+IPs -- education-channel discovery works from this environment (titles/RSS),
+full transcripts need a residential connection.
