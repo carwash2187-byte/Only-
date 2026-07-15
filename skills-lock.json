@@ -31,6 +31,18 @@
       "skillPath": "cli-tool/components/skills/ai-research/prompt-caching/SKILL.md",
       "computedHash": "151439aa8bad7b1e7e82e21bb9aa48ff40c36de3da99c83dc0d152305a68a222"
     },
+    "text-optimizer": {
+      "source": "kochetkov-ma/claude-brewcode",
+      "sourceType": "github",
+      "skillPath": "skills/text-optimizer/SKILL.md",
+      "computedHash": "d6858dee60432217ddb74a80798f98aa316307a6032dd3956053b1e9c9092dc9"
+    },
+    "token-efficiency": {
+      "source": "delphine-l/claude_global",
+      "sourceType": "github",
+      "skillPath": "skills/claude-meta/token-efficiency/SKILL.md",
+      "computedHash": "94754a40b57e4099db737663b50ca9e0eeb4244bed4c3caf4ee6727bb81c8f64"
+    },
     "trading-signal": {
       "source": "binance/binance-skills-hub",
       "sourceType": "github",
