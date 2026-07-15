@@ -52,6 +52,7 @@ class DeskConfig:
     max_total_drawdown_pct: float = 0.0  # 0 = off; e.g. 0.05 = funded-account 5% max loss limit
     daily_profit_target_pct: float = 0.0  # 0 = off; e.g. 0.02: once up 2% on the day, cash out everything and stop
     min_adx: float = 0.0  # regime filter: skip entries when ADX(14) is below this (0 = off; ~20 typical)
+    session_aware_forex: bool = False  # skip/deprioritize FX pairs outside their liquid trading session
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -74,6 +75,7 @@ def funded_account_config(**overrides) -> "DeskConfig":
         max_per_correlation_group=2,
         news_blackout=True,
         breakeven_at_1r=True,
+        session_aware_forex=True,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -156,6 +158,56 @@ def correlation_group(symbol: str) -> Optional[str]:
         if symbol in members:
             return name
     return None
+
+
+# Each currency pair is only genuinely liquid while at least one of its two
+# home markets is open. Trading a pair outside its session means wider
+# spreads and choppier, less institutional-driven price action -- one of the
+# three real losses traced in Session 7 was exactly this (a signal taken in
+# a dead session). Pairs list per session per real trading-desk convention;
+# "overlap" (London/New York, 8am-12pm ET) is the single highest-liquidity
+# window in the whole FX day and gets scored highest.
+FOREX_SESSION_PAIRS = {
+    "asian": {"USDJPY", "AUDUSD", "NZDUSD", "AUDJPY", "EURJPY", "GBPJPY"},
+    "london": {"EURUSD", "GBPUSD", "EURJPY", "EURGBP", "EURCHF", "GBPJPY"},
+    "newyork": {"EURUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD"},
+    "overlap": {"EURUSD", "GBPUSD", "USDCHF", "USDCAD"},
+}
+
+
+def active_forex_session(now=None) -> str:
+    """Which real-world FX session is live right now, by ET hour. Returns
+    'overlap' (8am-12pm ET, London+NY both open -- highest liquidity),
+    'london' (3am-8am ET), 'newyork' (12pm-5pm ET), or 'asian' (otherwise)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+        ZoneInfo("America/New_York")
+    )
+    hour = now.hour
+    if 8 <= hour < 12:
+        return "overlap"
+    if 3 <= hour < 8:
+        return "london"
+    if 12 <= hour < 17:
+        return "newyork"
+    return "asian"
+
+
+def forex_session_score(symbol: str, now=None) -> int:
+    """0-2 liquidity score for a currency pair at the current time: 2 if
+    it's a core pair for the live overlap window, 1 if it's active in
+    whichever single session is live, 0 if it isn't an FX pair or isn't
+    trading actively right now. Non-FX symbols always score 0 (this only
+    applies to currency pairs)."""
+    symbol = symbol.upper().replace("_", "").replace("/", "")
+    session = active_forex_session(now)
+    if session == "overlap" and symbol in FOREX_SESSION_PAIRS["overlap"]:
+        return 2
+    if symbol in FOREX_SESSION_PAIRS.get(session, ()):
+        return 1
+    return 0
 
 
 @dataclass
@@ -398,7 +450,28 @@ class TradingDesk:
             group = correlation_group(held)
             if group:
                 group_counts[group] = group_counts.get(group, 0) + 1
-        for symbol, info in candidates.items():
+
+        ordered_candidates = list(candidates.items())
+        if cfg.session_aware_forex:
+            session = active_forex_session()
+            skipped_off_session = [
+                symbol for symbol in candidates
+                if forex_session_score(symbol) == 0 and correlation_group(symbol) == "usd-fx"
+            ]
+            for symbol in skipped_off_session:
+                report.actions.append(
+                    DeskAction(
+                        "skip", symbol,
+                        f"session filter: '{session}' session is live, {symbol} isn't a "
+                        "core pair for it right now (thin liquidity/wide spreads off-session)",
+                    )
+                )
+            ordered_candidates = [
+                (s, info) for s, info in ordered_candidates if s not in skipped_off_session
+            ]
+            ordered_candidates.sort(key=lambda item: -forex_session_score(item[0]))
+
+        for symbol, info in ordered_candidates:
             if trades_left_today is not None and trades_left_today <= 0:
                 report.actions.append(
                     DeskAction("skip", symbol, "scalper discipline: daily trade cap reached")

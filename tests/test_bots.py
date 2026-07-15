@@ -612,6 +612,53 @@ def test_correlation_guard_caps_cluster_exposure(price_df, tmp_path, journal):
     assert len(buys) == 2 and len(skipped) == 1, report.describe()
 
 
+def test_forex_session_score_overlap_is_highest():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.organization import active_forex_session, forex_session_score
+
+    ny = ZoneInfo("America/New_York")
+    overlap_time = datetime(2026, 7, 15, 9, 0, tzinfo=ny)  # 9am ET -> overlap
+    asian_time = datetime(2026, 7, 15, 1, 0, tzinfo=ny)  # 1am ET -> asian
+
+    assert active_forex_session(overlap_time) == "overlap"
+    assert forex_session_score("EURUSD", overlap_time) == 2
+    assert forex_session_score("EUR_USD", overlap_time) == 2  # underscore format normalized
+
+    assert active_forex_session(asian_time) == "asian"
+    assert forex_session_score("EURUSD", asian_time) == 0
+    assert forex_session_score("USDJPY", asian_time) == 1
+    assert forex_session_score("AAPL", overlap_time) == 0  # not an FX pair
+
+
+def test_session_aware_forex_skips_off_session_pairs(price_df, tmp_path, journal, monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    import bots.organization as org_mod
+
+    asian_time = datetime(2026, 7, 15, 1, 0, tzinfo=ZoneInfo("America/New_York"))
+    monkeypatch.setattr(org_mod, "active_forex_session", lambda now=None: "asian")
+
+    broker = PaperBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "USDJPY": 150.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_positions=99, session_aware_forex=True),
+    )
+    report = desk.run_once(symbols=["EURUSD", "USDJPY"])
+    skipped = [a for a in report.actions if "session filter" in a.reason]
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    # EURUSD isn't active in the asian session -> skipped; USDJPY is -> traded
+    assert any(a.symbol == "EURUSD" for a in skipped), report.describe()
+    assert all(a.symbol != "EURUSD" for a in buys), report.describe()
+
+
 def test_breakeven_stop_after_1r(price_df, tmp_path, journal):
     broker = PaperBroker(
         starting_cash=10_000,

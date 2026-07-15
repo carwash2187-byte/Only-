@@ -276,3 +276,49 @@ still 1-minute charts at MambaFX's pace. Crypto remains available as the
 after-hours fallback when literally nothing else is open, but it is no
 longer the default -- it was the wrong instrument for this strategy, not
 just an inconvenient one.
+
+## Session 9 findings (which specific instruments, not just which asset class)
+
+Session 8 settled asset class (forex majors over crypto). This round asked
+the next-level question professional day traders actually answer every
+morning: of the pairs on the watchlist, which ones are worth trading *right
+now*, today?
+
+**Stock-screening side (for reference; the bot doesn't currently trade
+individual stocks intraday, so not implemented, but recorded for when it
+does):** the standard professional day-trading screener stack is price
+range, relative volume (RVOL) above ~2.0 (confirms a move isn't just noise
+-- institutional/news-driven), float under ~20M shares for the biggest
+percentage movers, percentage change (gap%), market cap, and ATR as a
+minimum-movement filter. Pre-market scans (before 9:30am ET) look for
+overnight news and gap-ups. ([Warrior Trading-style screener criteria via
+search results])
+
+**Forex side (what actually applies to this bot right now):** a currency
+pair is only genuinely liquid while one of its two home markets is open --
+trading it outside that window means wider spreads and choppier,
+non-institutional price action. Confirmed this is exactly the kind of
+mistake traced in session 7 (a signal taken in effectively a dead market).
+Real desks pick pairs by session:
+- **London/NY overlap (8am-12pm ET, highest liquidity of the whole day):**
+  EURUSD, GBPUSD, USDCHF, USDCAD
+- **London (3am-8am ET):** EURUSD, GBPUSD, EURJPY, EURGBP, EURCHF, GBPJPY
+- **New York (12pm-5pm ET):** EURUSD, USDJPY, USDCHF, USDCAD, AUDUSD, NZDUSD
+- **Asian (rest of the day):** USDJPY, AUDUSD, NZDUSD, AUDJPY, EURJPY, GBPJPY
+([OANDA](https://www.oanda.com/us-en/trade-tap-blog/trading-knowledge/when-is-the-best-time-for-forex-trading/),
+[Babypips](https://www.babypips.com/learn/forex/session-overlaps))
+
+**Implemented:** `bots/organization.py` gained `active_forex_session(now)`
+(returns which of the four sessions is live by ET hour) and
+`forex_session_score(symbol, now)` (2 = core overlap pair right now, 1 =
+active in whichever single session is live, 0 = not actively traded right
+now). New `DeskConfig.session_aware_forex` flag (on by default in
+`funded_account_config()`, matching the "always trade like a funded
+account" standing rule): when set, `run_once()` skips FX candidates
+scoring 0 for the current session (logged as a "session filter" skip, same
+transparency as every other risk-desk veto) and orders the remaining
+candidates by score so the most-liquid-right-now pair gets first pick of
+the open slots. Non-FX symbols are unaffected. Added
+`test_forex_session_score_overlap_is_highest` and
+`test_session_aware_forex_skips_off_session_pairs` to
+`tests/test_bots.py` (48 tests passing).
