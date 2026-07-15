@@ -203,3 +203,39 @@ gate breakout entries on trend strength. Implemented: `min_adx` (20 in
 funded mode) -- entries skipped in chop, manual mirror calls exempt.
 Next-level options noted for later: HMM-based regime models
 ([Sakeeb91/market-regime-detection](https://github.com/Sakeeb91/market-regime-detection)).
+
+## Session 7 findings (autopsy of tonight's real losses + MambaFX's actual style)
+
+**Root cause of tonight's 4-loss streak, found by reading the actual
+journal entries, not more theory:** 3 of 4 losses shared the exact same
+"opening range breakout, last hour of session" signal -- on crypto, which
+trades 24/7 and has no real session open or close. That feature was
+computing on an arbitrary UTC-midnight boundary with zero trading
+meaning. Fixed: `_is_continuous_market()` detects 24/7 assets (bars/day
+>=90% of a full day) and drops opening-range/session-phase for them,
+keeping VWAP (still valid -- institutional systems reset crypto VWAP
+daily too). Stock/forex sessions are unaffected.
+
+**MambaFX, verified against his actual channel (@mambafx) this time:** he
+scalps **1-minute** charts on NAS100/US30, more aggressive than the 5m
+default built earlier. Confirmed the bot can run 1m (`--timeframe 1m`,
+verified live fetch works). Also worth flagging honestly: his channel's
+recent uploads skew toward course/monetization content ("You WON'T
+believe how much this costs") over pure technical breakdowns -- same
+"trust the journal, not the marketing" rule from session 1 applies.
+
+**Signal repaint, found while reviewing other scalping bots
+([nyao_scalper_mt5](https://github.com/elrizwiraswara/nyao_scalper_mt5)
+explicitly calls this out as "new-bar entry evaluation that removes
+intrabar signal repaint"):** a live bot deciding off its most recent
+fetched candle is often deciding off a candle that hasn't finished
+forming yet -- verified live, a "5-minute" bar was 5 seconds old. The
+same instant can produce a different signal once that bar actually
+closes. Fixed: `_drop_forming_bar()` trims an in-progress bar before any
+live signal/state call; daily+ bars (backtesting, training) are
+unaffected since those are always fully historical already.
+
+**Dead-market filter cross-reference:** the same MT5 scalper repo's "dead
+market filter when volatility is too low" is the same concept as the
+ADX regime filter already built in session 6 -- independent confirmation
+this is a real, recognized pattern, not a one-off idea.

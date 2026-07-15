@@ -52,14 +52,36 @@ def _is_intraday(df: pd.DataFrame) -> bool:
     return spacing < pd.Timedelta(hours=6)
 
 
+def _is_continuous_market(df: pd.DataFrame, bar_minutes: int) -> bool:
+    """True for 24/7 markets (crypto): a calendar day is ~90%+ full of bars,
+    unlike stocks (6.5h/day) or forex (24/5, real weekend gaps).
+
+    Found from a real losing streak: opening-range-breakout and
+    end-of-session features assume a market that actually opens and
+    closes. Crypto has neither, so those features were computing on an
+    arbitrary UTC-midnight boundary with no trading meaning -- 3 of 4
+    real losses in one session shared that exact (meaningless) signal.
+    See docs/DAY-TRADING-NOTES.md session 7.
+    """
+    idx = df.index
+    session = idx.normalize()
+    bars_per_day = pd.Series(1, index=idx).groupby(session).transform("size")
+    full_day_bars = max(1, (24 * 60) // max(bar_minutes, 1))
+    return bool((bars_per_day.median() / full_day_bars) >= 0.9)
+
+
 def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
     """Per-bar discretized features, computed once per DataFrame and cached
     on it (training walks the same frame thousands of times).
 
     Daily bars keep the original trend+RSI features so the existing Q-table
-    stays valid. Intraday bars add the day-trading features the evidence
-    supports (see docs/DAY-TRADING-NOTES.md): session VWAP side, opening
-    range position, and session phase.
+    stays valid. Intraday bars on session-based markets (stocks/forex) add
+    the day-trading features the evidence supports (see
+    docs/DAY-TRADING-NOTES.md): session VWAP side, opening range position,
+    and session phase. Intraday bars on continuous 24/7 markets (crypto)
+    keep VWAP (still a valid institutional benchmark with a daily reset)
+    but drop opening-range/session-phase, which assume a market that opens
+    and closes.
     """
     # The cache is wrapped in a plain holder object rather than stored as a
     # bare DataFrame: pandas compares df.attrs dicts during concat/finalize,
@@ -89,6 +111,7 @@ def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
         bar_minutes = max(
             1, int(pd.Series(df.index[1:] - df.index[:-1]).median().total_seconds() // 60)
         )
+        continuous_market = _is_continuous_market(df, bar_minutes)
         bars_30min = max(1, round(30 / bar_minutes))
         bars_1h = max(1, round(60 / bar_minutes))
         grouped = features.groupby(session, sort=False)
@@ -107,22 +130,23 @@ def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
         )
         features["vwap"] = np.where(close.values >= anchor, "above", "below")
 
-        # Opening range: high/low of the first 30 minutes of each session.
-        in_or_window = bar_of_day < bars_30min
-        or_high = high.where(in_or_window).groupby(session).transform("max")
-        or_low = low.where(in_or_window).groupby(session).transform("min")
-        features["orb"] = np.select(
-            [in_or_window, close > or_high, close < or_low],
-            ["in", "up", "down"],
-            default="in",
-        )
+        if not continuous_market:
+            # Opening range: high/low of the first 30 minutes of each session.
+            in_or_window = bar_of_day < bars_30min
+            or_high = high.where(in_or_window).groupby(session).transform("max")
+            or_low = low.where(in_or_window).groupby(session).transform("min")
+            features["orb"] = np.select(
+                [in_or_window, close > or_high, close < or_low],
+                ["in", "up", "down"],
+                default="in",
+            )
 
-        # Session phase: opening hour / midday / final hour.
-        features["tod"] = np.select(
-            [bar_of_day < bars_1h, bar_of_day >= (bars_in_day - bars_1h)],
-            ["open", "late"],
-            default="mid",
-        )
+            # Session phase: opening hour / midday / final hour.
+            features["tod"] = np.select(
+                [bar_of_day < bars_1h, bar_of_day >= (bars_in_day - bars_1h)],
+                ["open", "late"],
+                default="mid",
+            )
 
     df.attrs["_qstate_features"] = _FeatureCache(features)
     return features
@@ -132,13 +156,18 @@ def extract_state(df: pd.DataFrame, index: int, holding: bool) -> str:
     """Discretize the market at bar `index` into a small state string.
 
     Daily candles: trend x RSI x position (unchanged from v1, so trained
-    daily states keep working). Intraday candles additionally carry VWAP
-    side, opening-range position, and session phase.
+    daily states keep working). Intraday candles on session-based markets
+    (stocks/forex) additionally carry VWAP side, opening-range position,
+    and session phase. Intraday candles on continuous 24/7 markets
+    (crypto) carry VWAP only -- opening-range/session-phase have no
+    meaning without a market open/close.
     """
     row = _feature_frame(df).iloc[index]
     state = f"trend-{row['trend']}|rsi-{row['rsi']}"
     if "vwap" in row.index:
-        state += f"|vwap-{row['vwap']}|orb-{row['orb']}|tod-{row['tod']}"
+        state += f"|vwap-{row['vwap']}"
+        if "orb" in row.index:
+            state += f"|orb-{row['orb']}|tod-{row['tod']}"
     return state + f"|pos-{'in' if holding else 'out'}"
 
 
@@ -245,16 +274,41 @@ class QTraderAgent:
     # -- inference -------------------------------------------------------------
 
     def signal(self, df: pd.DataFrame, holding: bool = False) -> str:
-        """Action recommendation ('buy' / 'sell' / 'hold') for the latest bar."""
-        df = _normalize_ohlcv(df)
+        """Action recommendation ('buy' / 'sell' / 'hold') for the latest
+        CLOSED bar (a still-forming last candle is dropped first -- see
+        _drop_forming_bar)."""
+        df = _drop_forming_bar(_normalize_ohlcv(df))
         if len(df) < 31:
             return "hold"
         state = extract_state(df, len(df) - 1, holding)
         return self.choose_action(state, explore=False)
 
     def current_state(self, df: pd.DataFrame, holding: bool = False) -> str:
-        df = _normalize_ohlcv(df)
+        df = _drop_forming_bar(_normalize_ohlcv(df))
         return extract_state(df, len(df) - 1, holding)
+
+
+def _drop_forming_bar(df: pd.DataFrame) -> pd.DataFrame:
+    """Live intraday feeds often return a still-forming last candle -- its
+    high/low/close keep changing until the bar period actually elapses.
+    Deciding on it risks 'repaint': the exact same instant can produce a
+    different signal once the bar closes for real (a pattern flagged by
+    several of the scalping bots studied -- see docs/DAY-TRADING-NOTES.md
+    session 7). Verified live: a freshly fetched 5-minute bar was 5
+    seconds old, not 5 minutes. Drop it when detectable; daily+ bars (not
+    a live-repaint concern the way sub-hour bars are) and data without a
+    usable timestamp are left alone.
+    """
+    idx = df.index
+    if not isinstance(idx, pd.DatetimeIndex) or len(idx) < 3:
+        return df
+    spacing = pd.Series(idx[1:] - idx[:-1]).median()
+    if spacing >= pd.Timedelta(hours=6):
+        return df
+    now = pd.Timestamp.now(tz=idx.tz) if idx.tz is not None else pd.Timestamp.now()
+    if idx[-1] + spacing > now:
+        return df.iloc[:-1]
+    return df
 
 
 def _normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:

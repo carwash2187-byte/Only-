@@ -840,3 +840,62 @@ def test_funded_config_includes_regime_filter():
     from bots.organization import funded_account_config
 
     assert funded_account_config().min_adx == 20.0
+
+
+def test_continuous_market_drops_orb_and_session_phase():
+    import numpy as np
+    import pandas as pd
+
+    from bots.learning.agent import _is_continuous_market, extract_state
+
+    rng = np.random.default_rng(2)
+    idx = pd.date_range("2026-07-10", periods=3 * 288, freq="5min")  # crypto: no gaps
+    px = 100 * np.exp(np.cumsum(rng.normal(0, 0.001, len(idx))))
+    crypto = pd.DataFrame({
+        "high": px * 1.001, "low": px * 0.999, "close": px,
+        "volume": rng.integers(100, 500, len(idx)),
+    }, index=idx)
+    assert _is_continuous_market(crypto, 5)
+    state = extract_state(crypto, 400, holding=False)
+    assert "vwap-" in state and "orb-" not in state and "tod-" not in state
+
+    frames = []
+    for day in ("2026-07-08", "2026-07-09", "2026-07-10"):
+        session_idx = pd.date_range(f"{day} 09:30", periods=78, freq="5min")
+        p = 100 * np.exp(np.cumsum(rng.normal(0, 0.001, 78)))
+        frames.append(pd.DataFrame({
+            "high": p * 1.001, "low": p * 0.999, "close": p,
+            "volume": rng.integers(100, 500, 78),
+        }, index=session_idx))
+    stocks = pd.concat(frames)
+    assert not _is_continuous_market(stocks, 5)
+    stock_state = extract_state(stocks, 100, holding=False)
+    assert "orb-" in stock_state and "tod-" in stock_state
+
+
+def test_drop_forming_bar_removes_incomplete_live_candle():
+    import numpy as np
+    import pandas as pd
+
+    from bots.learning.agent import _drop_forming_bar
+
+    now = pd.Timestamp.now().floor("min")
+    idx = pd.date_range(end=now, periods=40, freq="5min")
+    # nudge the last bar to look freshly started (a few seconds old), like
+    # a real live intraday fetch mid-candle
+    idx = idx[:-1].append(pd.DatetimeIndex([now - pd.Timedelta(seconds=5)]))
+    df = pd.DataFrame({"close": np.arange(40, dtype=float)}, index=idx)
+
+    trimmed = _drop_forming_bar(df)
+    assert len(trimmed) == len(df) - 1
+    assert trimmed.index[-1] == idx[-2]  # kept the last fully-closed bar
+
+
+def test_drop_forming_bar_keeps_daily_bars_untouched():
+    import pandas as pd
+
+    from bots.learning.agent import _drop_forming_bar
+
+    idx = pd.date_range("2026-01-01", periods=30, freq="1D")
+    df = pd.DataFrame({"close": range(30)}, index=idx)
+    assert len(_drop_forming_bar(df)) == len(df)
