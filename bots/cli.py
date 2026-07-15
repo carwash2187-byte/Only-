@@ -165,6 +165,7 @@ def cmd_autopilot(args) -> None:
         interval_minutes=args.interval,
         symbols=args.symbols.split(",") if args.symbols else None,
         desk=desk,
+        market_override=args.market,
     )
 
 
@@ -299,6 +300,8 @@ def main() -> None:
                         help="use intraday candles and flatten all positions before close")
     p_auto.add_argument("--timeframe", default=None,
                         help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
+    p_auto.add_argument("--market", default=None, choices=["stocks", "forex", "crypto"],
+                        help="force the trading-hours clock (default: auto-detect from broker/symbols)")
 
     p_watch = sub.add_parser(
         "watch", help="check YouTube/Twitter/Instagram for trade calls, auto-queue them"

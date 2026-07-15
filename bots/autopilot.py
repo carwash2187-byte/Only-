@@ -78,8 +78,17 @@ def run_autopilot(
     max_cycles: Optional[int] = None,
     desk=None,
     flatten_before_close_minutes: int = 15,
+    market_override: Optional[str] = None,
 ) -> None:
-    market = BROKER_MARKET.get(broker_name, "stocks")
+    # The generic paper/Alpaca/Robinhood brokers can hold any symbol
+    # (stocks, or crypto tickers like BTC-USD) -- the broker name alone
+    # doesn't tell you which market clock applies. When every symbol in
+    # the watchlist is crypto, trade around the clock instead of defaulting
+    # to stock hours and reporting "closed" 24/7 for a crypto session.
+    market = market_override or BROKER_MARKET.get(broker_name, "stocks")
+    if market_override is None and symbols and broker_name in ("paper", "alpaca", "robinhood"):
+        if all(s.upper().endswith(("-USD", "-USDT")) for s in symbols):
+            market = "crypto"
     if desk is None:
         from bots.brokers import get_broker
         from bots.organization import DeskConfig, TradingDesk
