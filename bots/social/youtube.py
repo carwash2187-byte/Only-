@@ -76,7 +76,7 @@ def resolve_channel_id(handle_or_url: str) -> str:
             url = f"https://www.youtube.com/@{handle_or_url.lstrip('@')}"
     resp = requests.get(url, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
     resp.raise_for_status()
-    match = re.search(r'"channelId":"(UC[\w-]{22})"', resp.text)
+    match = re.search(r'"(?:channelId|externalId)":"(UC[\w-]{22})"', resp.text)
     if not match:
         raise ValueError(f"Could not resolve a channel ID from {handle_or_url}")
     return match.group(1)

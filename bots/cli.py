@@ -49,7 +49,7 @@ def cmd_demo(_args) -> None:
         broker=broker,
         journal=journal,
         agent=agent,
-        config=DeskConfig(min_copy_score=0),
+        config=DeskConfig(news_blackout=False, min_copy_score=0),
         history_fn=lambda _symbol: df,
         guard=DrawdownGuard(state_path="bot_data/demo_day_state.json"),
         manual_signals_path="bot_data/demo_manual_signals.json",

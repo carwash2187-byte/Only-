@@ -17,7 +17,7 @@ def make_desk(tmp_path, broker, journal, price_df, config=None, agent=None):
         broker=broker,
         journal=journal,
         agent=agent or QTraderAgent(model_path=str(tmp_path / "q.json")),
-        config=config or DeskConfig(min_copy_score=0),
+        config=config or DeskConfig(news_blackout=False, min_copy_score=0),
         history_fn=lambda _s: price_df,
         guard=DrawdownGuard(state_path=str(tmp_path / "day_state.json")),
         manual_signals_path=str(tmp_path / "manual_signals.json"),
@@ -145,7 +145,7 @@ def test_desk_stop_loss_closes_position(price_df, tmp_path, journal):
     desk = make_desk(
         tmp_path, broker, journal, price_df,
         # risk budget 0 -> no new entries, keeps the test offline
-        config=DeskConfig(min_copy_score=99, risk_per_trade_pct=0.0),
+        config=DeskConfig(news_blackout=False, min_copy_score=99, risk_per_trade_pct=0.0),
     )
     report = desk.run_once(symbols=["UNRELATED"])
     sells = [a for a in report.actions if a.action == "sell"]
@@ -170,7 +170,7 @@ def test_circuit_breaker_blocks_new_entries(price_df, tmp_path, journal):
         broker=broker,
         journal=journal,
         agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
-        config=DeskConfig(min_copy_score=0),
+        config=DeskConfig(news_blackout=False, min_copy_score=0),
         history_fn=lambda _s: price_df,
         guard=guard,
         manual_signals_path=str(tmp_path / "manual.json"),
@@ -194,7 +194,7 @@ def test_mirror_signal_executes_under_risk_rules_and_consumes(price_df, tmp_path
         broker=broker,
         journal=journal,
         agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
-        config=DeskConfig(min_copy_score=99),
+        config=DeskConfig(news_blackout=False, min_copy_score=99),
         history_fn=lambda _s: price_df,
         guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
         manual_signals_path=sig_path,
@@ -216,7 +216,7 @@ def test_risk_per_trade_sizing(price_df, tmp_path, journal):
     desk = make_desk(
         tmp_path, broker, journal, price_df,
         # risking 0.5% with a 5% stop -> position value = 10000*0.005/0.05 = 1000
-        config=DeskConfig(min_copy_score=0, risk_per_trade_pct=0.005, stop_loss_pct=0.05),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, risk_per_trade_pct=0.005, stop_loss_pct=0.05),
     )
     report = desk.run_once(symbols=["DEMO"])
     buys = [a for a in report.actions if a.action == "buy" and a.ok]
@@ -234,7 +234,7 @@ def test_desk_skips_entry_with_pending_order(price_df, tmp_path, journal):
         state_path=str(tmp_path / "acct.json"),
         price_overrides={"DEMO": 100.0},
     )
-    desk = make_desk(tmp_path, broker, journal, price_df, config=DeskConfig(min_copy_score=0))
+    desk = make_desk(tmp_path, broker, journal, price_df, config=DeskConfig(news_blackout=False, min_copy_score=0))
     report = desk.run_once(symbols=["DEMO"])
     assert not [a for a in report.actions if a.action == "buy"]
     assert any("pending fill" in a.reason for a in report.actions if a.symbol == "DEMO")
@@ -256,7 +256,7 @@ def test_max_positions_counts_pending_journal_entries(price_df, tmp_path, journa
     )
     desk = make_desk(
         tmp_path, broker, journal, price_df,
-        config=DeskConfig(min_copy_score=0, max_positions=5),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_positions=5),
     )
     report = desk.run_once(symbols=[f"SYM{i}" for i in range(6)])
     buys = [a for a in report.actions if a.action == "buy" and a.ok]
@@ -307,7 +307,7 @@ def test_daily_trade_cap(price_df, tmp_path, journal):
     )
     desk = make_desk(
         tmp_path, broker, journal, price_df,
-        config=DeskConfig(min_copy_score=0, max_positions=99, max_trades_per_day=4),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_positions=99, max_trades_per_day=4),
     )
     report = desk.run_once(symbols=["NEW1", "NEW2"])
     buys = [a for a in report.actions if a.action == "buy" and a.ok]
@@ -366,7 +366,7 @@ def test_autopilot_flattens_before_close(price_df, tmp_path, monkeypatch):
         broker=broker,
         journal=journal,
         agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
-        config=DeskConfig(min_copy_score=0, day_trading=True),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, day_trading=True),
         history_fn=lambda _s: price_df,
         guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
         manual_signals_path=str(tmp_path / "manual.json"),
@@ -399,7 +399,7 @@ def test_buy_bracket_fallback_and_desk_uses_it(price_df, tmp_path, journal):
     )
     desk = make_desk(
         tmp_path, broker, journal, price_df,
-        config=DeskConfig(min_copy_score=0, stop_loss_pct=0.015, take_profit_pct=0.03),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, stop_loss_pct=0.015, take_profit_pct=0.03),
     )
     report = desk.run_once(symbols=["DEMO"])
     assert [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
@@ -424,7 +424,7 @@ def test_reconcile_closes_orphaned_journal_entries(price_df, tmp_path, journal):
     )
     desk = make_desk(
         tmp_path, broker, journal, price_df,
-        config=DeskConfig(min_copy_score=99, max_positions=0),
+        config=DeskConfig(news_blackout=False, min_copy_score=99, max_positions=0),
     )
     report = desk.run_once(symbols=["GONE"])
     reconciled = [a for a in report.actions if "reconciled" in a.reason]
@@ -553,3 +553,41 @@ def test_tradelocker_lot_conversion():
     # non-forex instruments pass through unchanged
     assert _units_to_lots("NAS100", 2.5) == 2.5
     assert _units_to_lots("BTCUSD.X", 0.3) == 0.3
+
+
+def test_news_guard_blocks_around_high_impact_events():
+    from datetime import datetime, timedelta, timezone
+
+    from bots.newsguard import NewsGuard
+
+    now = datetime(2026, 7, 15, 12, 30, tzinfo=timezone.utc)
+    events = [
+        {"title": "CPI y/y", "country": "USD", "impact": "High",
+         "date": (now + timedelta(minutes=5)).isoformat()},
+        {"title": "Low thing", "country": "USD", "impact": "Low",
+         "date": now.isoformat()},
+        {"title": "EUR news", "country": "EUR", "impact": "High",
+         "date": now.isoformat()},
+    ]
+    guard = NewsGuard(currencies=("USD",), fetch_fn=lambda: events)
+    blocked, why = guard.blackout(now=now)
+    assert blocked and "CPI" in why
+
+    # 30 minutes later: outside the window
+    blocked, _ = guard.blackout(now=now + timedelta(minutes=30))
+    assert not blocked
+
+    # EUR-only guard ignores the USD event
+    eur_guard = NewsGuard(currencies=("CHF",), fetch_fn=lambda: events)
+    assert not eur_guard.blackout(now=now)[0]
+
+
+def test_news_guard_fails_safe_on_broken_feed():
+    from bots.newsguard import NewsGuard
+
+    def broken():
+        raise RuntimeError("feed down")
+
+    guard = NewsGuard(fetch_fn=broken)
+    blocked, why = guard.blackout()
+    assert not blocked  # never lock the desk because a feed is down

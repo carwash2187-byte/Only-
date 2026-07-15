@@ -85,3 +85,48 @@ Judge on the journal, nothing else: 25+ closed trades, positive average
 PnL per trade, losses clustered near -1R (proof stops are respected), no
 circuit-breaker days. Paper results still overstate live results (no
 slippage pressure) — size down at the transition.
+
+## Session 3 findings (instruments, banks, funded-account survival)
+
+**Gold (XAUUSD/GC):** trades ~200-500 pips daily range (vs ~80 for EURUSD).
+London+NY overlap (8:00-12:00 ET) sets the daily high/low ~70% of the time
+-- that's THE gold window. 8:30 ET on data days (NFP/CPI) is the single most
+violent timestamp of the week: 1,000+ pip moves, spreads widen 20x.
+([NordFX](https://nordfx.com/en/traders-guide/best-time-to-trade-gold-xauusd-sessions-volatility-news),
+[ACY](https://acy.com/en/market-news/education/best-time-trade-gold-xauusd-sessions-news-091755/))
+
+**Indices (NAS100/US30):** NAS100 is the prop-firm favorite -- 1.5-2.0%
+daily range (US30: 0.8-1.2%), tech-heavy so it swings hard on Fed rates
+and tech earnings. Tightest spreads during US cash hours 9:30-16:00 ET.
+([BrightFunded](https://brightfunded.com/blog/mastering-the-nas100-a-strategic-guide-for-prop-firm-traders))
+
+**"Smart money" / bank concepts (order blocks, liquidity sweeps):** the
+honest read -- no rigorous public evidence these describe what banks
+actually do; even practitioner guides admit the value is a *consistent
+decision framework*, not proven institutional mechanics. The bot keeps
+what's measurable from the same family (VWAP = the real institutional
+benchmark, opening range) and skips the narrative parts.
+
+**Funded-account survival rules (beyond the loss limits):**
+- Consistency caps: best day must stay under ~35-50% of total profit --
+  grind small daily, no hero trades
+- News blackouts: many firms hard-prohibit positions +/-10min around
+  red-folder news; violation forfeits the account EVEN IF the trade wins
+- Weekend holding bans on several firms -> the flatten-before-close habit
+  already matches this
+([FundedNext](https://fundednext.com/blog/prop-firm-trading-rules),
+[FundingPips](https://help.fundingpips.com/hc/en-us/articles/34504137479441-News-Trading-Weekend-Holding))
+
+**Position-sizing math (risk of ruin):** with positive expectancy and 1%
+risk per trade, risk of ruin stays under 0.5%; full-Kelly sizing produces
+40-60% drawdowns (account-killers). Half/quarter-Kelly keeps ~75% of the
+growth at a fraction of the pain. The bot's 1% fixed-fractional sizing is
+the textbook-correct choice. ([CrossTrade](https://crosstrade.io/learn/risk-management/risk-of-ruin))
+
+**Applied to the bot this session:**
+- bots/newsguard.py: live economic calendar (ForexFactory weekly JSON),
+  desk refuses new entries +/-10min around high-impact USD news (exits
+  still run). Fail-safe: feed down -> trade normally, never lock up.
+- Trained on gold (GC=F), NASDAQ (NQ=F), Dow (YM=F), GBPUSD 5m bars.
+- Fixed YouTube channel resolution (externalId) -- education channels
+  now watchable via python -m bots watch.

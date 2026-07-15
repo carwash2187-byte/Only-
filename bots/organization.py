@@ -43,6 +43,8 @@ class DeskConfig:
     timeframe: str = "1d"  # candle size for signals: "1d" swing, "5m"/"15m" day trading
     day_trading: bool = False  # if True, autopilot flattens all positions before close
     max_trades_per_day: int = 0  # scalper discipline: cap entries per day (0 = no cap)
+    news_blackout: bool = True  # no new entries +/-10min around high-impact USD news
+    news_currencies: tuple = ("USD",)
 
 
 @dataclass
@@ -206,6 +208,19 @@ class TradingDesk:
         report.notes.append(f"[risk] {guard_msg}")
         if halted:
             return report
+
+        # 2b. News blackout: high-impact releases (NFP/CPI/FOMC) blow spreads
+        #     out and are hard-prohibited windows on most funded accounts.
+        #     Exits above already ran; only new entries are blocked.
+        if cfg.news_blackout:
+            if not hasattr(self, "_news_guard"):
+                from bots.newsguard import NewsGuard
+
+                self._news_guard = NewsGuard(currencies=cfg.news_currencies)
+            news_blocked, news_msg = self._news_guard.blackout()
+            report.notes.append(f"[news] {news_msg}")
+            if news_blocked:
+                return report
 
         # 3. New entries from research + quant + committee, filtered by lessons.
         # A "slot" is used by a filled position OR a trade the journal still
