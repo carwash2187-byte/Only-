@@ -55,6 +55,12 @@
       "skillPath": "skills/repomix-explorer/SKILL.md",
       "computedHash": "bea98370ef35e710b4e4d900d0e250be37b0270e377ac011f7d346f056d8348f"
     },
+    "short": {
+      "source": "davidondrej/skills",
+      "sourceType": "github",
+      "skillPath": "skills/thinking-and-docs/short/SKILL.md",
+      "computedHash": "aa4874783a7845f9100e2055c529d2737dbdc297619c023ea0020137aab37797"
+    },
     "text-optimizer": {
       "source": "kochetkov-ma/claude-brewcode",
       "sourceType": "github",

@@ -762,14 +762,46 @@
       "entry_price": 1883.6099853515625,
       "entry_time": "2026-07-15T06:31:29.843691+00:00",
       "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": 1883.510009765625,
+      "exit_time": "2026-07-15T06:44:31.741332+00:00",
+      "pnl": -0.0398102783203125,
+      "pnl_pct": -0.00530765852352344,
+      "notes": "user watchlist | breakeven stop hit (was +1R, now -0.0%) -- risk-free exit",
+      "tags": [
+        "breakeven-armed"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "47bc8df13cc3",
+      "symbol": "SOL-USD",
+      "side": "long",
+      "quantity": 9.5824,
+      "entry_price": 78.29000091552734,
+      "entry_time": "2026-07-15T06:41:45.544102+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|orb-up|tod-late|pos-out",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
       "notes": "user watchlist",
-      "tags": [
-        "breakeven-armed"
-      ],
+      "tags": [],
+      "stop_pct": 0.003366592284606943
+    },
+    {
+      "trade_id": "b2541acb990e",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.3983,
+      "entry_price": 1883.1700439453125,
+      "entry_time": "2026-07-15T06:47:40.951992+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
       "stop_pct": 0.003
     }
   ]

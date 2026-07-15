@@ -756,3 +756,87 @@ def test_desk_halts_on_total_drawdown_breach(price_df, tmp_path, journal):
     report = desk.run_once(symbols=["DEMO"])
     assert not [a for a in report.actions if a.action == "buy"]
     assert any("HALTED" in n for n in report.notes)
+
+
+def test_daily_profit_target_cashes_out_and_stops(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=5_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"WIN": 100.0, "NEXT": 50.0},
+    )
+    guard = DrawdownGuard(state_path=str(tmp_path / "day.json"))
+    guard.check(5_000)  # record day-start baseline
+
+    # open a position that then runs up so equity = 5150 (+3% day)
+    assert broker.buy("WIN", 10).ok
+    journal.open_trade("WIN", "long", 10, 100.0, setup="daytrade")
+    broker.price_overrides["WIN"] = 115.0  # equity 4000 cash + 1150 = 5150
+
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          daily_profit_target_pct=0.02, take_profit_pct=0.99),
+        history_fn=lambda _s: price_df,
+        guard=guard,
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+    report = desk.run_once(symbols=["NEXT"])
+    # cashed out the winner, took no new trades
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "profit target" in sells[0].reason
+    assert broker.positions() == {}
+    assert not [a for a in report.actions if a.action == "buy"]
+    assert any("done for the day" in n for n in report.notes)
+
+    # next cycle same day: realized gain keeps it stopped
+    report2 = desk.run_once(symbols=["NEXT"])
+    assert not [a for a in report2.actions if a.action == "buy"]
+
+
+def test_funded_config_includes_profit_target():
+    from bots.organization import funded_account_config
+
+    assert funded_account_config().daily_profit_target_pct == 0.02
+
+
+def test_adx_regime_filter_skips_choppy_markets(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    # trending: steady climb -> high ADX. choppy: tight oscillation -> low ADX.
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    chop_close = pd.Series(100 + 0.3 * np.sin(np.arange(n)))
+    choppy = pd.DataFrame({
+        "high": chop_close + 0.1, "low": chop_close - 0.1, "close": chop_close,
+    })
+
+    from bots.organization import adx_value
+
+    adx_trend, adx_chop = adx_value(trending), adx_value(choppy)
+    assert adx_trend is not None and adx_chop is not None
+    assert adx_trend > 25 and adx_chop < 20, (adx_trend, adx_chop)
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"CHOP": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, choppy,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, min_adx=20.0),
+    )
+    report = desk.run_once(symbols=["CHOP"])
+    skips = [a for a in report.actions if "regime filter" in a.reason]
+    assert skips and not [a for a in report.actions if a.action == "buy"], report.describe()
+
+
+def test_funded_config_includes_regime_filter():
+    from bots.organization import funded_account_config
+
+    assert funded_account_config().min_adx == 20.0

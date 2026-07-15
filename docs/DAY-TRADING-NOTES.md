@@ -182,3 +182,24 @@ cache stored a DataFrame inside df.attrs; pandas compares attrs dicts during
 any later pd.concat and a DataFrame there raises "truth value is ambiguous".
 Fixed with a plain holder object + concat-free ATR. Lesson: hidden state on
 shared data structures bites later, far from where it was planted.
+
+## Session 6 findings (ending the day right + regime awareness)
+
+**Daily profit target ("quit while ahead"):** prop traders set a modest
+daily target (1-2%) and STOP once hit -- the fastest way to fail a funded
+account after a good morning is giving it back in the afternoon, and
+consistency rules punish oversized single days anyway.
+([ElTraderFinanciado](https://www.eltraderfinanciado.com/en/blog/profit-target-prop-firms),
+[MasterFunders](https://masterfunders.com/prop-firm-rules/))
+Implemented: `daily_profit_target_pct` (2% in funded mode) -- once today's
+gain hits target, the desk cashes out every position and refuses new
+entries until tomorrow.
+
+**Regime detection (when NOT to trade):** ADX(14) below ~20 marks a choppy
+market where breakout entries mostly fail; the credible open-source bots
+(e.g. [CeyxTrading/Breakout-Bot](https://github.com/CeyxTrading/Breakout-Bot),
+[QuantTradingOS/Market-Regime-Agent](https://github.com/QuantTradingOS/Market-Regime-Agent))
+gate breakout entries on trend strength. Implemented: `min_adx` (20 in
+funded mode) -- entries skipped in chop, manual mirror calls exempt.
+Next-level options noted for later: HMM-based regime models
+([Sakeeb91/market-regime-detection](https://github.com/Sakeeb91/market-regime-detection)).

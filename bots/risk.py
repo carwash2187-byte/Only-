@@ -59,6 +59,17 @@ class DrawdownGuard:
         return False, f"daily drawdown {loss_pct:+.1%} (limit {self.max_daily_loss_pct:.0%})"
 
 
+    def day_gain_pct(self, equity: float) -> float:
+        """Today's gain vs the recorded day-start baseline (0.0 if no
+        baseline yet). Used by the daily profit target ('quit while
+        ahead') rule."""
+        state = self._load()
+        if state.get("date") != date.today().isoformat():
+            return 0.0
+        start = float(state.get("start_equity") or 0.0)
+        return (equity / start - 1.0) if start > 0 else 0.0
+
+
 class MaxDrawdownGuard:
     """The other funded-account limit: total drawdown from the account's
     all-time peak equity (not reset daily like DrawdownGuard). Breaching

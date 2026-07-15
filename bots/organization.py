@@ -50,6 +50,8 @@ class DeskConfig:
     max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
     atr_stops: bool = False  # volatility-adaptive stops: 1.5x ATR(14) instead of fixed %
     max_total_drawdown_pct: float = 0.0  # 0 = off; e.g. 0.05 = funded-account 5% max loss limit
+    daily_profit_target_pct: float = 0.0  # 0 = off; e.g. 0.02: once up 2% on the day, cash out everything and stop
+    min_adx: float = 0.0  # regime filter: skip entries when ADX(14) is below this (0 = off; ~20 typical)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -60,6 +62,8 @@ def funded_account_config(**overrides) -> "DeskConfig":
     base = dict(
         max_daily_loss_pct=0.03,
         max_total_drawdown_pct=0.05,
+        daily_profit_target_pct=0.02,
+        min_adx=20.0,
         day_trading=True,
         timeframe="5m",
         stop_loss_pct=0.015,
@@ -111,6 +115,37 @@ def atr_pct(df, period: int = 14) -> Optional[float]:
         if not (atr > 0 and last > 0):
             return None
         return atr / last
+    except Exception:
+        return None
+
+
+def adx_value(df, period: int = 14) -> Optional[float]:
+    """ADX(14): trend-strength gauge. Below ~20 the market is chopping and
+    breakout entries mostly fail; above ~25 it's trending. None when the
+    data can't support it (no high/low columns, too few bars)."""
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if "high" not in cols or "low" not in cols or "close" not in cols:
+            return None
+        high, low, close = df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        if len(close) < period * 2 + 1:
+            return None
+        import numpy as np
+
+        up = high.diff()
+        down = -low.diff()
+        plus_dm = up.where((up > down) & (up > 0), 0.0)
+        minus_dm = down.where((down > up) & (down > 0), 0.0)
+        prev_close = close.shift(1)
+        tr = np.maximum(
+            high - low, np.maximum((high - prev_close).abs(), (low - prev_close).abs())
+        )
+        atr = tr.rolling(period).mean()
+        plus_di = 100 * plus_dm.rolling(period).mean() / atr
+        minus_di = 100 * minus_dm.rolling(period).mean() / atr
+        dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+        adx = float(dx.rolling(period).mean().iloc[-1])
+        return adx if adx == adx else None  # NaN check
     except Exception:
         return None
 
@@ -298,6 +333,24 @@ class TradingDesk:
             max_dd_halted, max_dd_msg = self.max_drawdown_guard.check(self.broker.equity())
             report.notes.append(f"[risk] {max_dd_msg}")
             if max_dd_halted:
+                return report
+
+        # 2a-bis. Daily profit target ("quit while ahead"): once today's gain
+        #    hits the target, cash out every position and stop for the day.
+        #    Prop-firm practice: the fastest way to fail a funded account
+        #    after a good morning is giving the profit back in the afternoon,
+        #    and consistency rules punish oversized single days anyway.
+        if cfg.daily_profit_target_pct > 0:
+            day_gain = self.guard.day_gain_pct(self.broker.equity())
+            if day_gain >= cfg.daily_profit_target_pct:
+                report.notes.append(
+                    f"[risk] daily profit target hit ({day_gain:+.1%} >= "
+                    f"{cfg.daily_profit_target_pct:.1%}) -- cashing out, done for the day"
+                )
+                flatten = self.flatten_all(
+                    reason=f"daily profit target hit ({day_gain:+.1%}) -- locking in the day"
+                )
+                report.actions.extend(flatten.actions)
                 return report
 
         # 2b. News blackout: high-impact releases (NFP/CPI/FOMC) blow spreads
@@ -525,6 +578,14 @@ class TradingDesk:
                 return DeskAction("skip", symbol, "quant desk: RL agent is bearish here")
             if cfg.atr_stops:
                 symbol_atr = atr_pct(df)
+            if cfg.min_adx > 0 and not manual:
+                adx = adx_value(df)
+                if adx is not None and adx < cfg.min_adx:
+                    return DeskAction(
+                        "skip", symbol,
+                        f"regime filter: ADX {adx:.0f} < {cfg.min_adx:.0f} -- choppy "
+                        "market, breakout entries mostly fail here",
+                    )
         except Exception:
             pass
 
