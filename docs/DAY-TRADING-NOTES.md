@@ -239,3 +239,40 @@ unaffected since those are always fully historical already.
 market filter when volatility is too low" is the same concept as the
 ADX regime filter already built in session 6 -- independent confirmation
 this is a real, recognized pattern, not a one-off idea.
+
+## Session 8 findings (crypto vs. forex -- settled with evidence, not guesswork)
+
+Asked directly: is crypto actually the right market for this bot? Researched
+it properly instead of assuming.
+
+**Cost:** crypto CFD spreads run 3-5x wider than major forex pairs (wider
+underlying-market fragmentation + higher volatility risk premium) --
+concretely, one comparison found a $12 BTC/USD spread vs forex majors
+typically under $1-2 equivalent; at 10 trades/day that gap alone can run
+$50k+/year at scale. That directly eats into a 1.5% ATR stop.
+([ForexSpreadCompare](https://forexspreadcompare.com/artigos/crypto-spread-comparison))
+
+**Structure:** confirmed in session 7 -- opening-range/session-phase
+features have no real meaning on a 24/7 market. Forex has genuine session
+structure the strategy is built around.
+
+**Where the actual edge concentrates:** the London/NY overlap (~8am-12pm
+ET) carries the highest share of real institutional forex volume
+(London alone ~35-40% of global FX turnover) -- directly matches the
+ORB+VWAP strategy already built, on a market where "opening range" means
+something. ([Equiti](https://www.equiti.com/sc-en/news/trading-ideas/london-session-why-the-forex-market-becomes-most-active-in-european-trading/))
+(Filtered out several "secret institutional bank levels" articles from
+one recurring author -- same unverifiable-marketing pattern flagged in
+session 1; kept only the measurable volume/timing claims.)
+
+**MambaFX cross-check:** his own site (mambafx.co) also advertises a
+managed-funds service alongside the education -- a different, higher-risk
+offering than a course, with the same "no independent verification"
+caveat as before.
+
+**Decision: switched the paper session from crypto to forex majors**
+(EURUSD/GBPUSD/USDJPY), still free (Yahoo data, no broker account),
+still 1-minute charts at MambaFX's pace. Crypto remains available as the
+after-hours fallback when literally nothing else is open, but it is no
+longer the default -- it was the wrong instrument for this strategy, not
+just an inconvenient one.
