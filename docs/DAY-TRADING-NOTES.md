@@ -799,3 +799,58 @@ daily trade cap") so it's visible on the dashboard, not hidden.
 Added `test_high_conviction_override_bypasses_daily_cap`,
 `test_high_conviction_override_disabled_by_default_still_caps`,
 `test_high_conviction_overrides_run_out_per_day` (72 tests passing).
+
+## Session 22 (self-review found a real scheduling flaw: the "day" rolled at the wrong time)
+
+Reviewed the bot's own behavior instead of adding features: at 10:50 UTC
+the desk was skipping every candidate with "daily trade cap reached" --
+right as London was open and the London/NY overlap (its own session-9
+research says this is the single best window of the day) was approaching.
+Looked at the journal: all 12 of the day's trades were opened between
+00:36 and 06:47 UTC, i.e. the overnight Asian session, the *worst*
+liquidity window. The budget was spent before the good hours even
+started.
+
+**Root cause:** every per-day counter (trade cap, loss streak,
+high-conviction overrides, daily circuit breaker, profit target) keyed
+off UTC midnight. But the forex/funded-account convention rolls the
+trading day at **5pm New York time** (the daily close) -- under that
+boundary, an overnight Asian session and the following London/NY
+sessions belong to the *same* day and share one budget, which is exactly
+how a prop firm counts "daily" too. Under UTC midnight they were split
+in half at the worst possible point.
+
+**Fixed:** `bots.journal.trading_day(dt)` -- maps any timestamp to its
+trading day with the 5pm-ET roll (NY time + 7 hours, date part). Now used
+by `trades_opened_today`, `count_trades_with_tag_today`,
+`consecutive_losses_today`, and both `DrawdownGuard.check()` and
+`day_gain_pct()` (daily loss limit + profit target now reset at the same
+instant a funded firm's would). Malformed timestamps fall back to the old
+date-prefix behavior rather than crashing.
+
+**Honest second look -- the boundary fix alone wasn't enough.** Under
+either boundary (UTC midnight or 5pm ET), the trading day still *starts*
+with the Asian session, so a flat per-day cap can still be fully spent
+overnight before London opens. The boundary change is still correct (it
+matches how a funded firm counts "daily," so the loss limit and profit
+target now reset at the right instant), but the observed problem needed a
+second fix: **a session budget**. New `DeskConfig.asian_session_budget_pct`
+(0.4 in `funded_account_config()`): while the Asian session is the live
+one, only 40% of `max_trades_per_day` may be spent; the remaining 60% is
+reserved for London/NY -- directly encoding the session-9 finding that
+the overlap is where the edge concentrates. High-conviction overrides
+(session 21) still work during the Asian session, so a genuinely
+exceptional overnight setup isn't locked out entirely. The skip message
+says exactly what's happening ("session budget: 4 of 10 daily trades
+allowed during the thin Asian session -- saving the rest for London/NY").
+
+Also re-ran the skills-registry search (asked to look for more): the
+risk/forex results were the same two skills already mined in session 13,
+and the trade-journal skills found (one for Chinese A-stocks, one
+already-reviewed Solana-heavy marketplace, one with 22 installs) all
+cover less than the journal already does (setup grading, auto mistakes
+log, profit factor, risk of ruin). Skipped honestly instead of
+installing for show.
+
+Added `test_trading_day_rolls_at_5pm_new_york` and
+`test_asian_session_budget_reserves_trades_for_london` (74 tests passing).

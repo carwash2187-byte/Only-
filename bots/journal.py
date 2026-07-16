@@ -13,7 +13,7 @@ import json
 import os
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from bots.paths import data_path
@@ -25,6 +25,34 @@ MIN_TRADES_FOR_LESSON = 5
 
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def trading_day(dt: Optional[datetime] = None) -> str:
+    """The *trading day* a timestamp belongs to, as an ISO date string.
+
+    Forex desks and funded-account firms roll the trading day at 5pm New
+    York time (the daily close), not at UTC midnight. Session 22 found the
+    difference matters in practice: with a UTC-midnight boundary the desk
+    burned its entire daily trade budget in the overnight Asian session
+    (00:30-07:00 UTC) and was then locked out of the London/NY overlap --
+    the best liquidity window of the whole day, per its own session-9
+    research. Anything after 5pm ET belongs to the NEXT trading day, which
+    is exactly how prop firms count 'daily' loss limits too.
+    """
+    from zoneinfo import ZoneInfo
+
+    dt = dt or datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ny = dt.astimezone(ZoneInfo("America/New_York"))
+    return (ny + timedelta(hours=7)).date().isoformat()
+
+
+def _entry_trading_day(iso_ts: str) -> str:
+    try:
+        return trading_day(datetime.fromisoformat(iso_ts))
+    except Exception:
+        return iso_ts[:10]  # malformed timestamp: fall back to its date prefix
 
 
 def risk_of_ruin(win_rate: float, risk_per_trade_pct: float) -> float:
@@ -241,38 +269,39 @@ class TradeJournal:
         Records tagged 'admin' (canceled never-filled orders, account
         migrations) are bookkeeping, not trading activity, and don't count.
         """
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = trading_day()
         return sum(
             1
             for t in self.trades.values()
-            if t.entry_time.startswith(today) and "admin" not in t.tags
+            if _entry_trading_day(t.entry_time) == today and "admin" not in t.tags
         )
 
     def count_trades_with_tag_today(self, tag: str) -> int:
         """How many of today's entries carry a given tag -- used to cap
         the high-conviction daily-trade-cap override at a fixed number
         per day (session 21), so it stays a narrow exception, not a hole."""
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = trading_day()
         return sum(
             1
             for t in self.trades.values()
-            if t.entry_time.startswith(today) and tag in t.tags
+            if _entry_trading_day(t.entry_time) == today and tag in t.tags
         )
 
     def consecutive_losses_today(self) -> int:
-        """Trailing streak of losing closed trades today (UTC), newest first.
+        """Trailing streak of losing closed trades this trading day (5pm-ET
+        roll, see trading_day()), newest first.
 
         The "2-loss rule": after consecutive losses, judgment (human or
         model-driven) degrades and revenge-trading risk spikes -- the desk
         stops opening trades for the day once the streak hits the cap.
         Admin-tagged records don't count.
         """
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = trading_day()
         closed_today = sorted(
             (
                 t for t in self.trades.values()
                 if not t.is_open and t.pnl is not None
-                and (t.exit_time or "").startswith(today)
+                and _entry_trading_day(t.exit_time or "") == today
                 and "admin" not in t.tags
             ),
             key=lambda t: t.exit_time or "",

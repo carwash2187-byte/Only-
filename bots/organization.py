@@ -62,6 +62,7 @@ class DeskConfig:
     orb_retest_required: bool = False  # MambaFX-style: don't chase an extended breakout candle early in the session, wait for a retest
     high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
+    asian_session_budget_pct: float = 0.0  # 0 = off; e.g. 0.4: only 40% of max_trades_per_day may be spent during the Asian session, saving the rest for London/NY
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -116,6 +117,13 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # in the discipline.
         high_conviction_adx=40.0,
         max_high_conviction_overrides=2,
+        # Session 22: the journal showed the desk spending its entire daily
+        # trade budget in the overnight Asian session -- the thinnest
+        # window -- leaving nothing for the London/NY overlap its own
+        # research rates highest. Reserve most of the budget for the good
+        # hours: at most 40% of max_trades_per_day may be spent while the
+        # Asian session is the live one.
+        asian_session_budget_pct=0.4,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -623,6 +631,20 @@ class TradingDesk:
             if cfg.max_trades_per_day > 0
             else None
         )
+        cap_reason = "scalper discipline: daily trade cap reached"
+        if (
+            trades_left_today is not None
+            and cfg.asian_session_budget_pct > 0
+            and active_forex_session() == "asian"
+        ):
+            asian_cap = max(1, int(cfg.max_trades_per_day * cfg.asian_session_budget_pct))
+            asian_left = asian_cap - self.journal.trades_opened_today()
+            if asian_left < trades_left_today:
+                trades_left_today = asian_left
+                cap_reason = (
+                    f"session budget: {asian_cap} of {cfg.max_trades_per_day} daily trades "
+                    "allowed during the thin Asian session -- saving the rest for London/NY"
+                )
         high_conviction_overrides_left = (
             max(0, cfg.max_high_conviction_overrides
                 - self.journal.count_trades_with_tag_today("high-conviction-override"))
@@ -667,9 +689,7 @@ class TradingDesk:
                     if adx is not None and adx >= cfg.high_conviction_adx:
                         use_high_conviction = True
                 if not use_high_conviction:
-                    report.actions.append(
-                        DeskAction("skip", symbol, "scalper discipline: daily trade cap reached")
-                    )
+                    report.actions.append(DeskAction("skip", symbol, cap_reason))
                     continue
             if symbol in committed_symbols:
                 continue

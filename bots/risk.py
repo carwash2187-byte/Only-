@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date
 from typing import Optional, Tuple
 
 from bots.paths import data_path
@@ -38,8 +37,13 @@ class DrawdownGuard:
             json.dump(state, fh, indent=2)
 
     def check(self, equity: float) -> Tuple[bool, str]:
-        """Returns (halted, message). Call once per desk cycle."""
-        today = date.today().isoformat()
+        """Returns (halted, message). Call once per desk cycle. The 'day'
+        rolls at 5pm New York time (the forex/funded-account daily close),
+        not container-local midnight -- same convention as the journal's
+        per-day counters (see bots.journal.trading_day)."""
+        from bots.journal import trading_day
+
+        today = trading_day()
         state = self._load()
         if state.get("date") != today:
             state = {"date": today, "start_equity": equity}
@@ -63,8 +67,10 @@ class DrawdownGuard:
         """Today's gain vs the recorded day-start baseline (0.0 if no
         baseline yet). Used by the daily profit target ('quit while
         ahead') rule."""
+        from bots.journal import trading_day
+
         state = self._load()
-        if state.get("date") != date.today().isoformat():
+        if state.get("date") != trading_day():
             return 0.0
         start = float(state.get("start_equity") or 0.0)
         return (equity / start - 1.0) if start > 0 else 0.0

@@ -59,6 +59,28 @@ def test_close_trade_logs_losses_to_mistakes_file(journal, tmp_path, monkeypatch
     assert "ADMIN" not in log_path.read_text()
 
 
+def test_trading_day_rolls_at_5pm_new_york():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.journal import trading_day
+
+    ny = ZoneInfo("America/New_York")
+    # 4:59pm ET Wednesday July 15 -> still trading day July 15
+    assert trading_day(datetime(2026, 7, 15, 16, 59, tzinfo=ny)) == "2026-07-15"
+    # 5:00pm ET Wednesday -> the NEXT trading day (July 16), forex convention
+    assert trading_day(datetime(2026, 7, 15, 17, 0, tzinfo=ny)) == "2026-07-16"
+    # 2am UTC July 16 == 10pm ET July 15 -> trading day July 16, so the
+    # overnight Asian session and the following London/NY sessions share
+    # one budget under ONE day label (this is the session-22 bug: with a
+    # UTC-midnight roll they were split, and Asian-session trades burned
+    # the whole cap before London even opened)
+    from datetime import timezone as tz
+    assert trading_day(datetime(2026, 7, 16, 2, 0, tzinfo=tz.utc)) == "2026-07-16"
+    # naive timestamps are treated as UTC, not local time
+    assert trading_day(datetime(2026, 7, 16, 2, 0)) == "2026-07-16"
+
+
 def test_journal_records_and_learns(journal):
     # Five losing trades on one setup should get it blocked.
     for _ in range(5):
@@ -1463,6 +1485,35 @@ def test_high_conviction_overrides_run_out_per_day(tmp_path, journal):
     report = desk.run_once(symbols=["STRONG"])
     assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
     assert any("daily trade cap" in a.reason for a in report.actions)
+
+
+def test_asian_session_budget_reserves_trades_for_london(price_df, tmp_path, journal, monkeypatch):
+    import bots.organization as org_mod
+
+    # 4 of 10 daily trades already used; asian budget 40% -> asian cap is 4,
+    # so during the asian session the desk must refuse a 5th entry even
+    # though 6 normal daily slots remain.
+    for i in range(4):
+        journal.open_trade(f"T{i}", "long", 1, 100.0, setup="daytrade")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"USDJPY": 150.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=10, asian_session_budget_pct=0.4)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+
+    monkeypatch.setattr(org_mod, "active_forex_session", lambda now=None: "asian")
+    report = desk.run_once(symbols=["USDJPY"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("session budget" in a.reason for a in report.actions), report.describe()
+
+    # Same desk state, but once London is the live session the reserved
+    # budget opens back up.
+    monkeypatch.setattr(org_mod, "active_forex_session", lambda now=None: "london")
+    report2 = desk.run_once(symbols=["USDJPY"])
+    assert not any("session budget" in a.reason for a in report2.actions), report2.describe()
 
 
 def test_funded_config_includes_regime_filter():
