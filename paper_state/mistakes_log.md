@@ -1,0 +1,3 @@
+- 2026-07-16T04:07 **ES=F** long -0.37 (-0.05%) setup=`copytrade:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.0%)
+- 2026-07-16T04:55 **CL=F** long -2.26 (-0.30%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.3%)
+- 2026-07-16T05:56 **NQ=F** long -0.39 (-0.05%) setup=`copytrade:trend-down|rsi-oversold|vwap-above|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
