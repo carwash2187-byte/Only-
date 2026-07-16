@@ -1079,6 +1079,22 @@
       "notes": "PLTR (score 2.0): Scion Asset Management (Michael Burry) top-1 holding | time stop: 123 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.4%)",
       "tags": [],
       "stop_pct": null
+    },
+    {
+      "trade_id": "a67fe91be988",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 1071.5008,
+      "entry_price": 0.7000839710235596,
+      "entry_time": "2026-07-16T21:47:34.902043+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
