@@ -739,3 +739,36 @@ still passing -- the weekend-fallback change is a CLI default change, not
 new logic, so no new test needed beyond the existing
 `test_autopilot_weekend_crypto_fallback` which still verifies the
 mechanism itself still works when explicitly requested).
+
+## Session 20 (found and closed a real gap: the Q-agent wasn't actually learning live)
+
+Asked directly whether the bot learns from mistakes "automatically,
+infinitely." Checked the code instead of assuming yes, and found the
+honest answer was "half of it."
+
+**What was already true:** the journal's setup veto (`should_avoid()`)
+re-reads real closed-trade stats every single cycle with zero retraining
+step -- genuinely continuous, automatic, unbounded. Same for the
+anti-martingale sizing (session 12) and drawdown taper (session 13).
+
+**What wasn't:** the Q-learning agent's actual table -- its "opinion" of
+each market state -- only ever got updated inside `_run_episode()`,
+called only by the offline `train` CLI command on historical data. Live
+trading only ever called `agent.signal()` (a pure lookup) and
+`agent.current_state()`, never `agent._update()` (the real learning
+step). So the model itself was frozen between manual retrains; it was
+using experience, not learning from it, while live.
+
+**Fixed:** `TradingDesk._online_learn()` in `bots/organization.py`, called
+right after every real trade closes in `_manage_position()`. Recovers the
+entry-time state from the journal record's `setup` string (already
+recorded there for exactly this), computes the post-close market state as
+the TD target, and calls the *same* `_update()` method training already
+uses -- same learning rate, same math, just fed by real outcomes instead
+of backtest replay. Admin-tagged and manual/mirror trades (no recorded
+state) are correctly skipped. Wrapped in try/except: a learning-update
+failure must never be able to break a trade close.
+
+Added `test_closing_a_trade_updates_the_qtable_live` (confirms the
+Q-value actually moves and persists to disk) and
+`test_online_learning_skips_admin_and_manual_trades` (69 tests passing).

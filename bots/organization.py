@@ -812,6 +812,7 @@ class TradingDesk:
                 record.trade_id, result.fill_price or price, notes=reason
             )
             reason += f" | realized PnL {closed.pnl:+.2f}"
+            self._online_learn(closed)
         if result.ok and force_exit:
             from bots.copytrader import manual as manual_mod
 
@@ -819,6 +820,32 @@ class TradingDesk:
         report.actions.append(
             DeskAction("sell", symbol, reason, quantity=quantity, ok=result.ok)
         )
+
+    def _online_learn(self, closed_record) -> None:
+        """The missing half of 'learns from mistakes automatically': the
+        journal-based setup veto (should_avoid) already re-reads real trade
+        history every cycle with no retraining step, but the Q-agent's own
+        table was still frozen between explicit `train` runs -- live
+        trading only ever called signal() (a lookup), never _update() (the
+        actual learning step). This closes that gap: every real trade that
+        closes feeds its outcome straight back into the Q-table, live, so
+        the model itself keeps adjusting from real experience, not just
+        the setup-level veto layer on top of it. Best-effort: any failure
+        here must never break a trade close."""
+        if closed_record.pnl_pct is None or "admin" in closed_record.tags:
+            return
+        setup = closed_record.setup or ""
+        if ":" not in setup:
+            return  # manual/mirror trades don't carry a recorded state
+        state = setup.split(":", 1)[1]
+        try:
+            df = self.history_fn(closed_record.symbol)
+            next_state = self.agent.current_state(df, holding=False)
+            reward = closed_record.pnl_pct / 100.0
+            self.agent._update(state, "buy", reward, next_state)
+            self.agent.save()
+        except Exception:
+            pass
 
     def _consider_entry(
         self,

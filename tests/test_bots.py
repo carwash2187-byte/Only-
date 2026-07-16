@@ -1061,6 +1061,58 @@ def test_htf_confirm_allows_entry_with_higher_timeframe_uptrend(price_df, tmp_pa
     assert len(blocked) == 0, report.describe()
 
 
+def test_closing_a_trade_updates_the_qtable_live(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    state = agent.current_state(price_df, holding=False)
+    record = journal.open_trade("DEMO", "long", 10, 100.0, setup=f"copytrade:{state}")
+    before = dict(agent._q_row(state))  # snapshot before any update
+
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.01, take_profit_pct=0.02)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
+    broker.price_overrides["DEMO"] = 103.0  # past the 2% take-profit
+    report = desk.run_once(symbols=[])
+
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert len(sells) == 1, report.describe()
+    after = agent._q_row(state)
+    assert after["buy"] != before.get("buy", 0.0), "Q-value for this state/action didn't move"
+
+    # and it's not just in memory -- it was actually saved to disk
+    reloaded = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    assert reloaded.load()
+    assert reloaded.q[state]["buy"] == pytest.approx(after["buy"])
+
+
+def test_online_learning_skips_admin_and_manual_trades(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"ADMIN": 100.0, "MANUAL": 100.0},
+    )
+    assert broker.buy("ADMIN", 10).ok
+    assert broker.buy("MANUAL", 10).ok
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+
+    admin_record = journal.open_trade("ADMIN", "long", 10, 100.0, setup="copytrade:trend-up|rsi-neutral|pos-out")
+    admin_record.tags.append("admin")
+    manual_record = journal.open_trade("MANUAL", "long", 10, 100.0, setup="mambafx-call")  # no ":" state suffix
+
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.01, take_profit_pct=0.02)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
+    broker.price_overrides["ADMIN"] = 103.0
+    broker.price_overrides["MANUAL"] = 103.0
+    desk.run_once(symbols=[])
+
+    # Neither trade should have added any new state to the Q-table
+    assert agent.q == {}
+
+
 def test_breakeven_stop_after_1r(price_df, tmp_path, journal):
     broker = PaperBroker(
         starting_cash=10_000,
