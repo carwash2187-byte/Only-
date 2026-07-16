@@ -819,6 +819,22 @@
       "notes": "user watchlist",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "44b52f0df02f",
+      "symbol": "NQ=F",
+      "side": "long",
+      "quantity": 0.0253,
+      "entry_price": 29650.25,
+      "entry_time": "2026-07-16T01:09:44.936872+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
