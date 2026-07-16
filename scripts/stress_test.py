@@ -24,6 +24,7 @@ Usage: PYTHONPATH=. python scripts/stress_test.py
 from __future__ import annotations
 
 import shutil
+import sys
 import tempfile
 
 import pandas as pd
@@ -49,7 +50,7 @@ def find_roughest_window(dfs: dict) -> pd.Timestamp:
     return combined.idxmax()
 
 
-def stress_test(starting_cash: float = 5_000.0) -> None:
+def fetch_rough_window() -> dict:
     print("Fetching real history for the live watchlist...")
     full = {}
     for sym in WATCHLIST:
@@ -64,7 +65,41 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
     window_end = roughest + pd.Timedelta(days=2)
     dfs = {s: df[(df.index >= window_start) & (df.index < window_end)].copy()
            for s, df in full.items()}
-    dfs = {s: df for s, df in dfs.items() if len(df) > 40}
+    return {s: df for s, df in dfs.items() if len(df) > 40}
+
+
+def practice_on_rough_window(episodes: int = 20) -> None:
+    """Train the LIVE Q-agent (respects BOT_DATA_DIR, same model_path the
+    autopilot loads) on the real roughest window found -- genuine practice
+    on real historical hard conditions, using the exact same agent.train()
+    mechanism the daily SPY/NVDA training already uses safely. This only
+    ever updates the Q-table; it never opens/closes a TradeRecord, so it
+    cannot touch the journal, the win-rate/profit-factor numbers, or
+    anything the funded-account-readiness question is graded on -- those
+    stay 100% real trades only, exactly as before."""
+    dfs = fetch_rough_window()
+    agent = QTraderAgent()  # default model_path -> respects BOT_DATA_DIR
+    loaded = agent.load()
+    before_states = len(agent.q)
+    print(f"\nlive model: {'loaded existing table' if loaded else 'starting fresh'} "
+          f"({before_states} known states)")
+    for sym, df in dfs.items():
+        if len(df) < 120:
+            print(f"  {sym}: not enough bars in this window, skipping")
+            continue
+        stats = agent.train(df, episodes=episodes)
+        print(f"  practiced on {sym} real data ({len(df)} bars, {episodes} episodes): "
+              f"{stats['trades']} trades in the eval pass, "
+              f"win rate {stats['win_rate']:.0%}, return {stats['total_return_pct']:+.1f}%")
+    agent.save()
+    print(f"\nsaved -- live model now knows {len(agent.q)} states "
+          f"({len(agent.q) - before_states:+d} vs before). "
+          "Restart the live autopilot process to pick this up "
+          "(it loaded its agent at startup, in memory).")
+
+
+def stress_test(starting_cash: float = 5_000.0) -> None:
+    dfs = fetch_rough_window()
     master_index = sorted(set().union(*[set(df.index) for df in dfs.values()]))
     print(f"replaying {master_index[0]} to {master_index[-1]} "
           f"({len(master_index)} timestamps, {len(dfs)} symbols, real 5-minute data)")
@@ -147,4 +182,7 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
 
 
 if __name__ == "__main__":
-    stress_test()
+    if "--practice" in sys.argv:
+        practice_on_rough_window()
+    else:
+        stress_test()
