@@ -981,6 +981,24 @@
         "high-conviction-override"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "b9afc3acc4c6",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 4.0284,
+      "entry_price": 185.9429931640625,
+      "entry_time": "2026-07-16T06:47:08.701609+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
