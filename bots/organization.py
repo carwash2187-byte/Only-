@@ -762,6 +762,11 @@ class TradingDesk:
             if last_trade is not None and last_trade.pnl is not None and last_trade.pnl < 0:
                 risk_pct = risk_pct / 2.0
                 sizing_note = " (anti-martingale: half size after the last loss)"
+        if self.max_drawdown_guard is not None:
+            dd_mult = self.max_drawdown_guard.size_multiplier(equity)
+            if dd_mult < 1.0:
+                risk_pct *= dd_mult
+                sizing_note += f" (drawdown taper: {dd_mult:.0%} size, approaching the max-loss ceiling)"
         risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0

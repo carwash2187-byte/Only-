@@ -27,6 +27,28 @@ def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def risk_of_ruin(win_rate: float, risk_per_trade_pct: float) -> float:
+    """Approximate probability of eventually blowing the account, using the
+    classic even-money gambler's-ruin formula from trading risk-management
+    literature (Van Tharp / Ralph Vince): edge = 2*win_rate - 1,
+    RoR = ((1-edge)/(1+edge)) ** (1/risk_per_trade_pct).
+
+    This assumes roughly similar-sized wins and losses (a 1:1 payoff) --
+    it's a rough back-of-envelope estimate real desks use before trusting a
+    sizing scheme, not an exact number for a strategy with an asymmetric
+    reward:risk shape. A negative edge (win_rate <= 50%) returns 1.0:
+    ruin is a "when", not an "if", at any sizing.
+    """
+    if risk_per_trade_pct <= 0:
+        return 0.0
+    edge = 2 * win_rate - 1
+    if edge <= 0:
+        return 1.0
+    z = (1 - edge) / (1 + edge)
+    units = 1.0 / risk_per_trade_pct
+    return z ** units
+
+
 @dataclass
 class TradeRecord:
     trade_id: str
@@ -171,11 +193,13 @@ class TradeJournal:
             cumulative += t.pnl
             peak = max(peak, cumulative)
             max_dd = max(max_dd, peak - cumulative)
+        wins = sum(1 for t in closed if t.pnl > 0)
         return {
             "trades": len(closed),
             "profit_factor": gross_profit / gross_loss if gross_loss > 0 else float("inf"),
             "expectancy": sum(t.pnl for t in closed) / len(closed),
             "max_drawdown": max_dd,
+            "win_rate": wins / len(closed),
         }
 
     def losing_setups(self, min_trades: int = MIN_TRADES_FOR_LESSON) -> List[str]:

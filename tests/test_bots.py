@@ -52,6 +52,31 @@ def test_journal_records_and_learns(journal):
     assert not journal.should_avoid("good-setup")
 
 
+def test_risk_of_ruin_matches_the_reference_table():
+    from bots.journal import risk_of_ruin
+
+    # Classic even-money gambler's-ruin table: 55% win rate (10% edge),
+    # risking 10%/5%/2% per trade -> ~13% / ~1.7% / ~0.02% ruin probability.
+    assert risk_of_ruin(0.55, 0.10) == pytest.approx(0.137, abs=0.01)
+    assert risk_of_ruin(0.55, 0.05) == pytest.approx(0.017, abs=0.005)
+    assert risk_of_ruin(0.55, 0.02) == pytest.approx(0.0002, abs=0.001)
+    # No edge (50% win rate, 1:1 payoff) -> ruin is certain
+    assert risk_of_ruin(0.50, 0.02) == 1.0
+    assert risk_of_ruin(0.40, 0.02) == 1.0
+    # Zero risk per trade -> never bets, never ruined
+    assert risk_of_ruin(0.55, 0.0) == 0.0
+
+
+def test_performance_metrics_includes_win_rate_and_risk_of_ruin(journal):
+    for i in range(6):
+        record = journal.open_trade("TEST", "long", 10, 100.0, setup=f"s{i}")
+        journal.close_trade(record.trade_id, 110.0 if i < 4 else 90.0)  # 4 wins, 2 losses
+
+    metrics = journal.performance_metrics()
+    assert metrics["win_rate"] == pytest.approx(4 / 6)
+    assert metrics["trades"] == 6
+
+
 def test_journal_persists(tmp_path):
     path = str(tmp_path / "journal.json")
     journal = TradeJournal(path=path)
@@ -871,6 +896,51 @@ def test_max_drawdown_guard_halts_and_stays_halted(tmp_path):
     # stays halted even if equity recovers -- funded accounts don't un-terminate
     still_halted, _ = guard.check(10_600)
     assert still_halted
+
+
+def test_max_drawdown_guard_size_multiplier_tapers_before_the_halt(tmp_path):
+    from bots.risk import MaxDrawdownGuard
+
+    guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=str(tmp_path / "dd.json"))
+    guard.check(10_000)  # peak = 10000, no drawdown yet
+    assert guard.size_multiplier(10_000) == 1.0
+    guard.check(9_800)  # 2% drawdown -- under half of the 5% ceiling
+    assert guard.size_multiplier(9_800) == 1.0
+    guard.check(9_650)  # 3.5% drawdown -- 70% of ceiling used -> half size
+    assert guard.size_multiplier(9_650) == 0.5
+    guard.check(9_550)  # 4.5% drawdown -- 90% of ceiling used -> quarter size
+    assert guard.size_multiplier(9_550) == 0.25
+
+
+def test_drawdown_taper_reduces_entry_size(price_df, tmp_path, journal):
+    from bots.risk import MaxDrawdownGuard
+
+    # Broker equity itself must reflect the drawdown -- run_once() calls
+    # max_drawdown_guard.check(broker.equity()) with the real current
+    # equity, which would otherwise overwrite/heal any pre-set guard state.
+    broker = PaperBroker(
+        starting_cash=96_500, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    dd_guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=str(tmp_path / "dd.json"))
+    dd_guard.check(100_000)  # establish a peak above current equity
+
+    # small risk_per_trade_pct so the risk-based budget (not max_position_pct)
+    # is the binding constraint on quantity
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        risk_per_trade_pct=0.005, max_total_drawdown_pct=0.05)
+    desk = TradingDesk(
+        broker=broker, journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=config, history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=str(tmp_path / "manual.json"),
+        max_drawdown_guard=dd_guard,
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1
+    assert "drawdown taper" in buys[0].reason
 
 
 def test_funded_account_config_matches_screenshot_numbers():

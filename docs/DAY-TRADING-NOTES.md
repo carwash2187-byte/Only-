@@ -435,3 +435,48 @@ halved for that one entry -- logged transparently in the trade reason
 ("anti-martingale: half size after the last loss"). Fully automatic, runs
 every cycle, no user action. Added
 `test_reduce_size_after_loss_halves_next_position` (52 tests passing).
+
+## Session 13 (skill search + 2 more real techniques mined from it)
+
+Searched the GitHub skills registry (`npx skills find`) for more trading
+skills. Found two, checked both before trusting either:
+
+- `octagonai/skills@forex-list` -- just a static pair listing gated behind
+  a paid third-party MCP API key we don't have. Skipped: the bot already
+  has a real, session-aware pair list built directly into the code
+  (session 9), no external dependency needed.
+- `omer-metin/skills-for-antigravity@risk-management-trading` -- mostly
+  generic AI-agent-marketplace roleplay framing ("Voice: a veteran trader
+  who learned the hard way..."), but its `references/patterns.md` file
+  contained standard, correct, textbook risk-management math worth mining
+  directly rather than installing the whole persona skill.
+
+**Two techniques pulled from it and implemented for real:**
+
+1. **Tiered drawdown-based position sizing.** The existing
+   `MaxDrawdownGuard` was binary: full size right up until the 5% funded
+   ceiling, then a hard halt. Real prop desks taper before that cliff.
+   Added `MaxDrawdownGuard.size_multiplier(equity)`: under 50% of the way
+   to the max-drawdown ceiling, full size; 50-75% of the way there, half
+   size; 75-100%, quarter size. Wired into `_consider_entry()`'s position
+   sizing in `bots/organization.py`, composing with the existing
+   anti-martingale halving from session 12 (both can apply at once).
+2. **Risk of ruin, computed from the bot's actual track record.** The
+   classic even-money gambler's-ruin approximation (Van Tharp / Ralph
+   Vince): `edge = 2*win_rate - 1`, `RoR = ((1-edge)/(1+edge)) **
+   (1/risk_per_trade_pct)`. Added `bots.journal.risk_of_ruin()` plus a
+   `win_rate` field on `TradeJournal.performance_metrics()`, and put both
+   on the dashboard. Explicitly labeled "(est.)" and documented as an
+   approximation that assumes roughly 1:1-sized wins/losses -- not exact
+   for this strategy's 1:2 R:R shape, but the standard back-of-envelope
+   sanity check real desks run. First real number it produced: **~100%
+   estimated risk of ruin**, because the all-time win rate across every
+   trade ever recorded (including the pre-session-7 buggy crypto period)
+   is ~13%, below the 50% break-even point this approximation needs. This
+   is an honest number about historical performance, not the current
+   forex desk specifically (which has 0 trades closed so far) -- it's a
+   real warning sign to watch, not a guess.
+
+Added `test_max_drawdown_guard_size_multiplier_tapers_before_the_halt`,
+`test_drawdown_taper_reduces_entry_size`, `test_risk_of_ruin_matches_the_reference_table`,
+`test_performance_metrics_includes_win_rate_and_risk_of_ruin` (56 tests passing).

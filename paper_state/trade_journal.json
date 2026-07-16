@@ -803,6 +803,22 @@
       "notes": "user watchlist | stop loss hit (-0.3%)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "08625f226ca4",
+      "symbol": "USDJPY",
+      "side": "long",
+      "quantity": 4.6209,
+      "entry_price": 162.11500549316406,
+      "entry_time": "2026-07-16T00:36:34.051540+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }

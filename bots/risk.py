@@ -112,3 +112,21 @@ class MaxDrawdownGuard:
                 f"funded accounts get terminated, no new trades until manually reviewed"
             )
         return False, f"total drawdown from peak: {drawdown:.1%} (limit {self.max_total_drawdown_pct:.0%})"
+
+    def size_multiplier(self, equity: float) -> float:
+        """Taper position size down as drawdown approaches the hard ceiling,
+        instead of trading at full size right up until check() slams the
+        door shut. Standard prop-desk practice (tiered drawdown limits):
+        below half the max, full size; 50-75% of the way there, half size;
+        75-100%, quarter size. 1.0 if there's no baseline yet."""
+        state = self._load()
+        peak = float(state.get("peak_equity") or equity)
+        if peak <= 0 or self.max_total_drawdown_pct <= 0:
+            return 1.0
+        drawdown = 1.0 - equity / peak
+        used = drawdown / self.max_total_drawdown_pct  # fraction of the ceiling used up
+        if used < 0.5:
+            return 1.0
+        if used < 0.75:
+            return 0.5
+        return 0.25

@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 import os
 
 from bots import marketdata
+from bots.journal import risk_of_ruin
 from bots.paths import data_path
 
 OUT_PATH = sys.argv[1] if len(sys.argv) > 1 else "/tmp/dashboard.html"
@@ -42,10 +43,17 @@ def performance_metrics(closed_trades: list) -> dict:
         cumulative += p
         peak = max(peak, cumulative)
         max_dd = max(max_dd, peak - cumulative)
+    wins = sum(1 for p in pnls if p > 0)
+    win_rate = wins / len(pnls)
     return {
         "profit_factor": gross_profit / gross_loss if gross_loss > 0 else float("inf"),
         "expectancy": sum(pnls) / len(pnls),
         "max_drawdown": max_dd,
+        "win_rate": win_rate,
+        # risk_per_trade_pct=0.015 matches funded_account_config's current
+        # default; this is a rough estimate (see risk_of_ruin docstring),
+        # not a precise number, but a real one computed from actual trades.
+        "risk_of_ruin": risk_of_ruin(win_rate, 0.015) if len(pnls) >= 5 else None,
     }
 
 
@@ -251,9 +259,14 @@ def build() -> str:
         pf_s = "∞" if pf == float("inf") else f"{pf:.2f}"
         metrics_html = (
             f'<span class="chip">PF {pf_s}</span> '
+            f'<span class="chip">Win rate {metrics["win_rate"]:.0%}</span> '
             f'<span class="chip">Expectancy {fmt_money(metrics["expectancy"])}/trade</span> '
             f'<span class="chip">Max DD {fmt_money(metrics["max_drawdown"])}</span>'
         )
+        if metrics["risk_of_ruin"] is not None:
+            metrics_html += (
+                f' <span class="chip">Risk of ruin (est.) {metrics["risk_of_ruin"]:.1%}</span>'
+            )
     else:
         metrics_html = '<span class="chip">not enough closed trades yet</span>'
 
