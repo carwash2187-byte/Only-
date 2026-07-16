@@ -668,6 +668,8 @@ def test_index_alias_resolution():
     assert resolve_symbol("NAS100") == "NQ=F"
     assert resolve_symbol("nasdaq") == "NQ=F"
     assert resolve_symbol("US500") == "ES=F"
+    assert resolve_symbol("GOLD") == "GC=F"
+    assert resolve_symbol("XAUUSD") == "GC=F"
     # unknown symbols pass through unchanged
     assert resolve_symbol("EURUSD") == "EURUSD"
     assert resolve_symbol("YM=F") == "YM=F"
@@ -830,6 +832,57 @@ def test_reduce_size_after_loss_halves_next_position(price_df, tmp_path, journal
     report2 = desk2.run_once(symbols=["DEMO"])
     full_buy = [a for a in report2.actions if a.action == "buy" and a.ok][0]
     assert buys[0].quantity == pytest.approx(full_buy.quantity / 2.0, rel=0.05)
+
+
+def _backdate_entry(journal, record, minutes):
+    from datetime import datetime, timedelta, timezone
+
+    record.entry_time = (
+        datetime.now(timezone.utc) - timedelta(minutes=minutes)
+    ).isoformat()
+    journal.save()
+
+
+def test_time_stop_closes_stale_trade(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    record = journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade")
+    _backdate_entry(journal, record, minutes=180)  # 3 hours old, flat since entry
+
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                        take_profit_pct=0.03, max_hold_minutes=120)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert len(sells) == 1 and "time stop" in sells[0].reason, report.describe()
+    assert "DEMO" not in broker.positions()
+
+
+def test_time_stop_spares_breakeven_armed_and_fresh_trades(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"OLDWIN": 102.0, "FRESH": 100.0},
+    )
+    assert broker.buy("OLDWIN", 10).ok
+    assert broker.buy("FRESH", 10).ok
+    # OLDWIN: old but already reached +1R (breakeven-armed) -> exempt
+    old_win = journal.open_trade("OLDWIN", "long", 10, 100.0, setup="daytrade")
+    old_win.tags.append("breakeven-armed")
+    _backdate_entry(journal, old_win, minutes=180)
+    # FRESH: opened just now -> under the cap, exempt
+    journal.open_trade("FRESH", "long", 10, 100.0, setup="daytrade")
+
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                        take_profit_pct=0.03, max_hold_minutes=120)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=[])
+    assert not [a for a in report.actions if "time stop" in a.reason], report.describe()
+    assert set(broker.positions()) == {"OLDWIN", "FRESH"}
 
 
 def test_heikin_ashi_smooths_noisy_uptrend_into_a_clean_trend():

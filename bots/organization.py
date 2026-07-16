@@ -58,6 +58,7 @@ class DeskConfig:
     session_aware_forex: bool = False  # skip/deprioritize FX pairs outside their liquid trading session
     htf_confirm: bool = False  # require a higher-timeframe trend filter to agree before entering
     reduce_size_after_loss: bool = False  # anti-martingale: halve risk_per_trade_pct right after a loss
+    max_hold_minutes: int = 0  # time stop: exit a trade that hasn't reached +1R after this long (0 = off)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -89,6 +90,10 @@ def funded_account_config(**overrides) -> "DeskConfig":
         breakeven_at_1r=True,
         session_aware_forex=True,
         htf_confirm=True,
+        # Time stop (session 16): a scalp thesis on 1m/5m candles is stale
+        # long before 2 hours -- if the trade hasn't even reached +1R by
+        # then, the setup didn't confirm; free the capital and risk budget.
+        max_hold_minutes=120,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -681,6 +686,26 @@ class TradingDesk:
                 reason = f"breakeven stop hit (was +1R, now {change:+.1%}) -- risk-free exit"
             elif change >= target_pct:
                 reason = f"take profit hit ({change:+.1%})"
+            elif cfg.max_hold_minutes > 0 and not breakeven_armed:
+                # Time stop: the entry thesis was a fast intraday move. If
+                # the trade hasn't even reached +1R after max_hold_minutes,
+                # the setup didn't confirm -- exit on the clock, free the
+                # capital, defend against "state drift" (the market that
+                # exists now isn't the one the signal fired in).
+                from datetime import datetime, timezone
+
+                try:
+                    entry_dt = datetime.fromisoformat(record.entry_time)
+                    if entry_dt.tzinfo is None:
+                        entry_dt = entry_dt.replace(tzinfo=timezone.utc)
+                    age_min = (datetime.now(timezone.utc) - entry_dt).total_seconds() / 60.0
+                    if age_min >= cfg.max_hold_minutes:
+                        reason = (
+                            f"time stop: {age_min:.0f} min in the trade without reaching "
+                            f"+1R (cap {cfg.max_hold_minutes}) -- setup went stale ({change:+.1%})"
+                        )
+                except Exception:
+                    pass
         if reason is None:
             try:
                 df = self.history_fn(symbol)

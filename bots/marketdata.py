@@ -27,6 +27,7 @@ INDEX_ALIASES = {
     "US30": "YM=F", "DOW": "YM=F", "DOW30": "YM=F", "DJ30": "YM=F",
     "NAS100": "NQ=F", "NASDAQ": "NQ=F", "NASDAQ100": "NQ=F", "NDX": "NQ=F",
     "US500": "ES=F", "SPX": "ES=F", "SPX500": "ES=F", "SP500": "ES=F",
+    "GOLD": "GC=F", "XAUUSD": "GC=F", "XAU": "GC=F",
 }
 
 

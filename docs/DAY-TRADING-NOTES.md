@@ -563,3 +563,42 @@ Added `test_autopilot_adds_stocks_during_nyse_hours`,
 `test_autopilot_flattens_only_stock_leg_near_nyse_close`,
 `test_heikin_ashi_smooths_noisy_uptrend_into_a_clean_trend` (60 tests
 passing).
+
+## Session 16 (exit management: scale-out rejected, time stops adopted, gold added)
+
+Study block while the desk runs live. Two exit-management techniques
+researched properly; one adopted, one *rejected with evidence* -- both
+outcomes documented because "we checked and the current design is right"
+is also a real finding.
+
+**Scale-out (close half at +1R, trail the rest) -- REJECTED.** Compared
+against full fixed-target exits on the same strategies, scale-out showed
+a 10-25% performance degradation for high-win-rate scalping styles; its
+real benefit is psychological comfort, not math. The bot has no
+psychology to comfort, so the current fixed 1:2 take-profit stays.
+([Traders Second Brain](https://traderssecondbrain.com/guides/take-profit-methods),
+[TradeZella](https://www.tradezella.com/blog/scalping-strategies))
+
+**Time stops (N-bar / clock exits) -- ADOPTED.** A scalp signal on 1m/5m
+candles bets on a *fast* move; if the trade still hasn't reached +1R
+hours later, the market state the signal fired in no longer exists
+("state drift") and the position is just parked capital blocking a
+position slot and risk budget. Evidence is honestly mixed on raw returns
+(some tests show no equity improvement) but consistently shows reduced
+drawdown and time-in-market -- and it directly fixes a real observed
+behavior: tonight's USDJPY scalp sat flat for hours on a 1-minute
+thesis. Implemented as `DeskConfig.max_hold_minutes` (0 = off; 120 min in
+`funded_account_config()`): a position that hasn't reached +1R by the cap
+is closed on the clock. Trades that DID reach +1R (breakeven-armed) are
+exempt -- they're risk-free, the stop/target can finish the job.
+([QuantifiedStrategies](https://www.quantifiedstrategies.com/trading-exit-strategies/),
+[Nasdaq Playbook](https://nasdaqplaybook.substack.com/p/time-stops-n-bar-exits-when-price))
+
+**Gold added** -- MambaFX's other main instrument alongside NAS100/US30,
+and the `gold` correlation group has existed since session 4 with nothing
+tradeable in it. `GOLD`/`XAUUSD`/`XAU` now alias to `GC=F` (COMEX gold
+futures, near-24h, verified live 5m data). Added to the live watchlist.
+
+Added `test_time_stop_closes_stale_trade`,
+`test_time_stop_spares_breakeven_armed_and_fresh_trades`, extended
+`test_index_alias_resolution` (62 tests passing).
