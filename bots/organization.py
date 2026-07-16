@@ -69,7 +69,11 @@ def funded_account_config(**overrides) -> "DeskConfig":
     base = dict(
         max_daily_loss_pct=0.03,
         max_total_drawdown_pct=0.05,
-        daily_profit_target_pct=0.02,
+        # 3% daily cash-out target ($150 on a $5k account) per user choice.
+        # Note it sits AT the 3% daily-loss limit's mirror image: a green
+        # day now has to run further before it locks in, so expect fewer
+        # (but bigger) target-hit days than at 2%.
+        daily_profit_target_pct=0.03,
         # Slightly above the 1% generic default: the hard backstops are the
         # 3% daily / 5% total drawdown circuit breakers above, not the
         # per-trade size -- those trip regardless of how any single trade

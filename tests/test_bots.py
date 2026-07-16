@@ -1179,7 +1179,7 @@ def test_daily_profit_target_cashes_out_and_stops(price_df, tmp_path, journal):
 def test_funded_config_includes_profit_target():
     from bots.organization import funded_account_config
 
-    assert funded_account_config().daily_profit_target_pct == 0.02
+    assert funded_account_config().daily_profit_target_pct == 0.03
 
 
 def test_adx_regime_filter_skips_choppy_markets(tmp_path, journal):
