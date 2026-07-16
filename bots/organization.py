@@ -54,6 +54,7 @@ class DeskConfig:
     min_adx: float = 0.0  # regime filter: skip entries when ADX(14) is below this (0 = off; ~20 typical)
     session_aware_forex: bool = False  # skip/deprioritize FX pairs outside their liquid trading session
     htf_confirm: bool = False  # require a higher-timeframe trend filter to agree before entering
+    reduce_size_after_loss: bool = False  # anti-martingale: halve risk_per_trade_pct right after a loss
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -71,6 +72,7 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # is sized, so this only changes how fast a *winning* day reaches
         # the profit target, not the worst-case loss on a bad one.
         risk_per_trade_pct=0.015,
+        reduce_size_after_loss=True,
         min_adx=20.0,
         day_trading=True,
         timeframe="5m",
@@ -753,7 +755,14 @@ class TradingDesk:
             stop_pct = min(max(1.5 * symbol_atr, 0.003), 0.05)
             take_profit_pct = 2.0 * stop_pct  # keep the 1:2 risk:reward shape
             record_stop = stop_pct
-        risk_budget = equity * cfg.risk_per_trade_pct / max(stop_pct, 1e-6)
+        risk_pct = cfg.risk_per_trade_pct
+        sizing_note = ""
+        if cfg.reduce_size_after_loss:
+            last_trade = self.journal.last_closed_trade()
+            if last_trade is not None and last_trade.pnl is not None and last_trade.pnl < 0:
+                risk_pct = risk_pct / 2.0
+                sizing_note = " (anti-martingale: half size after the last loss)"
+        risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0
         if quantity <= 0:
@@ -772,7 +781,7 @@ class TradingDesk:
                 manual_mod.consume_signal(symbol, self.manual_signals_path)
         return DeskAction(
             "buy", symbol,
-            reason if result.ok else f"order failed: {result.error}",
+            (reason if result.ok else f"order failed: {result.error}") + (sizing_note if result.ok else ""),
             quantity=quantity, ok=result.ok,
         )
 

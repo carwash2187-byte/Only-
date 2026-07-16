@@ -691,6 +691,39 @@ def test_session_aware_forex_skips_off_session_pairs(price_df, tmp_path, journal
     assert all(a.symbol != "EURUSD" for a in buys), report.describe()
 
 
+def test_reduce_size_after_loss_halves_next_position(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    # A closed loser recorded just now -> journal.last_closed_trade() is a loss
+    record = journal.open_trade("OTHER", "long", 10, 100.0, setup="daytrade")
+    journal.close_trade(record.trade_id, 95.0)
+
+    # Small risk_per_trade_pct so the risk-based budget (not the
+    # max_position_pct cap) is the binding constraint on quantity -- only
+    # then does halving risk_pct actually show up in the order size.
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        risk_per_trade_pct=0.005, reduce_size_after_loss=True)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1
+    assert "anti-martingale" in buys[0].reason
+
+    full_size_config = DeskConfig(news_blackout=False, min_copy_score=0,
+                                  risk_per_trade_pct=0.005, reduce_size_after_loss=False)
+    broker2 = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct2.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    journal2 = TradeJournal(path=str(tmp_path / "journal2.json"))
+    desk2 = make_desk(tmp_path, broker2, journal2, price_df, config=full_size_config)
+    report2 = desk2.run_once(symbols=["DEMO"])
+    full_buy = [a for a in report2.actions if a.action == "buy" and a.ok][0]
+    assert buys[0].quantity == pytest.approx(full_buy.quantity / 2.0, rel=0.05)
+
+
 def test_htf_confirm_blocks_entry_against_higher_timeframe_downtrend(price_df, tmp_path, journal):
     from bots.organization import trend_direction
 

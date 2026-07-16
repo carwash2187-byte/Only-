@@ -230,6 +230,19 @@ class TradeJournal:
                 break
         return streak
 
+    def last_closed_trade(self) -> Optional[TradeRecord]:
+        """Most recently closed trade (any day), or None if there isn't one.
+        Admin-tagged records (canceled orders, account migrations) don't
+        count -- same exclusion as consecutive_losses_today."""
+        closed = [
+            t for t in self.trades.values()
+            if not t.is_open and t.pnl is not None and t.exit_time
+            and "admin" not in t.tags
+        ]
+        if not closed:
+            return None
+        return max(closed, key=lambda t: t.exit_time or "")
+
     def day_trades_last_5_days(self) -> int:
         """Count same-day round trips in the last 5 calendar days (PDT guard)."""
         count = 0

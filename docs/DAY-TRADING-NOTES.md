@@ -405,3 +405,33 @@ stops, which are unchanged and still the actual backstop. This is a small,
 bounded change, not a loosening of the funded-account discipline.
 
 51 tests passing after this session.
+
+## Session 12 (automatic mistake-correction, no user action needed)
+
+Asked specifically for the bot to auto-improve from mistakes without being
+told, "like a real trader at super speed." The journal-based setup-veto
+(`should_avoid()`) and the Q-learning agent already do this every single
+cycle with zero user input -- worth stating plainly since it's easy to
+miss: every loss updates the Q-table's negative reward for that state, and
+after 5+ losses on one setup string the risk desk refuses to take it again,
+automatically, forever, no command required.
+
+**What was missing:** real traders don't just avoid a bad setup after
+enough losses -- they also react *immediately* to the very next trade
+after any loss, before there's even enough data for the setup to be
+statistically blocked. The standard rule (documented under "anti-martingale"
+position sizing): cut size after a loss, only return to full size after a
+win. Halving risk by 50% after a loss means a losing streak drains the
+account far slower, without needing to know in advance which setup will
+go cold.
+([FXOpen](https://fxopen.com/blog/en/martingale-and-anti-martingale-strategies-in-trading/),
+[FasterCapital](https://fastercapital.com/content/Position-sizing--Optimizing-Position-Sizing-with-Antimartingale-Principles.html))
+
+**Implemented:** `TradeJournal.last_closed_trade()` (most recent closed
+trade, any day) + `DeskConfig.reduce_size_after_loss` (on by default in
+`funded_account_config()`). In `_consider_entry()`, if the last closed
+trade lost money, the next trade's `risk_per_trade_pct` is automatically
+halved for that one entry -- logged transparently in the trade reason
+("anti-martingale: half size after the last loss"). Fully automatic, runs
+every cycle, no user action. Added
+`test_reduce_size_after_loss_halves_next_position` (52 tests passing).
