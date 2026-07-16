@@ -518,3 +518,48 @@ futures actually have a short daily maintenance pause forex doesn't),
 stated plainly rather than glossed over, but close enough for a paper
 desk and the right side of the approximation (won't sit "closed" during
 hours these actually trade).
+
+## Session 15 (stock hours, quieter notifications, Heikin-Ashi)
+
+Three direct asks: stop the phone notifications (dashboard is enough),
+also trade stocks during the actual 9:30-16:00 ET NYSE session "like
+before," and look into Heikin-Ashi ("forex ashi").
+
+**Notifications:** canceled the win-check PushNotification loop. Replaced
+it with a purely silent keep-alive (checks every ~20 min that the live
+process didn't die in a container restart, restarts it if so, never
+sends a notification or chat reply either way). Dashboard link is the
+one source of truth now, as asked.
+
+**Stock hours:** the original stock desk (session 1-4, mega-caps) never
+went away, it just wasn't running alongside the current forex/index desk.
+Rather than launch a second autopilot process against the same
+`paper_state` files (real risk: `PaperBroker`/`MaxDrawdownGuard` do plain
+`open(path, "w")` writes, not atomic -- two processes both loading,
+modifying, and saving the same JSON around the same moment can silently
+lose one process's update), extended the *same* single process instead.
+`run_autopilot()` gained a `stock_symbols` param: each cycle, if the NYSE
+session is open, those symbols get merged into that cycle's watchlist
+alongside the always-on forex/index one -- one process, one writer, same
+risk rules for both. Added a matching stock-only `flatten_all(symbols=...)`
+so the 4pm close-out only sweeps the stock positions, leaving
+still-tradeable forex/futures positions open (they don't need to close
+just because NYSE did). CLI: `--stock-symbols` (defaults to
+`AAPL,MSFT,NVDA,SPY,QQQ` when `--market forex --funded` are both set).
+
+**Heikin-Ashi:** real technique, not folklore -- averages each candle
+with the running trend to cancel out noise, with real, well-documented
+caveats: it lags actual price and shouldn't be used standalone or on a
+fast entry timeframe, but works well as a *trend filter on a higher
+timeframe*. That's exactly the role the session-10 HTF-confirm filter
+already plays, so `heikin_ashi()` transforms the higher-timeframe candles
+right before `trend_direction()` reads them for that filter -- the fast
+1m/5m entry timeframe itself is untouched (where HA's lag would actually
+hurt). Falls back to the raw OHLC trend read if the transform fails for
+any reason. ([OANDA](https://www.oanda.com/us-en/skills-and-insights/education/technical-analysis/price-charts-and-candlesticks/heikin-ashi-candles-explained/),
+[The Forex Geek](https://theforexgeek.com/heikin-ashi-day-trading/))
+
+Added `test_autopilot_adds_stocks_during_nyse_hours`,
+`test_autopilot_flattens_only_stock_leg_near_nyse_close`,
+`test_heikin_ashi_smooths_noisy_uptrend_into_a_clean_trend` (60 tests
+passing).

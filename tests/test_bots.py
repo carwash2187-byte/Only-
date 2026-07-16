@@ -590,6 +590,76 @@ def test_autopilot_weekend_crypto_fallback(price_df, tmp_path, monkeypatch):
     assert seen_symbols == [["BTC-USD"]]
 
 
+def test_autopilot_adds_stocks_during_nyse_hours(price_df, tmp_path, monkeypatch):
+    import bots.autopilot as ap
+
+    monkeypatch.setattr(ap.time, "sleep", lambda _s: None)
+    # forex and stocks both open -- a Wednesday at noon ET scenario
+    monkeypatch.setattr(ap, "market_is_open", lambda m, now=None: True)
+    monkeypatch.setattr(ap, "minutes_to_stock_close", lambda now=None: 240)  # not near close
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "AAPL": 200.0},
+    )
+    journal = TradeJournal(path=str(tmp_path / "journal.json"))
+    desk = make_desk(tmp_path, broker, journal, price_df)
+
+    seen_symbols = []
+    monkeypatch.setattr(
+        desk, "run_once",
+        lambda symbols=None: seen_symbols.append(symbols) or DeskReport(),
+    )
+
+    ap.run_autopilot(
+        broker_name="paper", interval_minutes=1, symbols=["EURUSD"],
+        market_override="forex", stock_symbols=["AAPL"],
+        max_cycles=1, desk=desk,
+    )
+    assert seen_symbols == [["EURUSD", "AAPL"]]
+
+
+def test_autopilot_flattens_only_stock_leg_near_nyse_close(price_df, tmp_path, monkeypatch):
+    import bots.autopilot as ap
+    from bots.organization import DeskConfig, TradingDesk
+    from bots.risk import DrawdownGuard
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "AAPL": 200.0},
+    )
+    assert broker.buy("EURUSD", 100).ok
+    assert broker.buy("AAPL", 5).ok
+    journal = TradeJournal(path=str(tmp_path / "journal.json"))
+    journal.open_trade("EURUSD", "long", 100, 1.1, setup="daytrade")
+    journal.open_trade("AAPL", "long", 5, 200.0, setup="daytrade")
+
+    desk = TradingDesk(
+        broker=broker,
+        journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, day_trading=True),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+
+    monkeypatch.setattr(ap.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(ap, "market_is_open", lambda m, now=None: True)
+    monkeypatch.setattr(ap, "minutes_to_stock_close", lambda now=None: 10)  # near close
+
+    ap.run_autopilot(
+        broker_name="paper", interval_minutes=1, symbols=["EURUSD"],
+        market_override="forex", stock_symbols=["AAPL"],
+        max_cycles=1, desk=desk,
+    )
+    positions = broker.positions()
+    assert "AAPL" not in positions  # flattened
+    assert positions.get("EURUSD") == pytest.approx(100)  # left alone
+
+
 def test_index_alias_resolution():
     from bots.marketdata import resolve_symbol
 
@@ -760,6 +830,30 @@ def test_reduce_size_after_loss_halves_next_position(price_df, tmp_path, journal
     report2 = desk2.run_once(symbols=["DEMO"])
     full_buy = [a for a in report2.actions if a.action == "buy" and a.ok][0]
     assert buys[0].quantity == pytest.approx(full_buy.quantity / 2.0, rel=0.05)
+
+
+def test_heikin_ashi_smooths_noisy_uptrend_into_a_clean_trend():
+    from bots.organization import heikin_ashi, trend_direction
+
+    rng = np.random.default_rng(7)
+    n = 60
+    base = np.linspace(100, 130, n)  # clear uptrend
+    noise = rng.normal(0, 3, n)  # noisy enough to flip a naive close-to-close read
+    close = base + noise
+    df = pd.DataFrame({
+        "open": close - rng.normal(0, 1, n),
+        "high": close + abs(rng.normal(0, 1.5, n)),
+        "low": close - abs(rng.normal(0, 1.5, n)),
+        "close": close,
+    })
+    ha = heikin_ashi(df)
+    assert len(ha) == len(df)
+    assert set(ha.columns) == {"open", "high", "low", "close"}
+    # HA close should track the same overall uptrend
+    assert trend_direction(ha) == "up"
+    # HA high/low bound HA open/close, standard HA invariant
+    assert (ha["high"] >= ha[["open", "close"]].max(axis=1) - 1e-9).all()
+    assert (ha["low"] <= ha[["open", "close"]].min(axis=1) + 1e-9).all()
 
 
 def test_htf_confirm_blocks_entry_against_higher_timeframe_downtrend(price_df, tmp_path, journal):

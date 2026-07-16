@@ -80,6 +80,7 @@ def run_autopilot(
     flatten_before_close_minutes: int = 15,
     market_override: Optional[str] = None,
     weekend_symbols: Optional[list] = None,
+    stock_symbols: Optional[list] = None,
 ) -> None:
     # The generic paper/Alpaca/Robinhood brokers can hold any symbol
     # (stocks, or crypto tickers like BTC-USD) -- the broker name alone
@@ -118,10 +119,20 @@ def run_autopilot(
         # one market that's actually open then -- when the caller has
         # opted in with a crypto watchlist for it.
         active_market, active_symbols = market, symbols
+        stock_active = False
         if market == "forex" and weekend_symbols and not market_is_open("forex", now) and market_is_open("crypto", now):
             active_market, active_symbols = "crypto", weekend_symbols
+        elif stock_symbols and market_is_open("stocks", now):
+            # Add the 9:30-16:00 ET stock session on top of the always-on
+            # forex/index watchlist -- same process, same desk, same risk
+            # rules, one single writer to the shared journal/account files
+            # (running a second autopilot process against the same state
+            # directory would race on those JSON writes).
+            stock_active = True
+            active_symbols = list(dict.fromkeys((symbols or []) + stock_symbols))
         if market_is_open(active_market, now):
             mins_left = minutes_to_stock_close(now) if active_market == "stocks" else None
+            stock_mins_left = minutes_to_stock_close(now) if stock_active else None
             try:
                 if (
                     day_trading
@@ -132,6 +143,22 @@ def run_autopilot(
                     report = desk.flatten_all()
                     flattened_today = now.date()
                     print(f"\n[{stamp}] day-trading flatten ({mins_left} min to close):")
+                    print(report.describe())
+                elif (
+                    day_trading
+                    and stock_mins_left is not None
+                    and stock_mins_left <= flatten_before_close_minutes
+                    and flattened_today != now.date()
+                ):
+                    # Only close the stock leg -- forex/index positions are
+                    # still tradeable after the NYSE closes and shouldn't
+                    # get swept up in the stock session's close-out.
+                    report = desk.flatten_all(
+                        reason="day-trading: flatten stock positions before the 4pm close",
+                        symbols=set(stock_symbols),
+                    )
+                    flattened_today = now.date()
+                    print(f"\n[{stamp}] day-trading flatten stock positions ({stock_mins_left} min to close):")
                     print(report.describe())
                 else:
                     label = f" (weekend fallback: {active_market})" if active_market != market else ""

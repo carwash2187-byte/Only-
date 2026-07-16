@@ -172,10 +172,16 @@ def cmd_autopilot(args) -> None:
     symbols = (
         [resolve_symbol(s) for s in args.symbols.split(",")] if args.symbols else None
     )
+    stock_symbols = (
+        [resolve_symbol(s) for s in args.stock_symbols.split(",")] if args.stock_symbols else (
+            ["AAPL", "MSFT", "NVDA", "SPY", "QQQ"] if (args.market == "forex" and args.funded) else None
+        )
+    )
     run_autopilot(
         broker_name=args.broker,
         interval_minutes=args.interval,
         symbols=symbols,
+        stock_symbols=stock_symbols,
         desk=desk,
         market_override=args.market,
         weekend_symbols=weekend_symbols,
@@ -322,6 +328,11 @@ def main() -> None:
                         help="comma-separated crypto watchlist to trade over the forex-closed "
                              "weekend instead of sitting idle (default: BTC-USD,ETH-USD when "
                              "--market forex and --funded are both set)")
+    p_auto.add_argument("--stock-symbols", default="",
+                        help="comma-separated stock watchlist to add during the 9:30-16:00 ET "
+                             "NYSE session, on top of the always-on forex/index watchlist "
+                             "(default: AAPL,MSFT,NVDA,SPY,QQQ when --market forex and --funded "
+                             "are both set)")
 
     p_watch = sub.add_parser(
         "watch", help="check YouTube/Twitter/Instagram for trade calls, auto-queue them"

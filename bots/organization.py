@@ -22,6 +22,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+import numpy as np
+import pandas as pd
+
 from bots.brokers import Broker, PaperBroker
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
@@ -211,6 +214,30 @@ def active_forex_session(now=None) -> str:
 # from this filter alone. Ratio follows the commonly used 4:1-5:1 spacing
 # (entry timeframe : confirmation timeframe).
 HTF_MAP = {"1m": "15m", "5m": "1h", "15m": "1h", "30m": "4h"}
+
+
+def heikin_ashi(df):
+    """Heikin-Ashi transform: averages each bar with the running trend so
+    noise cancels out and the direction reads cleaner. Real caveats from
+    the research (session 15): it lags real price (never use it on the
+    fast entry timeframe) and works best as a *trend filter* on a higher
+    timeframe, not standalone -- which is exactly the HTF-confirm role
+    it's used for here, not the entry signal itself."""
+    cols = {str(c).lower(): c for c in df.columns}
+    o, h, l, c = df[cols["open"]], df[cols["high"]], df[cols["low"]], df[cols["close"]]
+    ha_close = (o + h + l + c) / 4.0
+    ha_open = ha_close.copy()
+    ha_open.iloc[0] = (o.iloc[0] + c.iloc[0]) / 2.0
+    for i in range(1, len(df)):
+        ha_open.iloc[i] = (ha_open.iloc[i - 1] + ha_close.iloc[i - 1]) / 2.0
+    # np.maximum/minimum chains, not pd.concat -- pandas compares .attrs
+    # dicts during concat, which raises on any frame carrying the Q-agent's
+    # cached-feature marker (see bots/learning/agent.py's _FeatureCache).
+    ha_high = pd.Series(np.maximum(np.maximum(h.values, ha_open.values), ha_close.values), index=df.index)
+    ha_low = pd.Series(np.minimum(np.minimum(l.values, ha_open.values), ha_close.values), index=df.index)
+    return pd.DataFrame(
+        {"open": ha_open, "high": ha_high, "low": ha_low, "close": ha_close}, index=df.index
+    )
 
 
 def trend_direction(df, fast: int = 10, slow: int = 30) -> Optional[str]:
@@ -563,13 +590,19 @@ class TradingDesk:
                     group_counts[group] = group_counts.get(group, 0) + 1
         return report
 
-    def flatten_all(self, reason: str = "day-trading: flatten before close") -> DeskReport:
-        """Close every open position. Real day traders don't hold overnight --
+    def flatten_all(
+        self, reason: str = "day-trading: flatten before close", symbols: Optional[set] = None
+    ) -> DeskReport:
+        """Close open positions. Real day traders don't hold overnight --
         overnight moves aren't covered by the intraday stop-loss/take-profit
         checks, so autopilot calls this near market close when day_trading
-        is on."""
+        is on. `symbols`, if given, limits this to just that subset (e.g.
+        flattening stock positions at the 4pm close while leaving
+        still-tradeable forex/futures positions open)."""
         report = DeskReport()
         for symbol, quantity in list(self.broker.positions().items()):
+            if symbols is not None and symbol not in symbols:
+                continue
             self._manage_position(
                 symbol, quantity, report, force_exit=True, force_exit_reason=reason
             )
@@ -713,6 +746,10 @@ class TradingDesk:
             if htf:
                 try:
                     htf_df = self.htf_history_fn(symbol, htf)
+                    try:
+                        htf_df = heikin_ashi(htf_df)
+                    except Exception:
+                        pass  # fall back to raw OHLC trend if HA transform fails
                     htf_trend = trend_direction(htf_df)
                     if htf_trend == "down":
                         return DeskAction(
