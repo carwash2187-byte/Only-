@@ -1382,6 +1382,89 @@ def test_adx_regime_filter_skips_choppy_markets(tmp_path, journal):
     assert skips and not [a for a in report.actions if a.action == "buy"], report.describe()
 
 
+def test_high_conviction_override_bypasses_daily_cap(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    from bots.organization import adx_value
+    assert adx_value(trending) >= 40  # sanity: this is a genuinely strong trend
+
+    # A trade already opened today -> the 1-trade daily cap is hit.
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"STRONG": 100.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, high_conviction_adx=40.0,
+                        max_high_conviction_overrides=1)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["STRONG"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1, report.describe()
+    assert "high-conviction override" in buys[0].reason
+
+    record = journal.open_position_for("STRONG")
+    assert "high-conviction-override" in record.tags
+
+
+def test_high_conviction_override_disabled_by_default_still_caps(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"STRONG": 100.0},
+    )
+    # high_conviction_adx left at its default (0 = off)
+    config = DeskConfig(news_blackout=False, min_copy_score=0, max_trades_per_day=1)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["STRONG"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("daily trade cap" in a.reason for a in report.actions)
+
+
+def test_high_conviction_overrides_run_out_per_day(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+    # Already used up today's one allowed override.
+    used = journal.open_trade("PRIOR-OVERRIDE", "long", 1, 100.0, setup="daytrade")
+    used.tags.append("high-conviction-override")
+    journal.save()
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"STRONG": 100.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, high_conviction_adx=40.0,
+                        max_high_conviction_overrides=1)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["STRONG"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("daily trade cap" in a.reason for a in report.actions)
+
+
 def test_funded_config_includes_regime_filter():
     from bots.organization import funded_account_config
 

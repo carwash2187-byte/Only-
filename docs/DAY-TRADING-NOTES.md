@@ -772,3 +772,30 @@ failure must never be able to break a trade close.
 Added `test_closing_a_trade_updates_the_qtable_live` (confirms the
 Q-value actually moves and persists to disk) and
 `test_online_learning_skips_admin_and_manual_trades` (69 tests passing).
+
+## Session 21 (a narrow, bounded exception to the daily trade cap)
+
+Asked for the bot to still trade a genuinely good setup even after
+hitting the daily cap, instead of sitting out for the rest of the day no
+matter what. Fair ask -- a hard count limit doesn't know the difference
+between a mediocre 10th trade and an exceptional one. Implemented as a
+narrow exception, not a removed rule:
+
+`DeskConfig.high_conviction_adx` (40.0 in `funded_account_config()`) --
+ADX 20 is the normal "trending, not choppy" floor already used elsewhere;
+40+ is Wilder's classic "very strong trend" tier, a real step up rather
+than just clearing the bar. When the daily cap is hit, a candidate whose
+ADX clears this higher bar gets a second chance -- but it still has to
+pass every other filter (RL signal, HTF confirm, ORB retest, ADX regime,
+correlation cap, all of it); this only lifts the *count* limit, nothing
+else. Bounded by `max_high_conviction_overrides` (2/day) so it can't
+quietly become an unlimited hole in the discipline -- `TradeJournal`
+tracks how many have fired today via a `high-conviction-override` tag,
+same pattern as the existing admin-tag exclusions. Every override trade
+is logged transparently in its reason
+("high-conviction override: exceptionally strong trend, bypassed the
+daily trade cap") so it's visible on the dashboard, not hidden.
+
+Added `test_high_conviction_override_bypasses_daily_cap`,
+`test_high_conviction_override_disabled_by_default_still_caps`,
+`test_high_conviction_overrides_run_out_per_day` (72 tests passing).

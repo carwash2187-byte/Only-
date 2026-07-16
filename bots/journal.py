@@ -248,6 +248,17 @@ class TradeJournal:
             if t.entry_time.startswith(today) and "admin" not in t.tags
         )
 
+    def count_trades_with_tag_today(self, tag: str) -> int:
+        """How many of today's entries carry a given tag -- used to cap
+        the high-conviction daily-trade-cap override at a fixed number
+        per day (session 21), so it stays a narrow exception, not a hole."""
+        today = datetime.now(timezone.utc).date().isoformat()
+        return sum(
+            1
+            for t in self.trades.values()
+            if t.entry_time.startswith(today) and tag in t.tags
+        )
+
     def consecutive_losses_today(self) -> int:
         """Trailing streak of losing closed trades today (UTC), newest first.
 

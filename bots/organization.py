@@ -60,6 +60,8 @@ class DeskConfig:
     reduce_size_after_loss: bool = False  # anti-martingale: halve risk_per_trade_pct right after a loss
     max_hold_minutes: int = 0  # time stop: exit a trade that hasn't reached +1R after this long (0 = off)
     orb_retest_required: bool = False  # MambaFX-style: don't chase an extended breakout candle early in the session, wait for a retest
+    high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
+    max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -104,6 +106,16 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # 17). Real ORB backtests show 65.9% of raw breakouts hit their
         # stop -- this is the fix.
         orb_retest_required=True,
+        # Session 21: don't let a hard count cap block a genuinely
+        # exceptional setup. ADX 20 is "trending, not choppy" (the normal
+        # entry floor); 40+ is Wilder's "very strong trend" tier -- a real
+        # step up, not just barely clearing the bar. Still has to pass
+        # every other filter (RL signal, HTF confirm, ORB retest, etc.);
+        # this only lifts the daily *count* limit, nothing else, and only
+        # up to 2 extra trades a day so it can't become an unlimited hole
+        # in the discipline.
+        high_conviction_adx=40.0,
+        max_high_conviction_overrides=2,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -611,6 +623,12 @@ class TradingDesk:
             if cfg.max_trades_per_day > 0
             else None
         )
+        high_conviction_overrides_left = (
+            max(0, cfg.max_high_conviction_overrides
+                - self.journal.count_trades_with_tag_today("high-conviction-override"))
+            if cfg.high_conviction_adx > 0
+            else 0
+        )
         group_counts: Dict[str, int] = {}
         for held in committed_symbols:
             group = correlation_group(held)
@@ -639,11 +657,20 @@ class TradingDesk:
             ordered_candidates.sort(key=lambda item: -forex_session_score(item[0]))
 
         for symbol, info in ordered_candidates:
+            use_high_conviction = False
             if trades_left_today is not None and trades_left_today <= 0:
-                report.actions.append(
-                    DeskAction("skip", symbol, "scalper discipline: daily trade cap reached")
-                )
-                continue
+                if high_conviction_overrides_left > 0 and not info.get("manual"):
+                    try:
+                        adx = adx_value(self.history_fn(symbol))
+                    except Exception:
+                        adx = None
+                    if adx is not None and adx >= cfg.high_conviction_adx:
+                        use_high_conviction = True
+                if not use_high_conviction:
+                    report.actions.append(
+                        DeskAction("skip", symbol, "scalper discipline: daily trade cap reached")
+                    )
+                    continue
             if symbol in committed_symbols:
                 continue
             if open_slots <= 0:
@@ -674,11 +701,14 @@ class TradingDesk:
                 symbol, info["reason"], equity,
                 setup_base=info.get("setup", "copytrade"),
                 manual=bool(info.get("manual")),
+                high_conviction=use_high_conviction,
             )
             report.actions.append(action)
             if action.action == "buy" and action.ok:
                 open_slots -= 1
-                if trades_left_today is not None:
+                if use_high_conviction:
+                    high_conviction_overrides_left -= 1
+                elif trades_left_today is not None:
                     trades_left_today -= 1
                 if group:
                     group_counts[group] = group_counts.get(group, 0) + 1
@@ -854,6 +884,7 @@ class TradingDesk:
         equity: float,
         setup_base: str = "copytrade",
         manual: bool = False,
+        high_conviction: bool = False,
     ) -> DeskAction:
         cfg = self.config
 
@@ -951,6 +982,8 @@ class TradingDesk:
             if dd_mult < 1.0:
                 risk_pct *= dd_mult
                 sizing_note += f" (drawdown taper: {dd_mult:.0%} size, approaching the max-loss ceiling)"
+        if high_conviction:
+            sizing_note += " (high-conviction override: exceptionally strong trend, bypassed the daily trade cap)"
         risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0
@@ -959,11 +992,14 @@ class TradingDesk:
 
         result = self.broker.buy_bracket(symbol, quantity, stop_pct, take_profit_pct)
         if result.ok:
-            self.journal.open_trade(
+            opened = self.journal.open_trade(
                 symbol, "long", result.quantity or quantity,
                 result.fill_price or price, setup=setup, notes=reason,
                 stop_pct=record_stop,
             )
+            if high_conviction:
+                opened.tags.append("high-conviction-override")
+                self.journal.save()
             if manual:
                 from bots.copytrader import manual as manual_mod
 
