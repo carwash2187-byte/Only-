@@ -59,6 +59,7 @@ class DeskConfig:
     htf_confirm: bool = False  # require a higher-timeframe trend filter to agree before entering
     reduce_size_after_loss: bool = False  # anti-martingale: halve risk_per_trade_pct right after a loss
     max_hold_minutes: int = 0  # time stop: exit a trade that hasn't reached +1R after this long (0 = off)
+    orb_retest_required: bool = False  # MambaFX-style: don't chase an extended breakout candle early in the session, wait for a retest
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -98,6 +99,11 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # long before 2 hours -- if the trade hasn't even reached +1R by
         # then, the setup didn't confirm; free the capital and risk budget.
         max_hold_minutes=120,
+        # MambaFX's own strategy is explicitly a breakout style; his
+        # documented risk practice is retest-based, not chase-based (session
+        # 17). Real ORB backtests show 65.9% of raw breakouts hit their
+        # stop -- this is the fix.
+        orb_retest_required=True,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -139,6 +145,66 @@ def atr_pct(df, period: int = 14) -> Optional[float]:
         if not (atr > 0 and last > 0):
             return None
         return atr / last
+    except Exception:
+        return None
+
+
+def orb_chase_filter(df, atr_multiple: float = 1.0) -> Optional[str]:
+    """Approximates 'wait for the retest, don't chase the breakout candle'
+    (session 17, MambaFX-style breakout trading): real backtests show raw
+    opening-range breakouts hit their stop 65.9% of the time, mostly from
+    chasing an extended candle in the first ~2 hours after the open --
+    exactly the window this checks. If price is already more than
+    atr_multiple ATRs past today's opening-range high/low without having
+    pulled back, that's the chase pattern; the fix (break-and-retest) is
+    to wait for the level to be revisited and hold before entering.
+
+    Returns 'chasing' to veto, or None (no opinion -- not early enough in
+    the session, not a real single-session intraday market, or not
+    enough data to compute an opening range at all). Only checked in the
+    early session window on purpose: normal trend-continuation trades
+    later in the day are *supposed* to be far from the morning's range,
+    that isn't chasing.
+    """
+    from bots.learning.agent import _is_continuous_market, _is_intraday
+
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not {"open", "high", "low", "close"} <= set(cols):
+            return None
+        if not _is_intraday(df) or len(df) < 40:
+            return None
+        idx = df.index
+        bar_minutes = max(1, int(pd.Series(idx[1:] - idx[:-1]).median().total_seconds() // 60))
+        if _is_continuous_market(df, bar_minutes):
+            return None  # no real single session to have an "opening range"
+
+        high, low, close = df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        session = idx.normalize()
+        bar_of_day = pd.Series(1, index=idx).groupby(session).cumcount()
+        bars_30min = max(1, round(30 / bar_minutes))
+        bars_2h = max(1, round(120 / bar_minutes))
+        if int(bar_of_day.iloc[-1]) >= bars_2h:
+            return None  # past the early-session chase window
+
+        in_or_window = bar_of_day < bars_30min
+        todays_session = session.iloc[-1] if hasattr(session, "iloc") else session[-1]
+        in_today = session == todays_session
+        window = in_or_window & in_today
+        if not window.any():
+            return None
+
+        or_high, or_low = float(high[window].max()), float(low[window].min())
+        atr = atr_pct(df)
+        if atr is None:
+            return None
+        atr_abs = atr * float(close.iloc[-1])
+        if atr_abs <= 0:
+            return None
+        last_close = float(close.iloc[-1])
+        if last_close > or_high + atr_multiple * atr_abs or last_close < or_low - atr_multiple * atr_abs:
+            return "chasing"
+        return None
     except Exception:
         return None
 
@@ -767,6 +833,12 @@ class TradingDesk:
                         f"regime filter: ADX {adx:.0f} < {cfg.min_adx:.0f} -- choppy "
                         "market, breakout entries mostly fail here",
                     )
+            if cfg.orb_retest_required and not manual and orb_chase_filter(df) == "chasing":
+                return DeskAction(
+                    "skip", symbol,
+                    "breakout filter: price already ran past today's opening range "
+                    "without a pullback -- waiting for a retest instead of chasing",
+                )
         except Exception:
             pass
 

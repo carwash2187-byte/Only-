@@ -602,3 +602,55 @@ futures, near-24h, verified live 5m data). Added to the live watchlist.
 Added `test_time_stop_closes_stale_trade`,
 `test_time_stop_spares_breakeven_armed_and_fresh_trades`, extended
 `test_index_alias_resolution` (62 tests passing).
+
+## Session 17 (MambaFX's actual strategy identified: breakout, not just any signal)
+
+Asked to study MambaFX specifically and trade more like him. His own
+channel headline is literal: "MambaFx Breakout Strategy | Easy NAS100 &
+US30 Trading Strategy" -- he's a breakout trader on the exact instruments
+already added. Backtests on raw opening-range breakouts are damning
+though: **65.9% hit their stop, only 34% reach target** -- two out of
+three raw breakouts fail. The documented fix, "break and retest": wait
+for the level to be revisited and hold before entering, instead of
+chasing the breakout candle. Win rates cited moving from 52% to 68% with
+this and other confluence filters. Time-of-day data pinpoints exactly
+where the chasing problem is worst: 9-10am ET breakout win rates as low
+as 30-34%, vs 51-54% by 3-4pm -- the first two hours after any session
+open are where raw breakouts fail most.
+([XS](https://www.xs.com/en/blog/break-retest-trading/),
+[ORB Setups](https://orbsetups.com/research/how-to-identify-and-avoid-false-breakouts-a-data-driven-approach/))
+
+**Implemented:** `orb_chase_filter(df)` in `bots/organization.py` --
+computes today's opening-range high/low (first 30 min of the session) and
+vetoes an entry if price is already more than 1 ATR past that level
+*and* still within the first 2 hours of the session (the specific
+high-failure window; trend-continuation trades later in the day are
+supposed to be far from the morning's range, that's normal, not chased).
+Skips automatically for continuous 24h markets (no real single session to
+have an opening range) and for anything past the early window -- a
+single-bar approximation of "wait for the retest," not full multi-bar
+pattern detection, documented as such. New `DeskConfig.orb_retest_required`
+(on by default in `funded_account_config()`). Added
+`test_orb_chase_filter_vetoes_extended_early_breakout`,
+`test_orb_chase_filter_only_applies_in_the_early_window`,
+`test_orb_retest_required_blocks_entry` (65 tests passing).
+
+**Funded-account readiness, asked directly, answered with the actual
+numbers instead of a vibe:** the full trade history is 15 real (non-admin,
+non-zero) closed trades across the entire project's life: 1 win, 9
+losses (5 more are $0.00 bookkeeping closes from broker migrations, not
+trading decisions). Win rate 6.7%. Risk of ruin (per session 13's
+formula): 100%. **Not remotely enough data or evidence to trust yet** --
+almost that whole history predates this session's fixes (sessions 7-17:
+signal-repaint fix, continuous-market fix, session-aware pairs, HTF
+confirm, anti-martingale sizing, drawdown taper, time stops, breakout
+retest filter). The *current* rule set has closed **zero** trades of its
+own so far. The honest bar before considering a real funded account:
+enough closed trades under the current code (not the old buggy version)
+to make win rate/expectancy statistically meaningful -- 30-50 trades
+minimum, spanning multiple sessions/days/market conditions, with
+`risk_of_ruin()` sitting comfortably low rather than at the "certain
+ruin" end, and the 3%/5% funded limits never once breached across that
+whole stretch. Not a fixed calendar date -- a data bar, tracked live on
+the dashboard (win rate, profit factor, risk of ruin chips already
+there) as it actually gets crossed.

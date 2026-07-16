@@ -885,6 +885,70 @@ def test_time_stop_spares_breakeven_armed_and_fresh_trades(price_df, tmp_path, j
     assert set(broker.positions()) == {"OLDWIN", "FRESH"}
 
 
+def _synthetic_session_df(today_bars_after_open: list, prior_days: int = 3) -> pd.DataFrame:
+    """Builds a multi-day 5-minute intraday OHLC frame: `prior_days` full
+    quiet sessions (so ATR/history requirements are satisfied) followed by
+    today's session, where the first 6 bars (30 min) set the opening
+    range and `today_bars_after_open` are appended as closes after that."""
+    frames = []
+    for d in range(prior_days):
+        day = pd.Timestamp("2026-07-01") + pd.Timedelta(days=d)
+        idx = pd.date_range(day + pd.Timedelta(hours=9, minutes=30), periods=20, freq="5min")
+        close = pd.Series(100.0, index=idx) + np.linspace(0, 0.5, 20)
+        frames.append(pd.DataFrame({
+            "open": close, "high": close + 0.3, "low": close - 0.3, "close": close,
+        }, index=idx))
+
+    today = pd.Timestamp("2026-07-01") + pd.Timedelta(days=prior_days)
+    or_closes = [100.0, 100.3, 99.8, 100.4, 99.9, 100.2]  # opening range: ~99.7-100.5
+    all_closes = or_closes + today_bars_after_open
+    idx = pd.date_range(today + pd.Timedelta(hours=9, minutes=30), periods=len(all_closes), freq="5min")
+    close = pd.Series(all_closes, index=idx)
+    frames.append(pd.DataFrame({
+        "open": close, "high": close + 0.3, "low": close - 0.3, "close": close,
+    }, index=idx))
+    return pd.concat(frames)
+
+
+def test_orb_chase_filter_vetoes_extended_early_breakout():
+    from bots.organization import orb_chase_filter
+
+    # Opening range tops out ~100.5; jumping to 110 minutes later with no
+    # pullback is exactly the "chasing the breakout candle" pattern.
+    chasing_df = _synthetic_session_df([100.4, 101.0, 105.0, 110.0])
+    assert orb_chase_filter(chasing_df) == "chasing"
+
+    # Still within the opening range, no breakout to chase.
+    calm_df = _synthetic_session_df([100.3, 100.4, 100.2, 100.5])
+    assert orb_chase_filter(calm_df) is None
+
+
+def test_orb_chase_filter_only_applies_in_the_early_window():
+    from bots.organization import orb_chase_filter
+
+    # Same extended move, but 24+ bars (2h+) after the open -- normal
+    # trend continuation by then, not a chase, so no opinion.
+    late_bars = [100.4] + [100.5 + i * 0.5 for i in range(30)]  # ends far above OR high
+    late_df = _synthetic_session_df(late_bars)
+    assert orb_chase_filter(late_df) is None
+
+
+def test_orb_retest_required_blocks_entry(price_df, tmp_path, journal):
+    from bots.organization import DeskConfig
+
+    chasing_df = _synthetic_session_df([100.4, 101.0, 105.0, 110.0])
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 110.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0, orb_retest_required=True)
+    desk = make_desk(tmp_path, broker, journal, chasing_df, config=config)
+    report = desk.run_once(symbols=["DEMO"])
+    blocked = [a for a in report.actions if "breakout filter" in a.reason]
+    assert len(blocked) == 1, report.describe()
+    assert not any(a.action == "buy" and a.ok for a in report.actions)
+
+
 def test_heikin_ashi_smooths_noisy_uptrend_into_a_clean_trend():
     from bots.organization import heikin_ashi, trend_direction
 
