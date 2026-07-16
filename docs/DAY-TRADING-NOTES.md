@@ -854,3 +854,47 @@ installing for show.
 
 Added `test_trading_day_rolls_at_5pm_new_york` and
 `test_asian_session_budget_reserves_trades_for_london` (74 tests passing).
+
+## Session 23 (checked before raising risk, researched RSI-overbought entries, one real token-saving find)
+
+Asked to take on more risk "if it means money comes in." Checked the
+real numbers before touching anything: **last 25 real trades, 48% win
+rate, net -$7.10.** That's not a track record that supports taking MORE
+risk -- it's roughly break-even-to-slightly-negative. **Declined to
+increase risk_per_trade_pct.** The standing rule from session 11 still
+holds: risk changes get sized by what the data says, not by what would
+feel good. Will revisit if/when the real numbers actually support it.
+
+**Researched RSI-overbought entries** (prompted by the mistakes log
+showing a cluster of stale/losing overbought-entry trades). Real
+internal data: 18 overbought-entry trades, net -$3.23, but the picture is
+noisy -- 3 of 5 specific sub-patterns are flat-to-profitable, only one
+(already blacklisted by the existing setup-veto after 6 straight losses)
+is clearly bad. External research is genuinely mixed too: overbought
+RSI in a strong uptrend is often continuation, not a reversal warning --
+"RSI above 70 only signals a potential reversal when accompanied by
+divergence or a failure swing," and pullback entries (RSI cooled to the
+40-55 zone) are the well-evidenced lower-risk re-entry, not "never buy
+overbought."
+([Stockcharts](https://articles.stockcharts.com/article/stop-thinking-of-rsi-as-overbought-and-oversold/),
+[GoatFundedTrader](https://www.goatfundedtrader.com/blog/best-rsi-settings-for-day-trading))
+**Decision: no new filter.** The evidence doesn't clear the bar for a
+blanket rule, and the one setup that clearly is bad is already
+handled by the existing per-setup veto. Documented as a real "looked,
+found it's genuinely ambiguous, didn't force a change" outcome.
+
+**Skills search for token-usage reduction** (asked again, searched hard
+this time). Most results were the same kind of "cuts usage by X%" framing
+already debunked earlier in this project. One (`dubibubii/usage-limit-reducer`)
+turned out legitimate on inspection -- not a magic-number claim, just
+real, known practices (fresh sessions, right-sized model per task, track
+actual usage, reuse recurring context via a project file). That last one
+was a real, actionable gap here: **this repo had no `CLAUDE.md`.** Added
+one -- captures the `BOT_DATA_DIR=paper_state` convention, the exact live
+desk launch command, test/dashboard commands, and the change-and-restart
+workflow, so a fresh session (including scheduled routine fires) doesn't
+have to re-derive all of this from scratch every time. That's a real,
+if modest, token saving -- not a 90% headline number, an honest one.
+
+No code changes to `bots/` this session (research + a docs/CLAUDE.md
+addition only) -- no test changes, no live-desk restart needed.
