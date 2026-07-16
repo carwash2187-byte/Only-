@@ -835,6 +835,38 @@
       "notes": "user watchlist",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "de1e78fe9a3a",
+      "symbol": "YM=F",
+      "side": "long",
+      "quantity": 0.0142,
+      "entry_price": 52902.0,
+      "entry_time": "2026-07-16T01:44:49.432981+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "732ee8e9f929",
+      "symbol": "ES=F",
+      "side": "long",
+      "quantity": 0.0983,
+      "entry_price": 7618.5,
+      "entry_time": "2026-07-16T02:06:24.747145+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
