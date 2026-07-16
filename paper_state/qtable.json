@@ -2,7 +2,7 @@
   "q": {
     "trend-up|rsi-overbought|pos-out": {
       "hold": 0.036641412280581175,
-      "buy": 0.060662136707340567,
+      "buy": 0.049577010308892305,
       "sell": 0.045598327863139575
     },
     "trend-up|rsi-overbought|pos-in": {
@@ -17,7 +17,7 @@
     },
     "trend-up|rsi-neutral|pos-out": {
       "hold": 0.03672948251061196,
-      "buy": 0.0545869284324543,
+      "buy": 0.044232428006755156,
       "sell": 0.03949756351806096
     },
     "trend-up|rsi-oversold|pos-in": {
@@ -32,7 +32,7 @@
     },
     "trend-down|rsi-neutral|pos-out": {
       "hold": 0.03721604751412235,
-      "buy": 0.05972735635151584,
+      "buy": 0.05426054268156692,
       "sell": 0.040653040790559584
     },
     "trend-down|rsi-oversold|pos-out": {
