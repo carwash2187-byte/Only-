@@ -37,6 +37,28 @@ def journal(tmp_path):
     return TradeJournal(path=str(tmp_path / "journal.json"))
 
 
+def test_close_trade_logs_losses_to_mistakes_file(journal, tmp_path, monkeypatch):
+    monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))
+    log_path = tmp_path / "mistakes_log.md"
+
+    winner = journal.open_trade("WIN", "long", 10, 100.0, setup="good-setup")
+    journal.close_trade(winner.trade_id, 110.0)
+    assert not log_path.exists()  # a winner writes nothing
+
+    loser = journal.open_trade("LOSS", "long", 10, 100.0, setup="bad-setup")
+    journal.close_trade(loser.trade_id, 95.0)
+    assert log_path.exists()
+    text = log_path.read_text()
+    assert "LOSS" in text and "bad-setup" in text and "-5.00" in text
+
+    # admin-tagged records (canceled orders, migrations) aren't real
+    # trading mistakes and shouldn't clutter the log
+    admin_loss = journal.open_trade("ADMIN", "long", 10, 100.0, setup="x")
+    admin_loss.tags.append("admin")
+    journal.close_trade(admin_loss.trade_id, 90.0)
+    assert "ADMIN" not in log_path.read_text()
+
+
 def test_journal_records_and_learns(journal):
     # Five losing trades on one setup should get it blocked.
     for _ in range(5):
@@ -799,6 +821,31 @@ def test_session_aware_forex_skips_off_session_pairs(price_df, tmp_path, journal
     # EURUSD isn't active in the asian session -> skipped; USDJPY is -> traded
     assert any(a.symbol == "EURUSD" for a in skipped), report.describe()
     assert all(a.symbol != "EURUSD" for a in buys), report.describe()
+
+
+def test_session_aware_forex_applies_to_non_usd_crosses_too(price_df, tmp_path, journal, monkeypatch):
+    # EURGBP is a forex pair but sits in the "eur-crosses" correlation
+    # group, not "usd-fx" -- the session filter must still catch it (this
+    # was a real bug: it used to key off correlation_group == "usd-fx"
+    # specifically, so anything outside that one group silently skipped
+    # the session check entirely).
+    import bots.organization as org_mod
+
+    monkeypatch.setattr(org_mod, "active_forex_session", lambda now=None: "asian")
+
+    broker = PaperBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURGBP": 0.85},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_positions=99, session_aware_forex=True),
+    )
+    report = desk.run_once(symbols=["EURGBP"])
+    skipped = [a for a in report.actions if "session filter" in a.reason]
+    assert any(a.symbol == "EURGBP" for a in skipped), report.describe()
 
 
 def test_reduce_size_after_loss_halves_next_position(price_df, tmp_path, journal):

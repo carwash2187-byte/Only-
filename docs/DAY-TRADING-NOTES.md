@@ -654,3 +654,53 @@ ruin" end, and the 3%/5% funded limits never once breached across that
 whole stretch. Not a fixed calendar date -- a data bar, tracked live on
 the dashboard (win rate, profit factor, risk of ruin chips already
 there) as it actually gets crossed.
+
+## Session 18 (widen the watchlist instead of loosening the filters, auto mistake log, fixed a real correlation-cap bug)
+
+Asked to trade more right now. Checked the actual cycle log first instead
+of guessing: 16 skips, 0 new entries over 5 cycles. Each skip had a real
+reason (off-session pair, bearish read, trend disagreement) -- the desk
+wasn't broken, it just only had 3 forex pairs to choose from (EURUSD,
+GBPUSD, USDJPY) while the session-awareness system (session 9) actually
+knows about 12. Most cycles, the 3 pairs on the watchlist just happened
+to be the wrong ones for whatever session was live. Fix: widen the
+candidate pool to match what the filter already understands, rather than
+loosen any filter's standard. More shots on goal at the same bar, not a
+lower bar.
+
+**Live watchlist grew from 3 forex pairs to all 12** (`EURUSD, GBPUSD,
+USDJPY, AUDUSD, NZDUSD, USDCHF, USDCAD, EURJPY, GBPJPY, AUDJPY, EURGBP,
+EURCHF`) plus the existing indices/gold. All 12 verified to fetch live
+5-minute data before adding.
+
+**Bug found and fixed while doing this:** `CORRELATION_GROUPS["usd-fx"]`
+only listed 3 pairs, and the session-aware skip filter was checking
+`correlation_group(symbol) == "usd-fx"` to decide "is this a forex pair
+at all" -- so any of the 9 new pairs outside that one group would have
+silently skipped the session check entirely (correlation grouping and
+session-awareness are two separate concerns that had gotten conflated
+through a shared string). Fixed two ways: split `usd-fx` into three real
+correlation clusters (`usd-fx` for direct USD pairs, `jpy-crosses` for
+non-USD yen pairs, `eur-crosses` for EUR-driven non-USD/non-JPY pairs --
+the actual macro drivers that move these together), and decoupled the
+session-filter's "is this forex" check into its own
+`ALL_SESSION_FOREX_PAIRS` set, independent of correlation grouping.
+Without this fix, the correlation cap (max 2 per cluster) would have
+stopped covering 9 of the 12 pairs the moment the watchlist grew --
+exactly the "hidden leverage" gap this system exists to prevent.
+
+**Auto mistake-logging, no chat involved:** asked for review-your-mistakes
+to happen automatically without being asked, and without a chat reply
+each time. The Q-agent's negative reward and `should_avoid()`'s setup veto
+already did the *mechanism* silently, every cycle, with zero LLM calls --
+worth restating since it's easy to assume "auto-improve" requires an AI
+in the loop; it doesn't, it's plain code. What was missing was a
+*readable trail* of it. `TradeJournal.close_trade()` now writes one line
+to `mistakes_log.md` the instant any real (non-admin) losing trade
+closes -- pure Python string formatting inside the journal itself, not a
+chat message, not a Claude Code turn. Runs whether or not anyone's
+watching.
+
+Added `test_close_trade_logs_losses_to_mistakes_file`,
+`test_session_aware_forex_applies_to_non_usd_crosses_too` (67 tests
+passing).

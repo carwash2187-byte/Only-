@@ -138,7 +138,28 @@ class TradeJournal:
         if notes:
             record.notes = (record.notes + " | " + notes).strip(" |")
         self.save()
+        if record.pnl is not None and record.pnl < 0 and "admin" not in record.tags:
+            self._log_mistake(record)
         return record
+
+    def _log_mistake(self, record: TradeRecord) -> None:
+        """Plain-text, human-readable trail of every losing trade, written
+        the instant it closes -- no chat, no LLM call, just the desk
+        journaling its own mistake so there's something to read without
+        anyone having to ask. The real self-correction (should_avoid(),
+        the Q-agent's negative reward) already happens automatically too;
+        this is the readable record of it, not the mechanism."""
+        path = data_path("mistakes_log.md")
+        line = (
+            f"- {(record.exit_time or '')[:16]} **{record.symbol}** {record.side} "
+            f"{record.pnl:+.2f} ({record.pnl_pct:+.2f}%) setup=`{record.setup}` "
+            f"-- {record.notes}\n"
+        )
+        try:
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(line)
+        except Exception:
+            pass  # logging a mistake should never itself break a trade close
 
     def open_position_for(self, symbol: str) -> Optional[TradeRecord]:
         for record in self.trades.values():

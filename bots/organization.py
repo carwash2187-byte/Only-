@@ -118,7 +118,18 @@ CORRELATION_GROUPS = {
     "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F"},
     "gold": {"GC=F", "GLD", "IAU", "XAUUSD"},
     "oil": {"CL=F", "USO", "XLE"},
-    "usd-fx": {"EURUSD", "GBPUSD", "USDJPY", "EUR_USD", "GBP_USD", "USD_JPY"},
+    # Any pair with USD as one leg moves together on a broad USD swing,
+    # even with different signs -- that's still one concentrated bet on
+    # "USD direction," the exact hidden-leverage pattern this cap exists
+    # for (session 18: watchlist grew from 3 pairs to all 12 session-aware
+    # pairs, so this needed to grow with it or the cap would silently stop
+    # covering 9 of them).
+    "usd-fx": {"EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
+               "EUR_USD", "GBP_USD", "USD_JPY"},
+    # JPY-crosses without USD in them -- these move together on yen
+    # risk-sentiment (carry-trade unwinds etc.) independent of USD-fx.
+    "jpy-crosses": {"EURJPY", "GBPJPY", "AUDJPY"},
+    "eur-crosses": {"EURGBP", "EURCHF"},
 }
 
 
@@ -261,6 +272,13 @@ FOREX_SESSION_PAIRS = {
     "newyork": {"EURUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD"},
     "overlap": {"EURUSD", "GBPUSD", "USDCHF", "USDCAD"},
 }
+
+# Every pair the session-awareness system knows about, regardless of
+# which correlation cluster it happens to sit in -- used to detect "is
+# this symbol a currency pair at all" independent of correlation grouping
+# (those are two separate concerns; session 18 fixed a bug where they'd
+# been conflated via a shared "usd-fx" string).
+ALL_SESSION_FOREX_PAIRS = set().union(*FOREX_SESSION_PAIRS.values())
 
 
 def active_forex_session(now=None) -> str:
@@ -604,7 +622,8 @@ class TradingDesk:
             session = active_forex_session()
             skipped_off_session = [
                 symbol for symbol in candidates
-                if forex_session_score(symbol) == 0 and correlation_group(symbol) == "usd-fx"
+                if forex_session_score(symbol) == 0
+                and symbol.upper().replace("_", "").replace("/", "") in ALL_SESSION_FOREX_PAIRS
             ]
             for symbol in skipped_off_session:
                 report.actions.append(
