@@ -369,3 +369,39 @@ current forex desk, which hasn't taken a single trade yet today. The
 pause is real and correctly triggered by the rule as written (it doesn't
 distinguish "old position, new close"), but it's tail-end cleanup, not a
 live forex trading problem.
+
+## Session 11 (weekend market rotation + a bounded risk bump toward the $100/day target)
+
+Two direct asks: trade different instruments depending on the day (forex
+weekdays already existed; the actual gap is the ~48-hour weekend forex
+closure where the bot was doing nothing), and take a bit more risk since
+the hard 5% max-drawdown ceiling already exists.
+
+**Weekend gap, quantified:** forex is closed roughly Friday 5pm ET to
+Sunday 5pm ET -- about 2 of every 7 days the bot was simply idle,
+sleeping in a loop with zero shot at the daily target on those days.
+Crypto is the one market that's actually open through that window
+(confirmed already in session 8 as the intentional after-hours fallback,
+just never wired into the automatic scheduler).
+
+**Implemented:** `bots/autopilot.py`'s `run_autopilot()` gained a
+`weekend_symbols` parameter. Each cycle it checks: forex closed right now,
+crypto open right now, and a weekend watchlist configured -> if so, run
+that cycle against the crypto watchlist instead of sleeping through it.
+Weekdays are completely unaffected (forex trades as before). Wired into
+the CLI as `--weekend-symbols` (defaults to `BTC-USD,ETH-USD` automatically
+when `--market forex --funded` are both set, so the funded desk gets this
+for free). Added `test_autopilot_weekend_crypto_fallback`.
+
+**Risk bump -- what actually changed and why it's still bounded:** the
+real ceiling on a bad day was never the per-trade size, it's the 3% daily
+/ 5% total drawdown circuit breakers, which trip on total account
+movement regardless of how any individual trade was sized. Raising
+`risk_per_trade_pct` from the generic 1% default to 1.5% in
+`funded_account_config()` only changes how much a *winning* trade
+contributes toward the 2% daily target (faster path to $100/day on a good
+day) -- it does not raise, remove, or get anywhere near the 3%/5% hard
+stops, which are unchanged and still the actual backstop. This is a small,
+bounded change, not a loosening of the funded-account discipline.
+
+51 tests passing after this session.

@@ -79,6 +79,7 @@ def run_autopilot(
     desk=None,
     flatten_before_close_minutes: int = 15,
     market_override: Optional[str] = None,
+    weekend_symbols: Optional[list] = None,
 ) -> None:
     # The generic paper/Alpaca/Robinhood brokers can hold any symbol
     # (stocks, or crypto tickers like BTC-USD) -- the broker name alone
@@ -111,8 +112,16 @@ def run_autopilot(
     while max_cycles is None or cycles < max_cycles:
         now = datetime.now(tz=NY)
         stamp = now.strftime("%Y-%m-%d %H:%M ET")
-        if market_is_open(market):
-            mins_left = minutes_to_stock_close(now) if market == "stocks" else None
+        # Weekend fallback: forex is flat-out closed roughly Fri 5pm ET to
+        # Sun 5pm ET. Rather than sitting idle for two days (no shot at the
+        # daily target at all on those days), fall back to crypto -- the
+        # one market that's actually open then -- when the caller has
+        # opted in with a crypto watchlist for it.
+        active_market, active_symbols = market, symbols
+        if market == "forex" and weekend_symbols and not market_is_open("forex", now) and market_is_open("crypto", now):
+            active_market, active_symbols = "crypto", weekend_symbols
+        if market_is_open(active_market, now):
+            mins_left = minutes_to_stock_close(now) if active_market == "stocks" else None
             try:
                 if (
                     day_trading
@@ -125,8 +134,9 @@ def run_autopilot(
                     print(f"\n[{stamp}] day-trading flatten ({mins_left} min to close):")
                     print(report.describe())
                 else:
-                    report = desk.run_once(symbols=symbols)
-                    print(f"\n[{stamp}] cycle {cycles + 1}:")
+                    label = f" (weekend fallback: {active_market})" if active_market != market else ""
+                    report = desk.run_once(symbols=active_symbols)
+                    print(f"\n[{stamp}] cycle {cycles + 1}{label}:")
                     print(report.describe())
             except Exception as exc:
                 print(f"\n[{stamp}] cycle failed (will retry next interval): {exc}")

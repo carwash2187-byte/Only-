@@ -164,12 +164,16 @@ def cmd_autopilot(args) -> None:
             timeframe=timeframe,
         )
     desk = TradingDesk(broker=broker, config=config)
+    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else (
+        ["BTC-USD", "ETH-USD"] if (args.market == "forex" and args.funded) else None
+    )
     run_autopilot(
         broker_name=args.broker,
         interval_minutes=args.interval,
         symbols=args.symbols.split(",") if args.symbols else None,
         desk=desk,
         market_override=args.market,
+        weekend_symbols=weekend_symbols,
     )
 
 
@@ -309,6 +313,10 @@ def main() -> None:
                         help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
     p_auto.add_argument("--market", default=None, choices=["stocks", "forex", "crypto"],
                         help="force the trading-hours clock (default: auto-detect from broker/symbols)")
+    p_auto.add_argument("--weekend-symbols", default="",
+                        help="comma-separated crypto watchlist to trade over the forex-closed "
+                             "weekend instead of sitting idle (default: BTC-USD,ETH-USD when "
+                             "--market forex and --funded are both set)")
 
     p_watch = sub.add_parser(
         "watch", help="check YouTube/Twitter/Instagram for trade calls, auto-queue them"

@@ -65,6 +65,12 @@ def funded_account_config(**overrides) -> "DeskConfig":
         max_daily_loss_pct=0.03,
         max_total_drawdown_pct=0.05,
         daily_profit_target_pct=0.02,
+        # Slightly above the 1% generic default: the hard backstops are the
+        # 3% daily / 5% total drawdown circuit breakers above, not the
+        # per-trade size -- those trip regardless of how any single trade
+        # is sized, so this only changes how fast a *winning* day reaches
+        # the profit target, not the worst-case loss on a bad one.
+        risk_per_trade_pct=0.015,
         min_adx=20.0,
         day_trading=True,
         timeframe="5m",

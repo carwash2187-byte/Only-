@@ -534,6 +534,37 @@ def test_autopilot_runs_cycles_offline(price_df, tmp_path, monkeypatch, capsys):
     assert "cycle 2" in out
 
 
+def test_autopilot_weekend_crypto_fallback(price_df, tmp_path, monkeypatch):
+    import bots.autopilot as ap
+
+    monkeypatch.setattr(ap.time, "sleep", lambda _s: None)
+    # forex closed, crypto open -- the Saturday scenario
+    monkeypatch.setattr(
+        ap, "market_is_open", lambda m, now=None: m == "crypto"
+    )
+
+    broker = PaperBroker(
+        starting_cash=10_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "BTC-USD": 60_000.0},
+    )
+    journal = TradeJournal(path=str(tmp_path / "journal.json"))
+    desk = make_desk(tmp_path, broker, journal, price_df)
+
+    seen_symbols = []
+    monkeypatch.setattr(
+        desk, "run_once",
+        lambda symbols=None: seen_symbols.append(symbols) or DeskReport(),
+    )
+
+    ap.run_autopilot(
+        broker_name="paper", interval_minutes=1, symbols=["EURUSD"],
+        market_override="forex", weekend_symbols=["BTC-USD"],
+        max_cycles=1, desk=desk,
+    )
+    assert seen_symbols == [["BTC-USD"]]
+
+
 def test_oanda_symbol_normalization():
     from bots.brokers.oanda import _instrument
 
