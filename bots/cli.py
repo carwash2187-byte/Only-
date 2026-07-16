@@ -167,10 +167,15 @@ def cmd_autopilot(args) -> None:
     weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else (
         ["BTC-USD", "ETH-USD"] if (args.market == "forex" and args.funded) else None
     )
+    from bots.marketdata import resolve_symbol
+
+    symbols = (
+        [resolve_symbol(s) for s in args.symbols.split(",")] if args.symbols else None
+    )
     run_autopilot(
         broker_name=args.broker,
         interval_minutes=args.interval,
-        symbols=args.symbols.split(",") if args.symbols else None,
+        symbols=symbols,
         desk=desk,
         market_override=args.market,
         weekend_symbols=weekend_symbols,

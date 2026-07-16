@@ -480,3 +480,41 @@ skills. Found two, checked both before trusting either:
 Added `test_max_drawdown_guard_size_multiplier_tapers_before_the_halt`,
 `test_drawdown_taper_reduces_entry_size`, `test_risk_of_ruin_matches_the_reference_table`,
 `test_performance_metrics_includes_win_rate_and_risk_of_ruin` (56 tests passing).
+
+## Session 14 (US30 / NASDAQ added -- MambaFX's actual instruments)
+
+Asked directly to add US30 and NASDAQ. Worth noting: this closes a loop --
+session 7 already confirmed MambaFX himself scalps 1-minute NAS100/US30,
+not forex majors. The desk switched to forex majors in session 8 for cost
+and structural reasons, but there's no reason it can't trade both families
+side by side.
+
+**The catch:** "US30"/"NAS100" are broker-CFD nicknames, not real ticker
+symbols -- Yahoo has no data under those names. The right instrument for
+round-the-clock day trading isn't the cash index either (`^DJI`/`^NDX`
+only update during NYSE hours, same problem as trying to session-trade a
+market with no real session) -- it's the **futures** contract (`YM=F` for
+Dow, `NQ=F` for Nasdaq-100), which trades nearly 24/5 on CME Globex, close
+enough to forex hours to run on the same round-the-clock schedule. Both
+tickers were already anticipated in `CORRELATION_GROUPS` from session 4
+(`YM=F` in us-broad, `NQ=F` in us-tech) but never actually reachable by
+typing a name a person would recognize. Verified both fetch real 5-minute
+data live before wiring anything up.
+
+**Implemented:** `bots.marketdata.INDEX_ALIASES` + `resolve_symbol()` --
+maps `US30`/`DOW`/`NAS100`/`NASDAQ`/`US500`/`SPX` (and a few common
+spellings of each) to their real futures tickers. Wired into
+`cmd_autopilot` in `bots/cli.py` so `--symbols US30,NAS100,EURUSD` just
+works. Also added `US500` (`ES=F`, S&P 500 futures) as the natural third
+index alongside US30/NASDAQ -- same family, already grouped in
+`CORRELATION_GROUPS`, real institutional volume. The existing
+correlation-cluster guard (max 2 positions per correlation group) already
+protects against overexposure across DIA/SPY/ES=F/YM=F without any new
+code. Added `test_index_alias_resolution` (57 tests passing).
+
+Live desk now watches `EURUSD, GBPUSD, USDJPY, US30, NAS100, US500`
+together under the forex-hours clock -- an approximation (CME index
+futures actually have a short daily maintenance pause forex doesn't),
+stated plainly rather than glossed over, but close enough for a paper
+desk and the right side of the approximation (won't sit "closed" during
+hours these actually trade).

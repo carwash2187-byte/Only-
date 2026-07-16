@@ -590,6 +590,19 @@ def test_autopilot_weekend_crypto_fallback(price_df, tmp_path, monkeypatch):
     assert seen_symbols == [["BTC-USD"]]
 
 
+def test_index_alias_resolution():
+    from bots.marketdata import resolve_symbol
+
+    assert resolve_symbol("US30") == "YM=F"
+    assert resolve_symbol("us30") == "YM=F"
+    assert resolve_symbol("NAS100") == "NQ=F"
+    assert resolve_symbol("nasdaq") == "NQ=F"
+    assert resolve_symbol("US500") == "ES=F"
+    # unknown symbols pass through unchanged
+    assert resolve_symbol("EURUSD") == "EURUSD"
+    assert resolve_symbol("YM=F") == "YM=F"
+
+
 def test_oanda_symbol_normalization():
     from bots.brokers.oanda import _instrument
 

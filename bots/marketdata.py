@@ -17,6 +17,25 @@ CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 TIMEOUT = 30
 
+# Broker-style CFD/index nicknames (what MambaFX and most retail platforms
+# actually call these -- "US30", "NAS100") mapped to their real, liquid
+# Yahoo futures tickers. Futures trade nearly 24/5 like forex (unlike the
+# ^DJI/^NDX cash index, which only updates during NYSE hours), which is
+# what makes them tradeable on the same round-the-clock schedule as the
+# forex desk instead of being locked to the 9:30-16:00 stock session.
+INDEX_ALIASES = {
+    "US30": "YM=F", "DOW": "YM=F", "DOW30": "YM=F", "DJ30": "YM=F",
+    "NAS100": "NQ=F", "NASDAQ": "NQ=F", "NASDAQ100": "NQ=F", "NDX": "NQ=F",
+    "US500": "ES=F", "SPX": "ES=F", "SPX500": "ES=F", "SP500": "ES=F",
+}
+
+
+def resolve_symbol(symbol: str) -> str:
+    """Map a friendly index/CFD nickname to its real tradeable ticker.
+    Passes through unchanged if it isn't a known alias (forex pairs,
+    stocks, and already-correct tickers like 'YM=F' are untouched)."""
+    return INDEX_ALIASES.get(symbol.strip().upper(), symbol)
+
 
 def _candidates(symbol: str) -> List[str]:
     symbol = symbol.strip()
