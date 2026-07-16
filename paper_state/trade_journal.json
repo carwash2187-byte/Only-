@@ -963,6 +963,24 @@
       "notes": "user watchlist",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "8c5f244d5c24",
+      "symbol": "AUDJPY",
+      "side": "long",
+      "quantity": 6.6023,
+      "entry_price": 113.47200012207031,
+      "entry_time": "2026-07-16T06:29:35.968033+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
