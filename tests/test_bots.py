@@ -692,6 +692,8 @@ def test_index_alias_resolution():
     assert resolve_symbol("US500") == "ES=F"
     assert resolve_symbol("GOLD") == "GC=F"
     assert resolve_symbol("XAUUSD") == "GC=F"
+    assert resolve_symbol("OIL") == "CL=F"
+    assert resolve_symbol("WTI") == "CL=F"
     # unknown symbols pass through unchanged
     assert resolve_symbol("EURUSD") == "EURUSD"
     assert resolve_symbol("YM=F") == "YM=F"

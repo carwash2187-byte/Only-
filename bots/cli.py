@@ -164,9 +164,14 @@ def cmd_autopilot(args) -> None:
             timeframe=timeframe,
         )
     desk = TradingDesk(broker=broker, config=config)
-    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else (
-        ["BTC-USD", "ETH-USD"] if (args.market == "forex" and args.funded) else None
-    )
+    # Not auto-enabled by default anymore (session 19): 2026 data shows
+    # weekend crypto liquidity has gotten WORSE since spot ETFs concentrated
+    # institutional market-making into weekday hours, not better -- trading
+    # costs +11%, depth -9%, and real cascading-liquidation events on thin
+    # weekend books (see docs/DAY-TRADING-NOTES.md session 19). The
+    # mechanism stays available for anyone who explicitly opts in with
+    # --weekend-symbols; the desk just doesn't reach for it on its own.
+    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else None
     from bots.marketdata import resolve_symbol
 
     symbols = (

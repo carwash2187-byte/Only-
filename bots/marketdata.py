@@ -28,6 +28,7 @@ INDEX_ALIASES = {
     "NAS100": "NQ=F", "NASDAQ": "NQ=F", "NASDAQ100": "NQ=F", "NDX": "NQ=F",
     "US500": "ES=F", "SPX": "ES=F", "SPX500": "ES=F", "SP500": "ES=F",
     "GOLD": "GC=F", "XAUUSD": "GC=F", "XAU": "GC=F",
+    "OIL": "CL=F", "WTI": "CL=F", "CRUDE": "CL=F", "USOIL": "CL=F",
 }
 
 

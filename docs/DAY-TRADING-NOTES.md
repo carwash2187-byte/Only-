@@ -704,3 +704,38 @@ watching.
 Added `test_close_trade_logs_losses_to_mistakes_file`,
 `test_session_aware_forex_applies_to_non_usd_crosses_too` (67 tests
 passing).
+
+## Session 19 (crypto weekend fallback reversed on fresh evidence, oil added)
+
+User's instinct: "crypto is trash, there's better." Checked with current
+(2026) data instead of relying on session 8's older research.
+
+**Weekend crypto fallback -- REVERSED.** Session 11 added crypto as the
+weekend trading fallback since forex/indices/gold all close Friday
+evening to Sunday evening. Fresh data changes the calculus: since spot
+ETFs launched, institutional market-making has concentrated into weekday
+hours, and weekend crypto liquidity has gotten *worse*, not better --
+trading costs +11%, effective market depth -9%, displayed liquidity -5%
+vs weekdays. Real consequence cited: a Feb 1, 2026 Saturday afternoon
+selloff cascaded into $2.2B in liquidations across 335,000 traders in 24
+hours, specifically because weekend order books were too thin to absorb
+it. **Decision: stop auto-enabling the crypto weekend fallback.** The
+mechanism (`--weekend-symbols`) stays available for anyone who wants to
+opt in explicitly, but the desk no longer reaches for it on its own --
+the better choice, given this account has no real track record yet, is
+to simply not trade over the weekend rather than force activity into a
+demonstrably thinner, worse market than it used to be.
+([Phemex](https://phemex.com/blogs/weekend-crypto-trading-explained),
+[Blockearner](https://blockearner.com.au/blog/the-bitcoin-liquidity-gap-why-the-24-7-crypto-market-gets-volatile-when-wall-street-logs-off/))
+
+**Oil added.** WTI crude (`CL=F`) is the world's most liquid crude
+contract -- 1M+ contracts/day, ~4M open interest -- and already had an
+unused correlation-group slot from session 4. Verified live 5-minute data
+before adding. `OIL`/`WTI`/`CRUDE`/`USOIL` alias to `CL=F` in
+`bots.marketdata`. Added to the live watchlist.
+
+Extended `test_index_alias_resolution` for the new oil aliases (67 tests
+still passing -- the weekend-fallback change is a CLI default change, not
+new logic, so no new test needed beyond the existing
+`test_autopilot_weekend_crypto_fallback` which still verifies the
+mechanism itself still works when explicitly requested).
