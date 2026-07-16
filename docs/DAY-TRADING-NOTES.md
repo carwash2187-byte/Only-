@@ -898,3 +898,39 @@ if modest, token saving -- not a 90% headline number, an honest one.
 
 No code changes to `bots/` this session (research + a docs/CLAUDE.md
 addition only) -- no test changes, no live-desk restart needed.
+
+## Session 24 (historical stress test -- real bad days, not a fake trade)
+
+Asked to speed up validation by having the bot "practice" on a bad
+market. Explicitly declined the version of this that would have been
+dishonest: injecting a fabricated trade into the live journal to "teach"
+the model would poison both the Q-learning update (a lesson learned from
+a market event that never happened) and the real track record the whole
+funded-account-readiness question depends on. Built the honest version
+instead: `scripts/stress_test.py` replays the **actual** live desk
+(`TradingDesk` + `funded_account_config()`, same code, same filters) bar
+by bar against **real** historical 5-minute price data, entirely in a
+throwaway temp directory that can never touch `paper_state/`.
+
+Two real bugs found and fixed while building it (both about the
+simulation being lookahead-free and fast, not about the trading logic):
+the higher-timeframe confirm filter (session 10) defaults to a live
+network fetch, which in a historical replay would silently use *today's*
+real market data against a simulated past "now" -- fixed by resampling
+the same historical frame instead. And a naive per-symbol replay loop
+made one live network call per simulated cycle, ~1700 times -- switched
+to pre-fetching all history once and slicing in memory.
+
+**Ran it across the actual live watchlist (8 symbols) over the roughest
+real week available in the last 60 days (June 18-23) combined across all
+of them.** Result: 6 trades, worst peak-to-trough dip **0.27%**, safety
+limits never triggered. Two honest readings of that number, both stated:
+either the desk's own entry filters (session-aware pairs, ADX regime,
+HTF confirm, breakout-retest) are doing their job keeping it out of bad
+conditions before the hard stops would ever be needed -- or the roughest
+window free 60-day data can show still isn't a real crisis, so the 3%/5%
+limits remain *unproven under real stress*, only proven correct in
+isolation (the existing unit tests already verify the guard math itself
+with synthetic drawdown sequences -- `test_max_drawdown_guard_halts_and_stays_halted`,
+`test_desk_halts_on_total_drawdown_breach`). Both things are true at
+once; neither one is "the bot is definitely safe in a crash."
