@@ -1179,6 +1179,54 @@
         "high-conviction-override"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "5081b0e01840",
+      "symbol": "GC=F",
+      "side": "long",
+      "quantity": 0.1875,
+      "entry_price": 4002.199951171875,
+      "entry_time": "2026-07-17T07:00:13.042875+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "283b1884265c",
+      "symbol": "EURGBP",
+      "side": "long",
+      "quantity": 883.0758,
+      "entry_price": 0.849590003490448,
+      "entry_time": "2026-07-17T07:01:24.368395+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "b7b5f17c2df1",
+      "symbol": "GBPUSD",
+      "side": "long",
+      "quantity": 556.5915,
+      "entry_price": 1.3479268550872803,
+      "entry_time": "2026-07-17T07:05:19.334831+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
