@@ -1127,6 +1127,58 @@
       "notes": "user watchlist",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "f89631384f8a",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 1071.5351,
+      "entry_price": 0.7000349760055542,
+      "entry_time": "2026-07-16T23:48:02.375883+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
+      "exit_price": 0.7002801299095154,
+      "exit_time": "2026-07-17T00:03:34.489217+00:00",
+      "pnl": 0.26269101299643516,
+      "pnl_pct": 0.03502023646875241,
+      "notes": "user watchlist | quant desk: RL agent says exit",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "ce10b0556ff8",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 3.4276,
+      "entry_price": 218.86000061035156,
+      "entry_time": "2026-07-17T00:03:44.118820+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": 218.8459930419922,
+      "exit_time": "2026-07-17T00:04:55.684244+00:00",
+      "pnl": -0.04801234130859375,
+      "pnl_pct": -0.006400241396464779,
+      "notes": "user watchlist | quant desk: RL agent says exit",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "551a381f54b4",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 4.036,
+      "entry_price": 185.86099243164062,
+      "entry_time": "2026-07-17T00:05:06.019118+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
