@@ -374,6 +374,38 @@ def trend_direction(df, fast: int = 10, slow: int = 30) -> Optional[str]:
         return None
 
 
+def tradeability_score(symbol: str, df, now=None) -> float:
+    """Composite 'how good is this instrument to trade RIGHT NOW' score,
+    built from the three components professional day traders actually rank
+    instruments by (session 25 research: volatility, liquidity, trend
+    strength -- and the desk's own filters already measure each):
+
+    - trend strength: ADX/25, capped at 2.0 (choppy < 0.8, strong > 1.2)
+    - movement potential: ATR% scaled so ~0.15% per bar = 1.0, capped 2.0
+      (a market that isn't moving can't pay for its own spread)
+    - session liquidity: the forex session score (0-2) for currency pairs;
+      non-forex (futures) get a neutral 1.0 since they trade near-24h
+
+    Score is only used to ORDER candidates -- every hard filter (ADX
+    floor, HTF confirm, session skip, correlation cap...) still applies
+    unchanged afterward. Ranking decides who gets first shot at the open
+    slots, not who's allowed in.
+    """
+    try:
+        adx = adx_value(df)
+        trend = min((adx or 0.0) / 25.0, 2.0)
+        atr = atr_pct(df)
+        movement = min((atr or 0.0) / 0.0015, 2.0)
+        compact = symbol.upper().replace("_", "").replace("/", "")
+        if compact in ALL_SESSION_FOREX_PAIRS:
+            session = float(forex_session_score(symbol, now))
+        else:
+            session = 1.0
+        return trend + movement + session
+    except Exception:
+        return 0.0
+
+
 def forex_session_score(symbol: str, now=None) -> int:
     """0-2 liquidity score for a currency pair at the current time: 2 if
     it's a core pair for the live overlap window, 1 if it's active in
@@ -676,7 +708,33 @@ class TradingDesk:
             ordered_candidates = [
                 (s, info) for s, info in ordered_candidates if s not in skipped_off_session
             ]
-            ordered_candidates.sort(key=lambda item: -forex_session_score(item[0]))
+
+        # "What's the best thing to trade right now?" -- rank every
+        # remaining candidate by the composite tradeability score (trend
+        # strength + movement potential + session liquidity) so the
+        # strongest market gets first claim on the open slots. One history
+        # fetch per symbol per cycle, reused by _consider_entry below.
+        history_cache: Dict[str, object] = {}
+        if len(ordered_candidates) > 1:
+            scores: Dict[str, float] = {}
+            for s, _info in ordered_candidates:
+                try:
+                    history_cache[s] = self.history_fn(s)
+                    scores[s] = tradeability_score(s, history_cache[s])
+                except Exception:
+                    scores[s] = 0.0
+            # manual mirror calls keep first claim regardless of score --
+            # a human's explicit call isn't outranked by the auto-ranker
+            ordered_candidates.sort(
+                key=lambda item: (0 if item[1].get("manual") else 1, -scores.get(item[0], 0.0))
+            )
+            if ordered_candidates:
+                best = ordered_candidates[0][0]
+                report.notes.append(
+                    f"[rank] best to trade right now: {best} "
+                    f"(score {scores.get(best, 0.0):.1f}); full ranking: "
+                    + ", ".join(f"{s} {scores.get(s, 0.0):.1f}" for s, _ in ordered_candidates[:8])
+                )
 
         for symbol, info in ordered_candidates:
             use_high_conviction = False
@@ -722,6 +780,7 @@ class TradingDesk:
                 setup_base=info.get("setup", "copytrade"),
                 manual=bool(info.get("manual")),
                 high_conviction=use_high_conviction,
+                df=history_cache.get(symbol),
             )
             report.actions.append(action)
             if action.action == "buy" and action.ok:
@@ -905,6 +964,7 @@ class TradingDesk:
         setup_base: str = "copytrade",
         manual: bool = False,
         high_conviction: bool = False,
+        df=None,
     ) -> DeskAction:
         cfg = self.config
 
@@ -914,7 +974,8 @@ class TradingDesk:
         setup_suffix = ""
         symbol_atr = None
         try:
-            df = self.history_fn(symbol)
+            if df is None:
+                df = self.history_fn(symbol)
             vote = self.agent.signal(df, holding=False)
             if not manual:
                 setup_suffix = ":" + self.agent.current_state(df, holding=False)

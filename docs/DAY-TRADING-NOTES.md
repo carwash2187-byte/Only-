@@ -934,3 +934,52 @@ isolation (the existing unit tests already verify the guard math itself
 with synthetic drawdown sequences -- `test_max_drawdown_guard_halts_and_stays_halted`,
 `test_desk_halts_on_total_drawdown_breach`). Both things are true at
 once; neither one is "the bot is definitely safe in a crash."
+
+## Session 25 ("what's the best thing to trade right now" ranker + practice expanded to 3 rough windows)
+
+Asked for the bot to know, at any moment, which instrument is the best
+one to trade. Research confirms the standard professional recipe is
+exactly three components: **volatility** (enough movement to pay for the
+trade), **liquidity** (tight spreads, real volume), and **trend
+strength** -- and the desk already measured all three separately (ATR,
+session scores, ADX); they'd just never been combined into an actual
+ranking.
+([daytrading.com](https://www.daytrading.com/strategies),
+[TradeAlgo](https://www.tradealgo.com/trading-guides/day-trading/best-day-trading-indicators-the-7-technical-tools-professional-traders-actually-use))
+
+**Implemented `tradeability_score(symbol, df)`** in
+`bots/organization.py`: trend strength (ADX/25, capped 2.0) + movement
+potential (ATR% scaled, capped 2.0) + session liquidity (the existing
+0-2 forex session score; futures get a neutral 1.0 as near-24h markets).
+Every cycle, all candidates are ranked by it and the best market gets
+first claim on the open slots; the full ranking is printed in the cycle
+notes ("[rank] best to trade right now: ..."). Two important properties:
+the score only ORDERS candidates -- every hard filter (ADX floor, HTF
+confirm, session skip, correlation cap, breakout-retest) still applies
+unchanged after ranking -- and manual mirror calls keep first claim
+regardless of score (a human's explicit call isn't outranked by the
+auto-ranker). Also added a per-cycle history cache so ranking adds zero
+extra network fetches (one fetch per symbol per cycle, reused by the
+entry logic; previously the entry logic fetched separately).
+
+**Practice mode expanded** (`stress_test.py --practice`): now trains the
+live model on the top **3** roughest real windows in the last 60 days
+(June 22, June 10, June 11), not just the single worst. Ran it: across
+most windows the trained policy's final answer was "don't trade" -- 0
+eval trades -- which is itself the correct learned response to bad
+conditions; where it did probe (CL=F, NQ=F) it experienced negative
+outcomes and pushed those state judgments down. Same guarantees as
+session 24: Q-table only, never touches the journal or any
+readiness-grading number.
+
+**Asked-for-but-not-done, stated plainly:** "ready for the funded
+account by tomorrow" -- no. The readiness bar hasn't changed (30-50
+real trades on current code, healthy risk-of-ruin, limits never
+breached, ideally one real rough day survived). Practice on historical
+windows accelerates the model's pattern knowledge but does not count as
+live evidence. Also "study until 90% token usage" -- burning tokens is
+not a goal; the study is done when the genuinely useful improvements are
+implemented, which this session did.
+
+Added `test_tradeability_ranking_gives_strong_trend_first_claim`
+(75 tests passing).

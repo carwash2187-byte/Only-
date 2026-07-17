@@ -1516,6 +1516,45 @@ def test_asian_session_budget_reserves_trades_for_london(price_df, tmp_path, jou
     assert not any("session budget" in a.reason for a in report2.actions), report2.describe()
 
 
+def test_tradeability_ranking_gives_strong_trend_first_claim(tmp_path, journal):
+    import numpy as np
+    import pandas as pd
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    chop_close = pd.Series(100 + 0.3 * np.sin(np.arange(n)))
+    choppy = pd.DataFrame({
+        "high": chop_close + 0.1, "low": chop_close - 0.1, "close": chop_close,
+    })
+
+    from bots.organization import tradeability_score
+    assert tradeability_score("STRONG", trending) > tradeability_score("CHOP", choppy)
+
+    # With only ONE trade allowed today, the desk must spend it on the
+    # higher-ranked (trending) candidate even though the choppy one comes
+    # first alphabetically/in watchlist order.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"CHOP": 100.0, "STRONG": 100.0},
+    )
+    frames = {"CHOP": choppy, "STRONG": trending}
+    desk = TradingDesk(
+        broker=broker, journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_trades_per_day=1),
+        history_fn=lambda s: frames[s],
+        guard=DrawdownGuard(state_path=str(tmp_path / "day.json")),
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+    report = desk.run_once(symbols=["CHOP", "STRONG"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1 and buys[0].symbol == "STRONG", report.describe()
+    assert any("[rank] best to trade right now: STRONG" in n for n in report.notes), report.notes
+
+
 def test_funded_config_includes_regime_filter():
     from bots.organization import funded_account_config
 

@@ -38,8 +38,8 @@ from bots.organization import DrawdownGuard, MaxDrawdownGuard, TradingDesk, fund
 WATCHLIST = ["EURUSD", "GBPUSD", "USDJPY", "YM=F", "NQ=F", "ES=F", "GC=F", "CL=F"]
 
 
-def find_roughest_window(dfs: dict) -> pd.Timestamp:
-    """The real calendar day with the highest combined intraday range
+def find_roughest_days(dfs: dict, n: int = 1) -> list:
+    """The n real calendar days with the highest combined intraday range
     across the whole watchlist -- the closest thing to 'the market was
     bad' this free, ~60-day intraday data can actually show."""
     combined = None
@@ -47,10 +47,10 @@ def find_roughest_window(dfs: dict) -> pd.Timestamp:
         ranges = (df["high"] - df["low"]) / df["close"]
         daily = ranges.groupby(df.index.normalize()).sum()
         combined = daily if combined is None else combined.add(daily, fill_value=0.0)
-    return combined.idxmax()
+    return list(combined.nlargest(n).index)
 
 
-def fetch_rough_window() -> dict:
+def _fetch_full_history() -> dict:
     print("Fetching real history for the live watchlist...")
     full = {}
     for sym in WATCHLIST:
@@ -58,39 +58,53 @@ def fetch_rough_window() -> dict:
             full[sym] = marketdata.get_history(sym, period="60d", interval="5m")
         except Exception as exc:
             print(f"  {sym}: unavailable ({exc}), skipping")
-    roughest = find_roughest_window(full)
-    print(f"roughest real window found (combined across the watchlist): {roughest.date()}")
+    return full
 
-    window_start = roughest - pd.Timedelta(days=4)
-    window_end = roughest + pd.Timedelta(days=2)
+
+def _window_around(full: dict, day: pd.Timestamp) -> dict:
+    window_start = day - pd.Timedelta(days=4)
+    window_end = day + pd.Timedelta(days=2)
     dfs = {s: df[(df.index >= window_start) & (df.index < window_end)].copy()
            for s, df in full.items()}
     return {s: df for s, df in dfs.items() if len(df) > 40}
 
 
-def practice_on_rough_window(episodes: int = 20) -> None:
+def fetch_rough_window() -> dict:
+    full = _fetch_full_history()
+    roughest = find_roughest_days(full, 1)[0]
+    print(f"roughest real window found (combined across the watchlist): {roughest.date()}")
+    return _window_around(full, roughest)
+
+
+def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
     """Train the LIVE Q-agent (respects BOT_DATA_DIR, same model_path the
-    autopilot loads) on the real roughest window found -- genuine practice
-    on real historical hard conditions, using the exact same agent.train()
-    mechanism the daily SPY/NVDA training already uses safely. This only
-    ever updates the Q-table; it never opens/closes a TradeRecord, so it
-    cannot touch the journal, the win-rate/profit-factor numbers, or
-    anything the funded-account-readiness question is graded on -- those
-    stay 100% real trades only, exactly as before."""
-    dfs = fetch_rough_window()
+    autopilot loads) on the N real roughest windows found -- genuine
+    practice on real historical hard conditions, using the exact same
+    agent.train() mechanism the daily SPY/NVDA training already uses
+    safely. This only ever updates the Q-table; it never opens/closes a
+    TradeRecord, so it cannot touch the journal, the win-rate/
+    profit-factor numbers, or anything the funded-account-readiness
+    question is graded on -- those stay 100% real trades only."""
+    full = _fetch_full_history()
+    rough_days = find_roughest_days(full, windows)
+    print(f"top {len(rough_days)} roughest real days across the watchlist: "
+          + ", ".join(str(d.date()) for d in rough_days))
+
     agent = QTraderAgent()  # default model_path -> respects BOT_DATA_DIR
     loaded = agent.load()
     before_states = len(agent.q)
-    print(f"\nlive model: {'loaded existing table' if loaded else 'starting fresh'} "
+    print(f"live model: {'loaded existing table' if loaded else 'starting fresh'} "
           f"({before_states} known states)")
-    for sym, df in dfs.items():
-        if len(df) < 120:
-            print(f"  {sym}: not enough bars in this window, skipping")
-            continue
-        stats = agent.train(df, episodes=episodes)
-        print(f"  practiced on {sym} real data ({len(df)} bars, {episodes} episodes): "
-              f"{stats['trades']} trades in the eval pass, "
-              f"win rate {stats['win_rate']:.0%}, return {stats['total_return_pct']:+.1f}%")
+    for day in rough_days:
+        dfs = _window_around(full, day)
+        print(f"\n-- practicing on the window around {day.date()} --")
+        for sym, df in dfs.items():
+            if len(df) < 120:
+                continue
+            stats = agent.train(df, episodes=episodes)
+            print(f"  {sym} ({len(df)} bars x {episodes} episodes): "
+                  f"{stats['trades']} eval trades, win rate {stats['win_rate']:.0%}, "
+                  f"return {stats['total_return_pct']:+.1f}%")
     agent.save()
     print(f"\nsaved -- live model now knows {len(agent.q)} states "
           f"({len(agent.q) - before_states:+d} vs before). "
@@ -183,6 +197,6 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
 
 if __name__ == "__main__":
     if "--practice" in sys.argv:
-        practice_on_rough_window()
+        practice_on_rough_windows()
     else:
         stress_test()
