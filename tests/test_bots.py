@@ -1164,6 +1164,52 @@ def test_breakeven_stop_after_1r(price_df, tmp_path, journal):
     assert not closed.is_open and closed.pnl == pytest.approx(-1.0, abs=0.01)
 
 
+def test_rl_exit_does_not_cut_a_breakeven_armed_winner_short(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    record = journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade")
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                        take_profit_pct=0.03)
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    agent.signal = lambda *a, **k: "sell"  # force an RL exit signal every cycle
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
+
+    # +2% -> past the 1.5% stop distance -> breakeven-armed, still below
+    # the 3% target. A pre-armed RL "sell" here used to cut the winner
+    # short well before it reached the real target.
+    broker.price_overrides["DEMO"] = 102.0
+    report = desk.run_once(symbols=[])
+    assert "breakeven-armed" in journal.trades[record.trade_id].tags
+    assert broker.positions() == {"DEMO": 10}, report.describe()
+    assert not [a for a in report.actions if a.action == "sell" and a.ok], report.describe()
+
+
+def test_rl_exit_still_works_before_breakeven_armed(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade")
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                        take_profit_pct=0.03)
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    agent.signal = lambda *a, **k: "sell"
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
+
+    # Small unrealized gain, well below the 1.5% breakeven-arm distance --
+    # the RL exit should still be allowed to bail out here.
+    broker.price_overrides["DEMO"] = 100.3
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "RL agent says exit" in sells[0].reason, report.describe()
+
+
 def test_loss_streak_rule_blocks_entries(price_df, tmp_path, journal):
     for i in range(3):
         t = journal.open_trade(f"L{i}", "long", 1, 100.0, setup="s")

@@ -859,6 +859,7 @@ class TradingDesk:
             return
 
         reason = None
+        breakeven_armed = False
         if force_exit:
             reason = force_exit_reason
         elif record:
@@ -904,7 +905,17 @@ class TradingDesk:
                         )
                 except Exception:
                     pass
-        if reason is None:
+        if reason is None and not breakeven_armed:
+            # Once a trade has already proven itself (+1R, breakeven-armed),
+            # the RL exit signal is exactly what was cutting winners short:
+            # avg win ($0.88) was running BELOW avg loss ($1.04) over the
+            # last 30 real trades, systematically, because this check fired
+            # on small unrealized gains before they reached the actual
+            # target. Session 16 already found fixed targets beat early
+            # trimming for this kind of system -- this was the same mistake
+            # from a different angle. Below breakeven-armed, the RL exit
+            # stays on: bailing out of a thesis that's turning bad before it
+            # becomes a bigger loss is still legitimate.
             try:
                 df = self.history_fn(symbol)
                 if self.agent.signal(df, holding=True) == "sell":

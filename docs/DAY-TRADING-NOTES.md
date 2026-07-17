@@ -983,3 +983,33 @@ implemented, which this session did.
 
 Added `test_tradeability_ranking_gives_strong_trend_first_claim`
 (75 tests passing).
+
+## Session 26 (real mistake found: winners were being cut shorter than losers)
+
+Asked "how could you have made more than $4" -- checked the real trade
+log instead of reaching for "add more risk." Last 30 real trades: 56.7%
+win rate (genuinely good), but **average win $0.88 vs. average loss
+$1.04** -- backwards from the 1:2 reward:risk shape the whole stop/target
+system is built around. Root cause, found in the actual exit reasons:
+almost every winning trade in the log closed with "quant desk: RL agent
+says exit," not "take profit hit."
+
+**The bug:** `_manage_position()`'s exit checks ran in order (stop loss,
+breakeven, take profit, time stop, *then* the RL exit signal as a
+catch-all) -- but the RL check had no floor. It could fire on a trade
+already breakeven-armed (proven to be +1R working) and cut it at a small
+fraction of the real target, every time, systematically. This is the
+same lesson session 16 already found from a different angle (fixed
+targets beat early trimming for this kind of system) showing up again
+through a different mechanism.
+
+**Fixed:** the RL exit signal is now only honored *before*
+breakeven-armed. Below that point it's still a legitimate early bailout
+("this thesis looks like it's turning bad, get out before it's a bigger
+loss"); once a trade has proven itself, the RL signal can no longer
+override the structured breakeven-stop/take-profit management that's
+specifically there to let a real winner run to target. Not a risk
+increase -- a bug fix in how existing profit was being realized.
+
+Added `test_rl_exit_does_not_cut_a_breakeven_armed_winner_short` and
+`test_rl_exit_still_works_before_breakeven_armed` (77 tests passing).
