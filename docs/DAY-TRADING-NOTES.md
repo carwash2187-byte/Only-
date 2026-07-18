@@ -1405,3 +1405,42 @@ Tests: `test_symbol_stats_and_minutes_since_last_loss`,
 `test_symbol_probation_halves_size_when_net_negative`.
 
 100 tests passing.
+
+## Session 34 (forensics: the take-profit had NEVER been hit -- RL exit made asymmetric)
+
+Directive: another improvement pass, aimed at "stop playing scared, get
+paid." Instead of guessing, pulled the exit reason for every one of the
+22 real desk trades in the journal. The finding was structural, not
+statistical noise:
+
+- **0 of 22 trades ever reached the take-profit target.** The 1:2
+  risk:reward payoff engine -- the entire reason the win rate only needs
+  to clear ~33% -- had never engaged once.
+- 10/22 were scratched by the RL "says exit" check before +1R, **7 of
+  them while slightly green** (+$0.00 to +$0.51). The winners were being
+  cut before they could become winners.
+- 11/22 hit the 120-minute time stop (avg ~+$0.10 -- working as designed:
+  scratch the thesis that never confirmed).
+- 1/22 hit the actual stop-loss (-$2.26). The stop machinery works.
+
+Fix: the pre-1R RL exit is now asymmetric -- it may only fire when the
+position is RED (cutting a failing thesis early remains legitimate and
+is standard practice), never on a green trade below +1R. Green trades
+are left to resolve via target, stop, breakeven stop, or time stop.
+Combined with session 26 (which protects breakeven-armed winners), the
+RL exit now can only ever shrink losses, never truncate wins -- "cut
+losses fast, let winners run," enforced mechanically.
+
+Small sample caveat stated plainly: 22 trades is not statistical proof
+of anything. But "the target has literally never been hit" is a
+structural property of the exit logic, not a sample-size artifact, and
+the change strictly matches the system's documented design intent.
+
+Also re-ran the widened practice (4 rough + 4 trend windows, 30
+episodes, full 17-symbol watchlist) as a further "past reps" pass on the
+live Q-table.
+
+Updated test: `test_rl_exit_still_works_before_breakeven_armed` now
+asserts both directions (green pre-1R: hands off; red pre-1R: cut).
+
+100 tests passing.

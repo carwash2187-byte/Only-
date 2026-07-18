@@ -1204,12 +1204,20 @@ def test_rl_exit_still_works_before_breakeven_armed(price_df, tmp_path, journal)
     agent.signal = lambda *a, **k: "sell"
     desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
 
-    # Small unrealized gain, well below the 1.5% breakeven-arm distance --
-    # the RL exit should still be allowed to bail out here.
-    broker.price_overrides["DEMO"] = 100.3
+    # Session 34: the RL exit is asymmetric now. A GREEN trade below +1R
+    # is left alone (forensics on all 22 real desk trades: zero ever
+    # reached the take-profit; 7 slightly-green trades were scratched by
+    # this exact exit) -- but a RED trade may still be cut early.
+    broker.price_overrides["DEMO"] = 100.3  # slightly green: hands off
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert not sells, report.describe()
+
+    broker.price_overrides["DEMO"] = 99.5  # red (above stop): cut the loser
     report = desk.run_once(symbols=[])
     sells = [a for a in report.actions if a.action == "sell" and a.ok]
     assert sells and "RL agent says exit" in sells[0].reason, report.describe()
+    assert "cutting the loser" in sells[0].reason
 
 
 def test_paper_broker_default_has_no_spread_cost(tmp_path):

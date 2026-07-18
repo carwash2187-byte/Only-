@@ -1016,21 +1016,21 @@ class TradingDesk:
                         )
                 except Exception:
                     pass
-        if reason is None and not breakeven_armed:
-            # Once a trade has already proven itself (+1R, breakeven-armed),
-            # the RL exit signal is exactly what was cutting winners short:
-            # avg win ($0.88) was running BELOW avg loss ($1.04) over the
-            # last 30 real trades, systematically, because this check fired
-            # on small unrealized gains before they reached the actual
-            # target. Session 16 already found fixed targets beat early
-            # trimming for this kind of system -- this was the same mistake
-            # from a different angle. Below breakeven-armed, the RL exit
-            # stays on: bailing out of a thesis that's turning bad before it
-            # becomes a bigger loss is still legitimate.
+        if reason is None and not breakeven_armed and (record is None or change < 0.0):
+            # Session 34 forensics on ALL 22 real desk trades: ZERO ever
+            # reached the take-profit. 10 were scratched by this RL exit --
+            # 7 of them while slightly GREEN -- and 11 hit the time stop.
+            # The 1:2 payoff engine never got to run once. So the RL exit
+            # is now asymmetric, matching the design's intent: it may cut a
+            # trade that is LOSING (bailing out of a bad thesis before the
+            # full stop is still legitimate), but a green trade below +1R
+            # is left alone to reach its target, stop, or time stop.
+            # (Session 26 already protects breakeven-armed winners; this
+            # closes the same hole for the pre-1R stretch.)
             try:
                 df = self.history_fn(symbol)
                 if self.agent.signal(df, holding=True) == "sell":
-                    reason = "quant desk: RL agent says exit"
+                    reason = "quant desk: RL agent says exit (position red, cutting the loser early)"
             except Exception:
                 pass
         if reason is None:
