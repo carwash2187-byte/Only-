@@ -50,6 +50,20 @@ def find_roughest_days(dfs: dict, n: int = 1) -> list:
     return list(combined.nlargest(n).index)
 
 
+def find_best_trend_days(dfs: dict, n: int = 1) -> list:
+    """The n real days with the strongest combined directional move across
+    the watchlist -- the big-runner days a trend-following scalper actually
+    gets paid on (large net move, not just large chop). Practicing on both
+    these AND the roughest days gives the agent reps in the two regimes
+    that matter: the days that can hurt it and the days it must not waste."""
+    combined = None
+    for df in dfs.values():
+        daily_close = df["close"].groupby(df.index.normalize())
+        net_move_pct = (daily_close.last() - daily_close.first()).abs() / daily_close.first()
+        combined = net_move_pct if combined is None else combined.add(net_move_pct, fill_value=0.0)
+    return list(combined.nlargest(n).index)
+
+
 def _fetch_full_history() -> dict:
     print("Fetching real history for the live watchlist...")
     full = {}
@@ -87,8 +101,12 @@ def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
     question is graded on -- those stay 100% real trades only."""
     full = _fetch_full_history()
     rough_days = find_roughest_days(full, windows)
+    trend_days = [d for d in find_best_trend_days(full, windows) if d not in rough_days]
     print(f"top {len(rough_days)} roughest real days across the watchlist: "
           + ", ".join(str(d.date()) for d in rough_days))
+    print(f"top {len(trend_days)} strongest-trend real days (the 'big runner' regime): "
+          + ", ".join(str(d.date()) for d in trend_days))
+    rough_days = rough_days + trend_days
 
     agent = QTraderAgent()  # default model_path -> respects BOT_DATA_DIR
     loaded = agent.load()

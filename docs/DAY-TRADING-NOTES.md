@@ -1295,3 +1295,45 @@ Tests added: `test_friday_close_window_detection`,
 logic is what gets tested).
 
 97 tests passing.
+
+## Session 32 (train in the past on BOTH regimes; copy-trading legality researched -- critical finding)
+
+Directive: stop letting the bot idle through quiet live markets ("one whole
+day for one day of experience") -- go back in time and get reps in both the
+disaster days AND the big-money days; and look into copy trading
+(MambaFX-style leaders, the "$4k/week" copy services).
+
+**Time-machine training extended to the good days.** `find_best_trend_days`
+added to scripts/stress_test.py: ranks real historical days by combined
+NET directional move (big runner days), complementing `find_roughest_days`
+(range/chop days). `--practice` now trains the live Q-agent on the top
+rough windows PLUS the top trend windows (deduped). Rationale: the two
+regimes that decide a scalper's month are the days that can hurt it and
+the trend days it must not waste -- practicing only on rough days taught
+defense but never offense. Same isolation guarantees as before: only the
+Q-table is touched, never the journal/track record.
+
+**Copy trading: researched before wiring anything, and the answer is a
+hard stop for the funded accounts.** Consistent across 2026 prop-industry
+sources (Tradeify, Apex, NexusFi, trade-copier operator guides):
+- Copying YOUR OWN strategy across YOUR OWN accounts: allowed at most
+  firms -- this is exactly the two-bot setup already built (each account
+  runs our own desk logic independently). No change needed.
+- EXTERNAL signals -- subscribing to another trader's calls (MambaFX or
+  anyone), paid signal groups, pass-your-challenge services: banned
+  essentially everywhere, detected via timestamp/instrument/size
+  fingerprinting across accounts, punished with termination AND denied
+  payouts. The "$4k in a week copy trading" pitches are exactly the
+  category that gets funded accounts killed.
+Decision: on the funded accounts the bot trades ONLY its own signals.
+MambaFX's *style* stays absorbed as strategy research (ORB retest filter,
+session discipline -- already implemented in earlier sessions); his
+*trades* are never mirrored there. The manual mirror mode remains
+available for the PAPER account only.
+
+**Tried the available `trading-signal` skill** (on-chain smart-money
+buy/sell events, BSC/Solana): returned an empty result set when called;
+and even working, it surfaces memecoin flow -- wrong market for a forex
+prop desk, and feeding any external signal into the funded accounts is
+the banned pattern above. Evaluated and rejected on evidence, same
+treatment as every other shiny object.
