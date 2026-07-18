@@ -61,44 +61,44 @@
       "sell": -0.03938873277279473
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 0.0018659370208998736,
-      "buy": 0.0056100273340167935,
-      "sell": 0.0019826406399467648
+      "hold": 0.0008772911894798226,
+      "buy": 0.0017387033539122945,
+      "sell": 0.000963025467110889
     },
     "trend-up|rsi-neutral|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 0.002787099243343355,
-      "buy": 0.0011903065613554642,
-      "sell": 0.0011915129902136403
+      "hold": 0.000914346394033903,
+      "buy": 0.002202162794789273,
+      "sell": 0.0009226801544271136
     },
     "trend-up|rsi-oversold|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 6.75668295829809e-06,
-      "buy": -0.0006145405995916697,
-      "sell": 7.044669909274945e-06
+      "hold": 1.842042438746866e-05,
+      "buy": -0.00063913188221303,
+      "sell": 4.577338541454048e-05
     },
     "trend-down|rsi-neutral|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 0.0016222966023152826,
-      "buy": 0.00018731682494389773,
-      "sell": 6.6950505241282266e-06
+      "hold": 3.543595422991434e-05,
+      "buy": -0.000290961064420864,
+      "sell": 0.00044121923682966175
     },
     "trend-down|rsi-oversold|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 9.101468052775702e-06,
-      "buy": -0.0003746392728407348,
-      "sell": 8.838949437000715e-06
+      "hold": 1.928263236822702e-05,
+      "buy": -0.00031583987806013566,
+      "sell": 6.494246976938717e-05
     },
     "trend-down|rsi-neutral|vwap-above|orb-up|tod-late|pos-out": {
-      "hold": 3.7933204076068826e-05,
-      "buy": -0.0007967411259675165,
-      "sell": 1.9948183507079757e-05
+      "hold": 0.0002743282404890536,
+      "buy": -0.0012663357557103111,
+      "sell": 0.00013377056804378526
     },
     "trend-down|rsi-oversold|vwap-below|orb-up|tod-late|pos-out": {
-      "hold": 3.629781882670326e-05,
-      "buy": -0.00035857342357931295,
-      "sell": 3.578083907774831e-05
+      "hold": 6.11751621752468e-05,
+      "buy": -0.00025759235596452295,
+      "sell": 0.00013094455656175724
     },
     "trend-down|rsi-neutral|vwap-below|orb-up|tod-late|pos-out": {
-      "hold": 4.891422123266035e-05,
-      "buy": -0.0005245173214389169,
-      "sell": 4.80466044930042e-05
+      "hold": 4.630915948890357e-05,
+      "buy": -0.00048493936244490177,
+      "sell": 5.842561328790985e-05
     },
     "trend-down|rsi-oversold|vwap-below|orb-in|tod-late|pos-out": {
       "hold": 0.00020585520340183155,
@@ -106,64 +106,64 @@
       "sell": 0.00017217854288422262
     },
     "trend-down|rsi-neutral|vwap-above|orb-in|tod-open|pos-out": {
-      "hold": 0.0001187469916020526,
-      "buy": -0.0010922239082047777,
-      "sell": 1.6528574268383333e-05
+      "hold": 0.0003394011086190191,
+      "buy": -0.001355208202771575,
+      "sell": 0.0002153328247807279
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-open|pos-out": {
-      "hold": 5.347991089123045e-05,
-      "buy": -0.0009127157872821693,
-      "sell": 0.00021291722624851598
+      "hold": 0.00027766040084650247,
+      "buy": -0.0009505656894546348,
+      "sell": 0.00041472057487766466
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-open|pos-in": {
-      "hold": 0.002525162593793109,
-      "buy": 0.0002574141724384731,
-      "sell": -0.001543221282408436
+      "hold": 0.003355472292263818,
+      "buy": 0.0009623654198827167,
+      "sell": -0.0017444515468725671
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-open|pos-in": {
-      "hold": 0.00043969415687480484,
-      "buy": 0.0024671536176792464,
-      "sell": -0.002663874468255303
+      "hold": 0.000663746390974726,
+      "buy": 0.004184088154974607,
+      "sell": -0.0020541192270047584
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 0.00039304407345199085,
-      "buy": 0.00026625318223389186,
-      "sell": 0.0005230191229598832
+      "hold": 0.0005178834015204719,
+      "buy": 0.0003981709233850627,
+      "sell": 0.0008038736886067859
     },
     "trend-down|rsi-oversold|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 0.00044195956672143965,
-      "buy": -7.010086040307398e-05,
-      "sell": 0.00033718335933259174
+      "hold": 0.0005469283128653016,
+      "buy": 0.0009754105850893391,
+      "sell": 0.0005215769589080713
     },
     "trend-down|rsi-neutral|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 0.0006184200308932468,
-      "buy": -0.0002355042506010231,
-      "sell": 0.0006491953426232734
+      "hold": 0.0005061650697038181,
+      "buy": -0.00032908742549790545,
+      "sell": 0.0006132306565171317
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": 0.0023052858719315944,
-      "buy": 0.0008799704401616002,
-      "sell": -0.006329639655837895
+      "hold": 0.0022355229474917875,
+      "buy": 0.0013757247408971239,
+      "sell": -0.004957432480471334
     },
     "trend-up|rsi-neutral|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 0.0006046948544936989,
-      "buy": -0.001571354050940171,
-      "sell": 0.0005838625706351931
+      "hold": 0.0005136302345245605,
+      "buy": -0.00173801824073653,
+      "sell": 0.000649319281001744
     },
     "trend-down|rsi-oversold|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": 0.0030595046714740463,
-      "buy": -0.004903667176676932,
-      "sell": -0.011921033391050105
+      "hold": 0.002851215557545825,
+      "buy": -0.0025031652967680653,
+      "sell": -0.020069536297401113
     },
     "trend-down|rsi-oversold|vwap-below|orb-down|tod-late|pos-out": {
-      "hold": 0.00010845892618691695,
-      "buy": 0.0005957484424124526,
-      "sell": 6.754858445946491e-05
+      "hold": 0.00020886479505535902,
+      "buy": 0.0036360185588775566,
+      "sell": 0.0004015636120085644
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-late|pos-out": {
-      "hold": 0.00012030963674072607,
-      "buy": -0.00023036168912199585,
-      "sell": 0.00014936156573564814
+      "hold": 0.0003106418742319448,
+      "buy": 0.0006587273180812555,
+      "sell": 0.0002762264069318055
     },
     "trend-down|rsi-neutral|vwap-above|orb-up|tod-open|pos-out": {
       "hold": 3.506902141882361e-05,
@@ -171,74 +171,74 @@
       "sell": 3.7932342789411374e-05
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 0.0003978860536226949,
-      "buy": 4.621644600617838e-05,
-      "sell": 1.218109702331159e-05
+      "hold": 0.000214263039679795,
+      "buy": -1.9547458018071936e-05,
+      "sell": 0.0006699223691569186
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": 0.0006375889580995655,
-      "buy": 0.0005686475495441008,
-      "sell": -0.0007168153872774191
+      "hold": 0.00042846607690704704,
+      "buy": 0.0006412261609875354,
+      "sell": -0.003248695397797147
     },
     "trend-down|rsi-neutral|vwap-above|orb-in|tod-mid|pos-in": {
-      "hold": -0.00048093618662015315,
-      "buy": 0.0009582816757191155,
-      "sell": -0.0008380360153324502
+      "hold": 0.0008700462888826318,
+      "buy": 0.0013468477092661792,
+      "sell": -0.00020363511968030624
     },
     "trend-down|rsi-neutral|vwap-above|orb-in|tod-mid|pos-out": {
-      "hold": 0.0011492527520667393,
-      "buy": -0.00012351805560847912,
-      "sell": 0.0001861297941322793
+      "hold": 0.00014469504344994194,
+      "buy": 0.0005608512075236282,
+      "sell": 3.741259420799352e-05
     },
     "trend-up|rsi-overbought|vwap-above|orb-in|tod-mid|pos-out": {
-      "hold": 0.0004372499551842519,
-      "buy": -0.00035076719671809183,
-      "sell": 0.001026576896629755
+      "hold": 0.0006322652391548974,
+      "buy": -0.00017058702676495536,
+      "sell": 0.0008815675138171827
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 0.00022787405289378466,
-      "buy": -0.0010189644696077472,
-      "sell": 0.0009425966374474814
+      "hold": 0.0006769930944249626,
+      "buy": -0.0006907242306296264,
+      "sell": 0.0004809104538223646
     },
     "trend-up|rsi-neutral|vwap-above|orb-in|tod-mid|pos-out": {
-      "hold": 0.00162097331385971,
-      "buy": 0.0004713481700141475,
-      "sell": 0.0007525298103193705
+      "hold": 0.0006646461431075358,
+      "buy": -0.0007319939318646906,
+      "sell": 0.0010454517082615303
     },
     "trend-up|rsi-oversold|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 1.281906707551641e-05,
+      "hold": 4.471426734113445e-05,
       "buy": -0.000736510437883679,
-      "sell": 0.00034440878242927083
+      "sell": 0.0004736732588776195
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-open|pos-in": {
-      "hold": -0.0007315616371138191,
-      "buy": -0.0009597179535597216,
-      "sell": -0.0012684628727374393
+      "hold": -0.0006871226699427617,
+      "buy": -0.00022054380728986668,
+      "sell": -0.0024053911318247974
     },
     "trend-down|rsi-neutral|vwap-above|orb-in|tod-open|pos-in": {
-      "hold": -0.0020269074211260634,
-      "buy": -0.0019168552459180323,
-      "sell": -0.0018501915656018084
+      "hold": -0.0024698213715348923,
+      "buy": -0.002335013914822066,
+      "sell": -0.0026462981801032115
     },
     "trend-up|rsi-overbought|vwap-above|orb-in|tod-open|pos-in": {
-      "hold": 0.0006091323641328,
-      "buy": 0.0006732614474019763,
-      "sell": 0.002603350002395476
+      "hold": 0.0008161719556113709,
+      "buy": 0.0006107890222182401,
+      "sell": 0.002631131250625503
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-open|pos-in": {
-      "hold": 0.001191154174214065,
-      "buy": 0.00011565619448722196,
-      "sell": -0.0005945462565403843
+      "hold": 0.0023665888053192993,
+      "buy": 0.00081385772811684,
+      "sell": 0.00020890355025319165
     },
     "trend-up|rsi-overbought|vwap-above|orb-in|tod-mid|pos-in": {
-      "hold": 0.0007065035759432939,
-      "buy": 0.0008525285612849791,
-      "sell": 0.004731723168867775
+      "hold": -0.00024490140485517776,
+      "buy": -0.00033720099004694906,
+      "sell": -0.00013413872471712703
     },
     "trend-up|rsi-neutral|vwap-above|orb-in|tod-mid|pos-in": {
-      "hold": -0.0018761087043242188,
-      "buy": -0.0007561226866311028,
-      "sell": -0.0011582444073129704
+      "hold": -0.0019757347086918563,
+      "buy": -0.0013527251540873554,
+      "sell": -0.00046592408470623133
     },
     "trend-up|rsi-oversold|vwap-above|orb-in|tod-mid|pos-in": {
       "hold": -0.0001834430128438473,
@@ -247,11 +247,11 @@
     },
     "trend-down|rsi-oversold|vwap-above|orb-in|tod-mid|pos-in": {
       "hold": 0.00012533403566036808,
-      "buy": 0.00026568567463125336,
-      "sell": -0.001353910106409757
+      "buy": 0.00046357233241566405,
+      "sell": -0.0013039398095466717
     },
     "trend-down|rsi-oversold|vwap-above|orb-in|tod-mid|pos-out": {
-      "hold": 6.71953619868916e-06,
+      "hold": 0.0003392005821454678,
       "buy": -0.0008134160087335325,
       "sell": 5.213442277878432e-06
     },
@@ -266,9 +266,9 @@
       "sell": -0.001138282181005206
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-late|pos-out": {
-      "hold": 0.00016292078141492636,
-      "buy": -0.00011523957469083233,
-      "sell": 0.00015796014236568615
+      "hold": 0.00012625562996687733,
+      "buy": 7.354608543655676e-05,
+      "sell": 0.0001288408562703983
     },
     "trend-down|rsi-neutral|vwap-above|orb-in|tod-late|pos-out": {
       "hold": 0.00023202739237970207,
@@ -276,19 +276,19 @@
       "sell": 0.00023122391571400272
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-open|pos-out": {
-      "hold": 0.000707818907041327,
-      "buy": -0.00047828117965745335,
-      "sell": 1.0835199837797186e-05
+      "hold": 0.00019473272483554345,
+      "buy": 0.0002236295234273088,
+      "sell": 0.0006106139564737955
     },
     "trend-up|rsi-overbought|vwap-above|orb-in|tod-open|pos-out": {
-      "hold": 0.00039522163271854104,
-      "buy": -0.00020582927172102612,
-      "sell": 2.3726263006117132e-05
+      "hold": 0.00019575848526245222,
+      "buy": 0.0017458246831934653,
+      "sell": 0.00013520096853810487
     },
     "trend-up|rsi-neutral|vwap-above|orb-in|tod-open|pos-out": {
-      "hold": 0.0005047313392348545,
-      "buy": -3.63218368193529e-05,
-      "sell": 5.506224027355242e-05
+      "hold": 0.00016498489129757718,
+      "buy": 0.00026053896928213534,
+      "sell": 0.0005034543799494406
     },
     "trend-up|rsi-neutral|vwap-below|orb-down|tod-open|pos-out": {
       "hold": 4.8520557132069994e-05,
@@ -296,9 +296,9 @@
       "sell": 3.6570195262777664e-05
     },
     "trend-up|rsi-neutral|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": -0.001475308486964766,
-      "buy": -0.00013486950505196913,
-      "sell": -0.0039283362624831985
+      "hold": -0.0016466136449939115,
+      "buy": -0.0019753754463818847,
+      "sell": -0.0025803043507418607
     },
     "trend-down|rsi-oversold|vwap-above|orb-in|tod-open|pos-out": {
       "hold": 3.9578443829886423e-05,
@@ -321,69 +321,69 @@
       "sell": -0.0007826924160511096
     },
     "trend-down|rsi-oversold|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 0.00015257593591534697,
-      "buy": 0.0005871752011989131,
-      "sell": -0.00029181756013259676
+      "hold": 0.0010624910564413894,
+      "buy": 0.000470928353720748,
+      "sell": -0.0017764200464714557
     },
     "trend-down|rsi-overbought|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 0.0004147610172314559,
-      "buy": 2.589414235521237e-05,
-      "sell": -0.0002674020422169779
+      "hold": 0.0004286242439530869,
+      "buy": 0.0006628570082052032,
+      "sell": 0.00281067612730718
     },
     "trend-down|rsi-overbought|vwap-above|orb-in|tod-mid|pos-in": {
-      "hold": 0.00011744054254393624,
-      "buy": 0.00149161699257211,
-      "sell": -0.0005279212251881588
+      "hold": 0.0003128937657902471,
+      "buy": 0.0015247531229914018,
+      "sell": -0.0005338646757320116
     },
     "trend-down|rsi-oversold|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 0.0006196339289465521,
-      "buy": -0.0001027683339898379,
-      "sell": 0.00016265400378798293
+      "hold": 0.00011831939528399121,
+      "buy": 0.0003626447055230868,
+      "sell": 0.00021027019153700927
     },
     "trend-down|rsi-overbought|vwap-above|orb-up|tod-mid|pos-out": {
-      "hold": 5.090298502976035e-06,
-      "buy": -0.0008413961060158895,
-      "sell": 6.477050952168613e-06
+      "hold": 1.998563924220414e-05,
+      "buy": -0.0006560220564799607,
+      "sell": 3.296415453435933e-05
     },
     "trend-down|rsi-overbought|vwap-above|orb-in|tod-mid|pos-out": {
-      "hold": 5.2561094098635195e-05,
-      "buy": -0.000505938077869375,
-      "sell": 4.886233916027073e-06
+      "hold": 0.0001409391833323972,
+      "buy": -0.0004096966436899853,
+      "sell": 1.1572973621092484e-05
     },
     "trend-up|rsi-oversold|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 5.454063190940511e-05,
-      "buy": -0.0005912544351360056,
-      "sell": 5.880712526394892e-06
+      "hold": 6.414343841636572e-05,
+      "buy": -0.0006091674890784204,
+      "sell": 8.732614039297245e-06
     },
     "trend-down|rsi-oversold|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": 0.0008833770837995489,
-      "buy": 0.0012096674223654202,
-      "sell": -0.0036948906338228247
+      "hold": 0.001306164256081356,
+      "buy": 0.0015443230589896595,
+      "sell": -0.001828848568925375
     },
     "trend-down|rsi-neutral|vwap-below|orb-in|tod-late|pos-in": {
-      "hold": 0.0015630860090086064,
-      "buy": 0.00011169369848238271,
-      "sell": -0.002001116617403029
+      "hold": 0.0025381929436879705,
+      "buy": 0.0017132348693530862,
+      "sell": -0.0007332331859183792
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-late|pos-out": {
-      "hold": 0.00011420425063312822,
-      "buy": -6.676531035342726e-05,
-      "sell": 0.00010987536801444365
+      "hold": 9.785371558589116e-05,
+      "buy": -9.419135698645454e-05,
+      "sell": 9.756737461512527e-05
     },
     "trend-down|rsi-overbought|vwap-above|orb-in|tod-open|pos-out": {
-      "hold": 3.743874516571131e-05,
-      "buy": -0.00039749910657577045,
-      "sell": 3.83903039214624e-05
+      "hold": 7.65946516198775e-05,
+      "buy": -0.0006335173946503652,
+      "sell": 0.0002896152354578917
     },
     "trend-up|rsi-neutral|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 0.0022879825382448246,
-      "buy": 0.006229273617986005,
-      "sell": -0.0005515107567770807
+      "hold": 0.0030567032611595654,
+      "buy": 0.0019320696273665873,
+      "sell": 0.0011963318556326866
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 0.0019648247369112837,
-      "buy": 2.838576145194354e-06,
-      "sell": 0.007011602261221723
+      "hold": -0.0004346729250577774,
+      "buy": 0.0004316720720867217,
+      "sell": 0.004326016537331515
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-open|pos-out": {
       "hold": 0.00011664026924596581,
@@ -391,64 +391,64 @@
       "sell": 6.620259495704657e-05
     },
     "trend-up|rsi-neutral|vwap-above|orb-in|tod-open|pos-in": {
-      "hold": 0.0008860556953504609,
-      "buy": 0.00019175195001728325,
-      "sell": -0.000717815918369918
+      "hold": 0.0016034321382175152,
+      "buy": 0.0005544598395531831,
+      "sell": -0.00045171462751221014
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-late|pos-out": {
-      "hold": 0.00045562113793003216,
+      "hold": 0.0002422147736961857,
       "buy": 2.889497683312342e-05,
-      "sell": 0.0002729881304932599
+      "sell": 0.0002449849697857191
     },
     "trend-down|rsi-oversold|vwap-below|orb-in|tod-open|pos-out": {
-      "hold": 2.855087046168739e-05,
-      "buy": -0.0005730616958565851,
-      "sell": 2.8423057390213816e-05
+      "hold": 0.00010829462503312598,
+      "buy": -0.0007879532109874584,
+      "sell": 8.385351126780867e-05
     },
     "trend-down|rsi-neutral|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 0.0013276310071363468,
-      "buy": 0.0003881610498209337,
-      "sell": -0.0011801429869785773
+      "hold": 0.0017896905127883997,
+      "buy": 0.0005125932962793567,
+      "sell": 0.000997968466400864
     },
     "trend-down|rsi-oversold|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 1.0027126141371693e-05,
-      "buy": -0.00030729969753362236,
-      "sell": 9.167245786536135e-06
+      "hold": 0.0001071648032002595,
+      "buy": -1.8640279209160286e-05,
+      "sell": 7.986294707203969e-05
     },
     "trend-down|rsi-oversold|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": -1.967082121253991e-05,
-      "buy": 0.0006302568341937607,
-      "sell": -0.00415772376823522
+      "hold": 0.0010951430676508728,
+      "buy": 0.0004990255582198816,
+      "sell": -0.0017000111814054657
     },
     "trend-up|rsi-neutral|vwap-above|orb-up|tod-late|pos-out": {
-      "hold": 4.0602030784601026e-05,
-      "buy": -0.0010177286521714706,
-      "sell": 3.0024027624438675e-05
+      "hold": 0.00012458624051455637,
+      "buy": -0.001117807364190097,
+      "sell": 8.606258269120033e-05
     },
     "trend-up|rsi-neutral|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": -0.0007089917520102782,
-      "buy": -0.0008735839229514635,
-      "sell": -0.0020641367653219697
+      "hold": -0.0010041232402625477,
+      "buy": -0.0015046837622684705,
+      "sell": -0.002656823293752192
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-open|pos-in": {
-      "hold": 0.00024929985347683204,
-      "buy": 0.0007036282529987436,
-      "sell": -0.0001375025306443085
+      "hold": 0.00045623372416252867,
+      "buy": 0.000981803115494038,
+      "sell": 0.0019309427598981584
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-late|pos-out": {
-      "hold": 2.04370769165147e-05,
-      "buy": -0.0005966650374052613,
-      "sell": 2.0249130997754807e-05
+      "hold": 1.7487427716942424e-05,
+      "buy": -0.000222093491965588,
+      "sell": 1.7307242824175134e-05
     },
     "trend-down|rsi-oversold|vwap-below|orb-in|tod-open|pos-in": {
-      "hold": 0.00027520843256471884,
-      "buy": 0.00030503752522178195,
+      "hold": 0.000172316419446114,
+      "buy": 0.0001731389027257653,
       "sell": -0.0018649302128522158
     },
     "trend-up|rsi-overbought|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 7.2297670540357e-05,
-      "buy": -0.00041842888876746374,
-      "sell": 0.001058359006833301
+      "hold": 0.00047559867505351535,
+      "buy": -0.000977430836515293,
+      "sell": 0.0009206607611989745
     },
     "trend-up|rsi-neutral|vwap-below|orb-down|tod-late|pos-out": {
       "hold": 5.5129671947213054e-05,
@@ -461,14 +461,14 @@
       "sell": -0.0013339791550357038
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-open|pos-out": {
-      "hold": 1.1569482554069283e-05,
-      "buy": -0.0004210292413089143,
-      "sell": 1.1455970789104525e-05
+      "hold": 0.0001489616811579688,
+      "buy": 3.711688259729298e-05,
+      "sell": 8.761066316657804e-05
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-open|pos-out": {
-      "hold": 5.638715586195072e-06,
-      "buy": -0.0003254168662482794,
-      "sell": 2.090912562974689e-05
+      "hold": 9.695608172398108e-05,
+      "buy": -0.0002884143937152391,
+      "sell": 0.0001254499633767625
     },
     "trend-up|rsi-oversold|vwap-below|orb-in|tod-open|pos-out": {
       "hold": 5.152705387583212e-05,
@@ -491,19 +491,19 @@
       "sell": 2.1178278750556474e-05
     },
     "trend-down|rsi-overbought|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 5.0669814000723385e-05,
-      "buy": -6.235086194539399e-05,
-      "sell": 0.001545167956603736
+      "hold": 0.0006500427189673284,
+      "buy": 0.0004926835107772804,
+      "sell": 0.001098415574874629
     },
     "trend-up|rsi-overbought|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 0.0017589200529170542,
-      "buy": 0.0027696403037208986,
-      "sell": 0.0017436295143068799
+      "hold": 0.001193763147535038,
+      "buy": 0.0021240971683533037,
+      "sell": 0.0012321065659692835
     },
     "trend-down|rsi-oversold|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 0.0006030059950146717,
-      "buy": -0.00030671124400788143,
-      "sell": 1.208744727900148e-05
+      "hold": 0.0005342461350804171,
+      "buy": -0.00017997023055164743,
+      "sell": 0.0002087548183714141
     },
     "trend-up|rsi-neutral|vwap-above|orb-in|tod-late|pos-in": {
       "hold": 0.0017315710902254995,
@@ -516,9 +516,9 @@
       "sell": 0.0003858504218364265
     },
     "trend-down|rsi-oversold|vwap-above|orb-up|tod-late|pos-out": {
-      "hold": 2.5853190644826597e-05,
-      "buy": -0.0008283746147988394,
-      "sell": 2.629865685299803e-05
+      "hold": 0.00021649305028413553,
+      "buy": -0.0008395988833293634,
+      "sell": 5.302235620282215e-05
     },
     "trend-up|rsi-oversold|vwap-above|orb-in|tod-open|pos-out": {
       "hold": 2.7686074860129237e-05,
@@ -526,24 +526,24 @@
       "sell": 9.788781783656225e-05
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-open|pos-out": {
-      "hold": 1.7000048920611604e-05,
-      "buy": -0.00016275998717103475,
-      "sell": 1.6311219730688224e-05
+      "hold": 2.7873080881966925e-05,
+      "buy": 0.0021373448017425003,
+      "sell": 1.8446146825225988e-05
     },
     "trend-down|rsi-neutral|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": -3.640144154129591e-06,
-      "buy": 0.0011297364662251307,
-      "sell": -0.0023720687416133725
+      "hold": -0.0006070557816705091,
+      "buy": 0.0003521162667383238,
+      "sell": -0.0006559778153837064
     },
     "trend-down|rsi-oversold|vwap-below|orb-down|tod-late|pos-in": {
-      "hold": 0.0008264843286274648,
-      "buy": 0.0037757248419106612,
-      "sell": -0.0044149885514555495
+      "hold": 0.003339665279281738,
+      "buy": 0.0047514895426187444,
+      "sell": -0.00240058080110646
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": -0.0009504619650215573,
-      "buy": -0.0005567606526676028,
-      "sell": -0.0012603928522828252
+      "hold": -0.0008095131749936942,
+      "buy": -0.0006761938307557809,
+      "sell": -0.001952323565227535
     },
     "trend-up|rsi-oversold|vwap-above|orb-in|tod-mid|pos-out": {
       "hold": 6.694043677478971e-06,
@@ -561,44 +561,44 @@
       "sell": -0.004887766388817414
     },
     "trend-down|rsi-neutral|vwap-below|orb-down|tod-late|pos-in": {
-      "hold": 0.0028468696466421427,
-      "buy": 0.006567609426442997,
-      "sell": -0.001282373185679279
+      "hold": 0.0024560073009742174,
+      "buy": 0.008068679922269442,
+      "sell": -0.0004974939299783714
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-late|pos-in": {
-      "hold": -0.0001184711299661029,
-      "buy": 0.0012163087723396982,
-      "sell": -0.0003420340903295695
+      "hold": 0.0004955804645709685,
+      "buy": 0.002258975338780439,
+      "sell": -0.00037627438288875077
     },
     "trend-down|rsi-overbought|vwap-above|orb-in|tod-open|pos-in": {
-      "hold": 0.00017346563970447866,
-      "buy": 0.00031986228461712557,
-      "sell": -4.302807518951718e-05
+      "hold": -0.0003309477542953709,
+      "buy": -0.0003247276793288368,
+      "sell": -0.00042097312072591656
     },
     "trend-up|rsi-overbought|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": -0.00011925365645621836,
+      "hold": 0.0001549258880622621,
       "buy": -0.0001943547785314729,
-      "sell": 7.061068098933592e-05
+      "sell": 1.2728477340980427e-05
     },
     "trend-up|rsi-oversold|vwap-above|orb-up|tod-mid|pos-in": {
-      "hold": 7.070475080665046e-05,
-      "buy": -0.00041616652782292977,
-      "sell": -0.000879598181558025
+      "hold": -0.00031406291834407254,
+      "buy": 0.0002445046845612046,
+      "sell": -0.0008759429559576707
     },
     "trend-up|rsi-overbought|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": -0.0013951532362142848,
-      "buy": -0.001644419097003317,
-      "sell": 0.0035118490713515775
+      "hold": -0.0032665484189915417,
+      "buy": -0.002488063243108799,
+      "sell": 0.00016500152732651252
     },
     "trend-down|rsi-oversold|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": 0.0019689432205541864,
-      "buy": 0.0030182793511935387,
+      "hold": 0.003912498255012691,
+      "buy": 0.0022790252448995456,
       "sell": -0.0032122857702954048
     },
     "trend-down|rsi-neutral|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": -0.0014120427159946638,
-      "buy": -0.0013832317082881997,
-      "sell": -0.0013457783905165067
+      "hold": -0.001914193021147649,
+      "buy": -0.0019630776310356163,
+      "sell": -0.0019524912065576722
     },
     "trend-up|rsi-oversold|vwap-above|orb-in|tod-open|pos-in": {
       "hold": -0.00023077345413066188,
@@ -606,14 +606,14 @@
       "sell": -0.0011617200159011018
     },
     "trend-down|rsi-oversold|vwap-below|orb-up|tod-late|pos-in": {
-      "hold": 0.0008552953362931646,
-      "buy": 0.0002957335305968097,
-      "sell": -0.0017432536124152795
+      "hold": 0.0007679684755329955,
+      "buy": 0.0005706646160388967,
+      "sell": -0.0018945668792758608
     },
     "trend-down|rsi-neutral|vwap-below|orb-up|tod-late|pos-in": {
-      "hold": 3.998551479168582e-05,
+      "hold": 4.994013415510863e-05,
       "buy": 3.855657851862364e-05,
-      "sell": -0.0013959723164300624
+      "sell": -0.001157251520348587
     },
     "trend-down|rsi-oversold|vwap-above|orb-in|tod-late|pos-out": {
       "hold": 0.00012891225475714197,
@@ -626,34 +626,34 @@
       "sell": 7.893612384451412e-05
     },
     "trend-up|rsi-neutral|vwap-below|orb-in|tod-late|pos-in": {
-      "hold": 0.0005647686961637997,
-      "buy": 0.0006725167632198746,
+      "hold": 0.0005739746587681204,
+      "buy": 0.0005729415926037882,
       "sell": -0.0015790349660609313
     },
     "trend-up|rsi-oversold|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": -0.0003091508487121711,
-      "buy": 0.0007047228043585295,
+      "hold": -3.681660430938509e-05,
+      "buy": 0.0005694019255132679,
       "sell": -0.002688177885249151
     },
     "trend-up|rsi-oversold|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": 0.0001625390441991229,
-      "buy": 0.0006582514645267577,
-      "sell": -0.004092233501960516
+      "hold": 0.00037098833302711917,
+      "buy": 0.000638935845527253,
+      "sell": -0.0038987692360183245
     },
     "trend-down|rsi-oversold|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": 0.000940409828729265,
-      "buy": 0.00032097716168662954,
-      "sell": -0.0016127770362794535
+      "hold": -9.383822779465787e-05,
+      "buy": 0.0004972869887660407,
+      "sell": -0.002040524116061345
     },
     "trend-down|rsi-overbought|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": 0.002029593526676455,
-      "buy": 0.0004988804542138453,
-      "sell": 0.0009403373879068053
+      "hold": 0.0015435564232117824,
+      "buy": 0.000692375120137285,
+      "sell": -0.0011822493891980928
     },
     "trend-up|rsi-overbought|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": 0.005321402418025431,
-      "buy": 0.0029528901333633513,
-      "sell": 0.0017202537395254076
+      "hold": 0.0011496586433074776,
+      "buy": 0.0024814194728366716,
+      "sell": 0.0030754013585775853
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-open|pos-in": {
       "hold": 0.0006766316954567435,
@@ -661,12 +661,12 @@
       "sell": 0.00022013863562240035
     },
     "trend-down|rsi-overbought|vwap-above|orb-up|tod-late|pos-out": {
-      "hold": 4.14075857241162e-05,
-      "buy": -0.0002276785568776709,
-      "sell": 4.2247740998763655e-05
+      "hold": 2.5796379242221687e-05,
+      "buy": -0.00036845200147659057,
+      "sell": 2.3169711394241327e-05
     },
     "trend-down|rsi-overbought|vwap-below|orb-down|tod-late|pos-out": {
-      "hold": 0.0001873146209123825,
+      "hold": 0.0001711171185799387,
       "buy": 6.834260849447209e-05,
       "sell": 0.00016683346241015646
     },
@@ -681,19 +681,19 @@
       "sell": 0.002404373904444674
     },
     "trend-down|rsi-overbought|vwap-below|orb-down|tod-mid|pos-out": {
-      "hold": 0.0006165990583278291,
-      "buy": -0.00022461819948015857,
-      "sell": 0.0008807364291843492
+      "hold": 0.0006335471146528925,
+      "buy": 0.002632439357772764,
+      "sell": 0.0007124468205936997
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 9.80522359162911e-06,
+      "hold": 0.00026419849686770404,
       "buy": -0.0008112163084238818,
       "sell": 5.945770076006362e-06
     },
     "trend-down|rsi-overbought|vwap-below|orb-down|tod-late|pos-in": {
-      "hold": 0.0007190115107963935,
-      "buy": 0.0015162488663988262,
-      "sell": 0.00021767382042376879
+      "hold": 0.0009590372930331473,
+      "buy": 0.0018954837300521033,
+      "sell": 9.249695537930448e-05
     },
     "trend-up|rsi-overbought|vwap-above|orb-in|tod-late|pos-out": {
       "hold": 0.0006844037748369437,
@@ -701,19 +701,19 @@
       "sell": 0.0006737287136572575
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": -0.00024177413487245367,
-      "buy": -0.00020142191465423272,
+      "hold": -0.0002533752668160559,
+      "buy": -9.464068854444863e-05,
       "sell": -0.0008623357862460698
     },
     "trend-down|rsi-overbought|vwap-below|orb-down|tod-mid|pos-in": {
-      "hold": 0.0013515625296362601,
-      "buy": 0.005667947780739098,
-      "sell": 0.0013741183592334107
+      "hold": 0.0005910183163660352,
+      "buy": 0.004252487929123482,
+      "sell": 0.004184024266503038
     },
     "trend-down|rsi-overbought|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": 0.00021535308349553898,
-      "buy": 0.000212827617027946,
-      "sell": -0.0003037504219721118
+      "hold": -1.964122860694529e-05,
+      "buy": -1.825359672610582e-05,
+      "sell": -0.00031443854009161927
     },
     "trend-up|rsi-oversold|vwap-below|orb-down|tod-late|pos-out": {
       "hold": 0.0004204665453455889,
@@ -721,14 +721,14 @@
       "sell": 0.00028932817044356285
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-mid|pos-in": {
-      "hold": 0.00265887904293835,
-      "buy": 0.0005277901182744828,
-      "sell": -0.0016557529734122479
+      "hold": 0.0030708990694144145,
+      "buy": 0.0007927991335408837,
+      "sell": -0.0021619076873741925
     },
     "trend-down|rsi-overbought|vwap-below|orb-in|tod-mid|pos-out": {
-      "hold": 1.0441862560824245e-05,
+      "hold": 1.3246424956942558e-05,
       "buy": -0.00044222111387803604,
-      "sell": 4.121900386622233e-05
+      "sell": 6.564578228507991e-05
     },
     "trend-down|rsi-overbought|vwap-above|orb-in|tod-late|pos-out": {
       "hold": 0.000214615498430249,
@@ -741,9 +741,9 @@
       "sell": 2.7280684230481257e-05
     },
     "trend-up|rsi-overbought|vwap-below|orb-down|tod-late|pos-in": {
-      "hold": 0.0014518063917944141,
-      "buy": 0.0006040838014516989,
-      "sell": -0.00016984466197126827
+      "hold": 0.0016464370848720746,
+      "buy": 0.001045691178141745,
+      "sell": 1.4960165635388447e-05
     },
     "trend-up|rsi-oversold|vwap-below|orb-in|tod-late|pos-out": {
       "hold": 0.00038245004869098364,
@@ -751,9 +751,9 @@
       "sell": 0.0
     },
     "trend-up|rsi-overbought|vwap-below|orb-down|tod-late|pos-out": {
-      "hold": 0.00012911873383751008,
-      "buy": -0.0002561035223245438,
-      "sell": 0.00011262617833430055
+      "hold": 0.00017231980372284887,
+      "buy": -0.00016530383766096267,
+      "sell": 0.00013126549570522886
     },
     "trend-up|rsi-neutral|vwap-above|orb-up|tod-open|pos-in": {
       "hold": 0.00016215388074303298,
@@ -771,19 +771,19 @@
       "sell": -0.00034556808997196584
     },
     "trend-up|rsi-neutral|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": 3.582757791312184e-05,
-      "buy": 2.1036696011634672e-05,
-      "sell": -0.0025451356621938124
+      "hold": 0.00031715562196461356,
+      "buy": -2.4451344898100233e-05,
+      "sell": -0.0017773683118631207
     },
     "trend-down|rsi-neutral|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": 0.0007051026299713815,
-      "buy": 0.00023227472838152627,
-      "sell": -0.0017668739979819254
+      "hold": 0.0005143334168401213,
+      "buy": 0.0002756009307898849,
+      "sell": -0.001917337974524831
     },
     "trend-down|rsi-neutral|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 8.595176925998098e-06,
-      "buy": -0.000433359290180215,
-      "sell": 9.209876879786889e-06
+      "hold": 8.2348274078377e-05,
+      "buy": -0.00035062746172383815,
+      "sell": 7.428302741370376e-05
     },
     "trend-up|rsi-neutral|vwap-below|orb-up|tod-late|pos-in": {
       "hold": 6.801859159877684e-05,
@@ -796,33 +796,33 @@
       "sell": 0.00019554457142611037
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-late|pos-out": {
-      "hold": 0.00010019474807668774,
-      "buy": -7.134263813631407e-06,
-      "sell": 0.00010093363359864327
+      "hold": 0.00011399704182102166,
+      "buy": -0.00028834421521412663,
+      "sell": 0.00014400467427335152
     },
     "trend-up|rsi-oversold|vwap-above|orb-up|tod-late|pos-in": {
-      "hold": 9.854119774568279e-06,
-      "buy": 4.508449224723304e-05,
+      "hold": -0.0005021166510000328,
+      "buy": -0.0005359655016248994,
       "sell": -0.001618570844515883
     },
     "trend-up|rsi-overbought|vwap-below|orb-in|tod-late|pos-in": {
-      "hold": -0.00024983674718169577,
-      "buy": 0.0010617685695304424,
-      "sell": -0.0012993253036714396
+      "hold": 0.0008387241293955445,
+      "buy": 0.0022470619094617965,
+      "sell": -0.0005448067848396026
     },
     "trend-up|rsi-neutral|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 9.691245667877225e-06,
-      "buy": -0.0007034377523331793,
-      "sell": 9.5039444304933e-06
+      "hold": 2.7545206528686868e-05,
+      "buy": -0.0005929710434391355,
+      "sell": 7.322991305250478e-05
     },
     "trend-up|rsi-oversold|vwap-above|orb-up|tod-late|pos-out": {
       "hold": 5.2754525545901174e-05,
       "buy": -0.0003846463136947994,
-      "sell": 5.5121291829814406e-05
+      "sell": 0.0002072896328523914
     },
     "trend-up|rsi-neutral|vwap-above|orb-down|tod-late|pos-out": {
-      "hold": 0.00018830709498782912,
-      "buy": 0.001647211359329282,
+      "hold": 0.000493489895953545,
+      "buy": 0.0021847703343140933,
       "sell": 0.00022546789359840719
     },
     "trend-up|rsi-overbought|vwap-above|orb-down|tod-late|pos-out": {
@@ -831,9 +831,9 @@
       "sell": 0.0004904576935441386
     },
     "trend-up|rsi-neutral|vwap-above|orb-down|tod-late|pos-in": {
-      "hold": 0.0008164629543076013,
-      "buy": 0.0037606067026574284,
-      "sell": 0.00035355709614942165
+      "hold": 0.002935782947841305,
+      "buy": 0.003517982201336182,
+      "sell": 0.001351482841177499
     },
     "trend-up|rsi-overbought|vwap-above|orb-down|tod-late|pos-in": {
       "hold": 2.0332163005673136e-05,
@@ -841,19 +841,19 @@
       "sell": 0.0001694477388400991
     },
     "trend-up|rsi-neutral|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": -0.0001463125603001725,
-      "buy": -0.0006383884124494964,
-      "sell": 0.00024264583157324
+      "hold": -0.0010240999132222187,
+      "buy": -0.002373972596146824,
+      "sell": 0.000276777289235278
     },
     "trend-up|rsi-neutral|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 0.0009242135661164814,
-      "buy": -0.000631842620855804,
-      "sell": 0.0008199950519480409
+      "hold": 0.0008422234157912404,
+      "buy": -0.0005716111711146377,
+      "sell": 0.001171198705030712
     },
     "trend-up|rsi-oversold|vwap-above|orb-down|tod-mid|pos-out": {
-      "hold": 0.0001298955318091953,
-      "buy": -0.0003555097685376044,
-      "sell": 0.00033282785666680656
+      "hold": 0.00019419303375297833,
+      "buy": -3.14548630165973e-05,
+      "sell": 0.0006895248819099496
     },
     "trend-down|rsi-neutral|vwap-above|orb-down|tod-late|pos-in": {
       "hold": 0.0007313428820950219,
@@ -861,19 +861,19 @@
       "sell": -0.0004902877368802564
     },
     "trend-up|rsi-oversold|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": -1.513420931487764e-05,
-      "buy": -6.899893160823632e-05,
-      "sell": -0.0013717689793707752
+      "hold": 0.00011605963560166912,
+      "buy": 1.8134732015026448e-08,
+      "sell": -0.0015429475291101704
     },
     "trend-down|rsi-overbought|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 7.714507266524922e-06,
-      "buy": -0.0005525158598132219,
+      "hold": 2.0246619905678922e-05,
+      "buy": -0.0005611004005400198,
       "sell": 7.436327034301609e-06
     },
     "trend-up|rsi-overbought|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 1.0070208091549328e-05,
-      "buy": -0.0010530405227924908,
-      "sell": 8.171816913604188e-06
+      "hold": 2.968307036348444e-05,
+      "buy": -0.0009578136667703209,
+      "sell": 1.4231304840479678e-05
     },
     "trend-down|rsi-overbought|vwap-above|orb-up|tod-open|pos-out": {
       "hold": 5.5808108579974715e-05,
@@ -886,14 +886,14 @@
       "sell": 0.00012297094264725027
     },
     "trend-up|rsi-overbought|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": -0.00014337055529658048,
-      "buy": -0.0011167719908233946,
-      "sell": -0.0010160611005467805
+      "hold": 9.378873812352843e-05,
+      "buy": -0.0007554513927268529,
+      "sell": -0.0011884312186073549
     },
     "trend-up|rsi-oversold|vwap-below|orb-up|tod-mid|pos-out": {
-      "hold": 9.097870580278277e-06,
-      "buy": -0.0007096486460728044,
-      "sell": 8.140301089090776e-06
+      "hold": 4.7409565502309184e-05,
+      "buy": -0.0007230733146897986,
+      "sell": 1.2863666647223019e-05
     },
     "trend-down|rsi-overbought|vwap-below|orb-up|tod-late|pos-in": {
       "hold": 9.229601084310425e-05,
@@ -901,14 +901,14 @@
       "sell": -0.00016632721915213347
     },
     "trend-down|rsi-overbought|vwap-below|orb-up|tod-mid|pos-in": {
-      "hold": -0.00011964852384225384,
-      "buy": 3.616395149144977e-05,
+      "hold": 1.1086296704066422e-05,
+      "buy": -6.17525583996886e-05,
       "sell": -0.0003968327524333934
     },
     "trend-up|rsi-oversold|vwap-above|orb-down|tod-mid|pos-in": {
-      "hold": -0.0004288621908631752,
-      "buy": -0.0005146645566592892,
-      "sell": -0.0006445064401873428
+      "hold": -0.0006147516685940164,
+      "buy": -0.0006655542681580868,
+      "sell": -0.0013578592536249942
     },
     "trend-down|rsi-oversold|vwap-above|orb-down|tod-late|pos-in": {
       "hold": 0.0007372590211323428,
@@ -931,14 +931,14 @@
       "sell": 0.00014169505250107288
     },
     "trend-up|rsi-overbought|vwap-below|orb-up|tod-late|pos-in": {
-      "hold": 0.0001579689682818261,
-      "buy": 0.00034394658710152444,
-      "sell": -0.00032316985282231146
+      "hold": 0.0002842584696661991,
+      "buy": 0.0015641963860471059,
+      "sell": -0.00037169815590813797
     },
     "trend-up|rsi-overbought|vwap-below|orb-up|tod-late|pos-out": {
-      "hold": 5.1028673950032175e-05,
+      "hold": 8.049454216146991e-05,
       "buy": -9.865405341593247e-05,
-      "sell": 4.9055500376200866e-05
+      "sell": 5.06015340103465e-05
     },
     "trend-up|rsi-oversold|vwap-above|orb-down|tod-late|pos-out": {
       "hold": 0.00035250579274165165,
@@ -981,125 +981,125 @@
       "sell": 0.0002691510607971578
     },
     "trend-up|rsi-overbought|vwap-above|pos-out": {
-      "hold": 0.0009987675425784874,
-      "buy": 0.001464534200587642,
-      "sell": 0.0009281564435519148
+      "hold": 0.0009807350933184144,
+      "buy": 0.002841124599449987,
+      "sell": 0.001100293001343637
     },
     "trend-up|rsi-neutral|vwap-below|pos-out": {
-      "hold": 0.0007538258813774011,
-      "buy": 0.0006907508982874541,
-      "sell": 0.0010380356947201838
+      "hold": 0.0008219867214739453,
+      "buy": 0.0015586772307440468,
+      "sell": 0.0010499494732399794
     },
     "trend-up|rsi-oversold|vwap-below|pos-out": {
-      "hold": 0.0002805252266332678,
-      "buy": 0.0003311735498502296,
-      "sell": 0.001078527445214125
+      "hold": 0.0013662632516184385,
+      "buy": -0.00014922113735970965,
+      "sell": 5.929022457401269e-05
     },
     "trend-down|rsi-neutral|vwap-above|pos-out": {
-      "hold": 0.0007743650440975793,
-      "buy": 0.0006459680073086236,
-      "sell": 0.0011059770087700747
+      "hold": 0.0015387682317514687,
+      "buy": 0.0005238509847571211,
+      "sell": 0.001131031592391197
     },
     "trend-up|rsi-neutral|vwap-above|pos-out": {
-      "hold": 0.0009825491458150854,
-      "buy": 0.0016586547656866715,
-      "sell": 0.0009132181350787592
+      "hold": 0.0007718050151224027,
+      "buy": 0.0016317168338809598,
+      "sell": 0.0008579695035386749
     },
     "trend-up|rsi-neutral|vwap-above|pos-in": {
-      "hold": 0.001750604680413886,
-      "buy": 0.0009581685947842195,
-      "sell": 0.001012254385507102
+      "hold": 0.0010410897073127876,
+      "buy": 0.001658140661352077,
+      "sell": 0.0008871008689198196
     },
     "trend-up|rsi-neutral|vwap-below|pos-in": {
-      "hold": 0.0027772653124982557,
-      "buy": 0.0019144572606703387,
-      "sell": -0.003603766666328297
+      "hold": 0.002904202650765732,
+      "buy": 0.0022103755341121687,
+      "sell": -0.00022605868675489244
     },
     "trend-up|rsi-overbought|vwap-above|pos-in": {
-      "hold": 0.0011567691661579828,
-      "buy": 0.0013621541285645253,
-      "sell": 0.002899402554868829
+      "hold": 0.001278440010225181,
+      "buy": 0.003394444553594672,
+      "sell": 0.003640522444038194
     },
     "trend-down|rsi-oversold|vwap-below|pos-out": {
-      "hold": 0.0008137691883882742,
-      "buy": 0.0023720952387068094,
-      "sell": 0.0011566745368794948
+      "hold": 0.0010797531003223096,
+      "buy": 0.0021815150152231584,
+      "sell": 0.0011663893998991798
     },
     "trend-down|rsi-oversold|vwap-below|pos-in": {
-      "hold": 0.0023496036662635188,
-      "buy": 0.00468766031295312,
-      "sell": -0.008430718454928855
+      "hold": 0.005419006766905677,
+      "buy": 0.002586540214317299,
+      "sell": -0.0050300265203918355
     },
     "trend-down|rsi-neutral|vwap-below|pos-out": {
-      "hold": 0.000982585317507947,
-      "buy": 0.0019106774108661488,
-      "sell": 0.0008631339470338797
+      "hold": 0.0013362120734535083,
+      "buy": 0.0016460823356825327,
+      "sell": 0.0008057653855986713
     },
     "trend-down|rsi-overbought|vwap-below|pos-out": {
-      "hold": 7.414759312855718e-05,
-      "buy": -0.0006140974600881651,
-      "sell": 0.0010744216806402426
+      "hold": 0.000810236911225238,
+      "buy": -0.0005705841473952467,
+      "sell": 0.00018520451764467404
     },
     "trend-down|rsi-neutral|vwap-below|pos-in": {
-      "hold": 0.0018665277308857482,
-      "buy": 0.0035767239426860416,
-      "sell": -0.0061790237441779194
+      "hold": 0.003909903722880449,
+      "buy": 0.0011329642801326807,
+      "sell": -0.0061137980915522885
     },
     "trend-up|rsi-overbought|vwap-below|pos-out": {
-      "hold": 0.0006803906898037692,
-      "buy": 0.0018986116633760337,
-      "sell": 0.0011605524716585118
+      "hold": 0.0008447380501015057,
+      "buy": 0.0017593717519075644,
+      "sell": 0.0011596765281154393
     },
     "trend-down|rsi-oversold|vwap-above|pos-out": {
-      "hold": 0.0009878807623547037,
-      "buy": -0.0007578053401262906,
-      "sell": 3.116810669342329e-08
+      "hold": 1.4160140257071338e-07,
+      "buy": -0.00048247352706152444,
+      "sell": 0.0008770960957636409
     },
     "trend-down|rsi-neutral|vwap-above|pos-in": {
-      "hold": 0.003721620290287937,
-      "buy": 0.0010366017622175064,
-      "sell": 0.0006722860570710147
+      "hold": 0.004166522236068031,
+      "buy": 0.0014022993007909343,
+      "sell": 0.0013730265644774503
     },
     "trend-down|rsi-overbought|vwap-above|pos-in": {
-      "hold": 0.0006713492028302101,
-      "buy": -0.0005018509600841178,
-      "sell": 0.00663108368056683
+      "hold": -0.0008294229074965774,
+      "buy": -0.0006713366345692475,
+      "sell": 0.00768332948212732
     },
     "trend-down|rsi-overbought|vwap-above|pos-out": {
-      "hold": 0.0009306688878629243,
-      "buy": -0.00013811841622461265,
-      "sell": 0.0002152078923549494
+      "hold": 0.0012459005135084659,
+      "buy": -0.00027197900844459983,
+      "sell": 0.00024077243970263074
     },
     "trend-up|rsi-oversold|vwap-above|pos-out": {
-      "hold": 5.5810452973092965e-06,
-      "buy": -0.0004706288494744012,
-      "sell": 0.0006865525244288595
+      "hold": 0.0007309847488320536,
+      "buy": -0.0003352666874501487,
+      "sell": 0.00013675506062055032
     },
     "trend-down|rsi-oversold|vwap-above|pos-in": {
-      "hold": 0.0002621151270996738,
-      "buy": 0.0032307901103646587,
-      "sell": -0.0025252342675814252
+      "hold": 0.0009726828038827925,
+      "buy": 0.0035475916053921623,
+      "sell": -0.003190661147284404
     },
     "trend-up|rsi-overbought|vwap-below|pos-in": {
-      "hold": 0.0023577593296051813,
-      "buy": 0.0031680456596079,
-      "sell": 0.0008358128049391861
+      "hold": 0.003085588388954008,
+      "buy": 0.0024401105572708554,
+      "sell": 0.0019044011016549818
     },
     "trend-down|rsi-overbought|vwap-below|pos-in": {
-      "hold": 0.0043145985853905,
-      "buy": 0.0006243989211240537,
-      "sell": -0.001129334752484099
+      "hold": 0.001841426034793847,
+      "buy": 0.004443814136083213,
+      "sell": -0.003153317742250588
     },
     "trend-up|rsi-oversold|vwap-below|pos-in": {
-      "hold": 0.0025091465405619783,
-      "buy": 0.00020762934726825078,
-      "sell": -0.0006641899472644456
+      "hold": 0.0016245840821436798,
+      "buy": 0.002404838573978152,
+      "sell": -0.0014984853464017796
     },
     "trend-up|rsi-oversold|vwap-above|pos-in": {
-      "hold": 0.0019350908947135372,
-      "buy": 0.0012939598425827934,
-      "sell": -0.00028138467459546453
+      "hold": 0.0023377189784385337,
+      "buy": 0.0009945769458378098,
+      "sell": -0.000997177708945979
     }
   },
-  "episodes": 7012
+  "episodes": 11772
 }
