@@ -67,6 +67,9 @@ class DeskConfig:
     loss_budget_pct: float = 0.8  # only ever risk this fraction of the daily/max loss limits; the rest is slippage insurance (stops are not guaranteed fills)
     rollover_blackout: bool = False  # no new non-crypto entries around the 5pm ET rollover (spreads spike, futures venues pause 5-6pm ET)
     friday_flatten: bool = False  # close all non-crypto positions in the last half hour before Friday 5pm ET (prop rule: no weekend holding without an add-on)
+    symbol_cooldown_minutes: int = 0  # after a losing close on a symbol, wait this long before re-entering IT (0 = off; anti-revenge-trading)
+    symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
+    symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -138,6 +141,15 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # Clarity Traders (and many firms): no weekend holding without a
         # paid add-on -- everything non-crypto closes before Friday 5pm ET.
         friday_flatten=True,
+        # Session 33: token-free self-correction inside the trading loop.
+        # 30-minute re-entry cooldown after a loss on that symbol (the
+        # same signal one cycle after a stop-out is revenge trading with
+        # extra steps), and journal-driven per-symbol probation: a symbol
+        # that is net-negative over >=10 of OUR OWN closed trades trades
+        # at half size until its record recovers. Both self-update from
+        # the journal on every close -- no human, no LLM, no tokens.
+        symbol_cooldown_minutes=30,
+        symbol_probation=True,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -1154,6 +1166,19 @@ class TradingDesk:
                 f"journal: setup '{setup}' has lost money historically (lesson learned)",
             )
 
+        # Anti-revenge cooldown: this symbol just stopped us out -- the
+        # conditions that killed the last trade are usually still there one
+        # cycle later, and immediate re-entry is how one loss becomes three.
+        if cfg.symbol_cooldown_minutes > 0 and not manual:
+            since_loss = self.journal.minutes_since_last_loss(symbol)
+            if since_loss is not None and since_loss < cfg.symbol_cooldown_minutes:
+                return DeskAction(
+                    "skip", symbol,
+                    f"cooldown: lost on {symbol} {since_loss:.0f}min ago -- "
+                    f"waiting {cfg.symbol_cooldown_minutes}min before re-entering "
+                    "the same market (anti-revenge-trading)",
+                )
+
         rating = self.llm_rating(symbol)
         if rating in ("Sell", "Underweight"):
             return DeskAction("skip", symbol, f"AI committee rated {rating}")
@@ -1200,6 +1225,15 @@ class TradingDesk:
                 " (weekend crypto: half size -- documented thinner liquidity "
                 "since spot ETFs concentrated market-making into weekday hours)"
             )
+        if cfg.symbol_probation:
+            stats = self.journal.symbol_stats(symbol)
+            if stats["trades"] >= cfg.symbol_probation_min_trades and stats["pnl"] < 0:
+                risk_pct /= 2.0
+                sizing_note += (
+                    f" (probation: {symbol} is {stats['pnl']:+.2f} over "
+                    f"{stats['trades']} of our own closed trades -- half size "
+                    "until its record recovers)"
+                )
         # Loss-budget headroom (session 31): cap this trade's risk to what's
         # LEFT of 80% of each loss limit, so no single stop-out -- even one
         # that slips past the stop -- should be able to cross a funded

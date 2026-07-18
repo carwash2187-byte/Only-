@@ -263,6 +263,50 @@ class TradeJournal:
     def should_avoid(self, setup: str, min_trades: int = MIN_TRADES_FOR_LESSON) -> bool:
         return setup in self.losing_setups(min_trades=min_trades)
 
+    def symbol_stats(self, symbol: str) -> Dict[str, float]:
+        """Closed-trade record for one symbol: {'trades', 'pnl', 'win_rate'}.
+        Admin records (never-filled orders, migrations) excluded. This is
+        the per-SYMBOL version of the setup grading above -- the journal
+        judging not just how a strategy performs, but where."""
+        key = symbol.upper().strip()
+        closed = [
+            t for t in self.trades.values()
+            if not t.is_open and t.pnl is not None
+            and t.symbol.upper().strip() == key and "admin" not in t.tags
+        ]
+        if not closed:
+            return {"trades": 0, "pnl": 0.0, "win_rate": 0.0}
+        wins = sum(1 for t in closed if t.pnl > 0)
+        return {
+            "trades": len(closed),
+            "pnl": sum(t.pnl for t in closed),
+            "win_rate": wins / len(closed),
+        }
+
+    def minutes_since_last_loss(self, symbol: str) -> Optional[float]:
+        """Minutes since this symbol's most recent losing close (None if it
+        has never lost). Powers the re-entry cooldown: the same signal that
+        just got stopped out usually still 'looks good' one cycle later --
+        that re-entry is revenge trading with extra steps."""
+        key = symbol.upper().strip()
+        losses = [
+            t.exit_time for t in self.trades.values()
+            if not t.is_open and t.pnl is not None and t.pnl < 0
+            and t.symbol.upper().strip() == key and "admin" not in t.tags
+            and t.exit_time
+        ]
+        if not losses:
+            return None
+        last = max(losses)
+        try:
+            from datetime import datetime, timezone
+            dt = datetime.fromisoformat(last)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return (datetime.now(timezone.utc) - dt).total_seconds() / 60.0
+        except ValueError:
+            return None
+
     def trades_opened_today(self) -> int:
         """Entries opened today (UTC) -- scalper discipline's trade cap.
 

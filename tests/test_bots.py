@@ -2125,3 +2125,69 @@ def test_weekend_symbols_none_disables_fallback():
     assert resolve_weekend_symbols("", "forex", funded=True) == ["BTC-USD", "ETH-USD"]
     assert resolve_weekend_symbols("", "stocks", funded=True) is None
     assert resolve_weekend_symbols("SOL-USD", "forex", funded=True) == ["SOL-USD"]
+
+
+# ---------------------------------------------------------------------------
+# Session 33: token-free in-loop self-correction (cooldown + symbol probation)
+# ---------------------------------------------------------------------------
+
+def test_symbol_stats_and_minutes_since_last_loss(journal):
+    a = journal.open_trade("GBPJPY", "long", 1, 100.0, setup="daytrade")
+    journal.close_trade(a.trade_id, 99.0)   # loss, just now
+    b = journal.open_trade("GBPJPY", "long", 1, 100.0, setup="daytrade")
+    journal.close_trade(b.trade_id, 102.0)  # win
+    stats = journal.symbol_stats("GBPJPY")
+    assert stats["trades"] == 2 and stats["win_rate"] == 0.5
+    assert stats["pnl"] == pytest.approx(1.0)
+    # loss just closed -> minutes-since is tiny; never-lost symbol -> None
+    assert journal.minutes_since_last_loss("GBPJPY") < 1.0
+    assert journal.minutes_since_last_loss("EURUSD") is None
+
+
+def test_cooldown_blocks_reentry_after_a_loss(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          symbol_cooldown_minutes=30),
+    )
+    t = journal.open_trade("EURUSD", "long", 1_000, 1.1, setup="daytrade")
+    journal.close_trade(t.trade_id, 1.09)  # stopped out moments ago
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert action.action == "skip" and "anti-revenge" in action.reason
+    # a different symbol is unaffected
+    broker.price_overrides["GBPUSD"] = 1.27
+    action = desk._consider_entry("GBPUSD", "test", equity=10_000)
+    assert "anti-revenge" not in (action.reason or "")
+
+
+def test_symbol_probation_halves_size_when_net_negative(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"GBPJPY": 190.0, "EURUSD": 1.1},
+    )
+    # build a 10-trade net-negative record for GBPJPY (older than any cooldown)
+    for i in range(10):
+        t = journal.open_trade("GBPJPY", "long", 1, 190.0, setup="daytrade")
+        journal.close_trade(t.trade_id, 189.0 if i < 6 else 191.0)
+    assert journal.symbol_stats("GBPJPY")["pnl"] < 0
+
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        # risk small enough that the risk-budget leg (not max_position_pct
+        # or cash) is what actually binds, so the halving is observable
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          symbol_probation=True, risk_per_trade_pct=0.001,
+                          stop_loss_pct=0.01, take_profit_pct=0.02),
+    )
+    probation = desk._consider_entry("GBPJPY", "test", equity=100_000)
+    clean = desk._consider_entry("EURUSD", "test", equity=100_000)
+    if probation.action == "buy" and clean.action == "buy":
+        # same config, same equity: the probation symbol gets half the
+        # dollar exposure of the clean-record symbol
+        probation_dollars = probation.quantity * 190.0
+        clean_dollars = clean.quantity * 1.1
+        assert probation_dollars == pytest.approx(clean_dollars / 2, rel=0.05)

@@ -1365,3 +1365,43 @@ finally gives the 9 forex crosses their first training reps. The
 `--practice-deep` code stays in the repo for future re-evaluation (e.g.
 if the state abstraction ever gains timeframe awareness), documented here
 as tried-and-rejected, same treatment as scale-out exits (session 16).
+
+## Session 33 (token-free self-correction inside the trading loop)
+
+Directive: the bot must learn from its mistakes at "super speed" while
+trading, autonomously -- no Claude, no tokens, no waiting for a human.
+Inventory of what already self-corrects in-process on every closed trade:
+online Q-learning (the outcome reweights the RL brain), setup grading
+(`should_avoid` blocks setups with proven negative expectancy), the
+mistakes log, anti-martingale sizing, and the loss-streak halt. Two gaps
+remained, both standard desk discipline with documented failure modes:
+
+1. **Anti-revenge cooldown** (`symbol_cooldown_minutes`, funded: 30).
+   The desk cycles every minute; after a stop-out, the same signal that
+   caused it usually still fires on the very next cycle -- the market
+   condition that killed the trade hasn't gone anywhere in 60 seconds.
+   Immediate re-entry after a loss is revenge trading with extra steps
+   (documented as a top funded-account failure driver in the same breach
+   research as session 31). Now: a losing close on a symbol blocks
+   re-entry on THAT symbol for 30 minutes. Other symbols unaffected;
+   manual mirrors exempt.
+
+2. **Per-symbol probation** (`symbol_probation`, funded: on). The journal
+   already graded setups but never graded WHERE the desk trades. Now any
+   symbol whose own closed-trade record is net-negative over >=10 real
+   trades is sized at HALF risk until its record recovers. Half-size
+   (not a ban) deliberately: a banned symbol can never generate the
+   trades that would clear its name -- probation keeps the sample
+   growing at reduced cost. Self-updating from the journal on every
+   close, in both directions.
+
+Both are pure in-process rules reading data the desk already writes --
+the "learns at super speed without tokens" property asked for: the lesson
+is enforced on the very next 60-second cycle after the trade that taught
+it.
+
+Tests: `test_symbol_stats_and_minutes_since_last_loss`,
+`test_cooldown_blocks_reentry_after_a_loss`,
+`test_symbol_probation_halves_size_when_net_negative`.
+
+100 tests passing.
