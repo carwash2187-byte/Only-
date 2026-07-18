@@ -1419,6 +1419,22 @@
       "notes": "user watchlist",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "de8a3d3004e6",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4039,
+      "entry_price": 1858.4587943115234,
+      "entry_time": "2026-07-18T21:39:56.526669+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
