@@ -13,6 +13,12 @@
       "skillPath": "plugins/quantitative-trading/skills/backtesting-frameworks/SKILL.md",
       "computedHash": "c186baf4119dafbf2e457abef8c6aebc10177074c4be4b8118edbbb3c396f869"
     },
+    "baoyu-youtube-transcript": {
+      "source": "jimliu/baoyu-skills",
+      "sourceType": "github",
+      "skillPath": "skills/baoyu-youtube-transcript/SKILL.md",
+      "computedHash": "27582028cbdd9c81232fba1aafbfa609e4dc1167bff4f2e89ca48a3ecd07049b"
+    },
     "compact-chat-history": {
       "source": "dtyq/magic",
       "sourceType": "github",
