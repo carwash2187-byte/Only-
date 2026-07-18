@@ -19,6 +19,21 @@ orders are in lots. For standard forex pairs 1 lot = 100,000 units and the
 conversion below applies; for other instruments (indices, metals, crypto CFDs)
 contract sizes vary by broker, so the desk quantity is passed through as lots
 directly -- start on demo and sanity-check position sizes for those.
+
+Funded-account safety properties of this connector:
+- Every desk entry goes through buy_bracket(), which attaches the stop-loss
+  and take-profit to the order itself (TradeLocker enforces them server-side).
+  A container restart between desk cycles leaves the position protected.
+  If the bracket is rejected, NO position is opened -- a missed trade is
+  recoverable, an unprotected position on a funded account is not.
+- sell() closes existing long positions through the position endpoint
+  instead of submitting a naked sell order. On hedging-mode accounts (the
+  prop-firm default) a naked sell would OPEN a short next to the long,
+  doubling margin, rather than exiting.
+- Watchlist names (GOLD, OIL, US30, NAS100, US500) are translated to
+  whatever this particular firm calls the instrument (XAUUSD, USOIL,
+  US100...), and positions() translates back, so the desk's journal
+  reconciliation never mistakes a renamed symbol for a closed trade.
 """
 
 from __future__ import annotations
@@ -32,6 +47,30 @@ DEMO_URL = "https://demo.tradelocker.com"
 LIVE_URL = "https://live.tradelocker.com"
 FOREX_LOT_UNITS = 100_000
 MIN_LOT = 0.01
+
+# Desk watchlist name -> candidate TradeLocker instrument names, tried in
+# order. Prop firms name CFDs differently (XAUUSD vs GOLD, US100 vs NAS100);
+# the first name that resolves on the connected account wins and is cached.
+TRADELOCKER_ALIASES: Dict[str, list] = {
+    "GOLD": ["XAUUSD", "GOLD"],
+    "OIL": ["USOIL", "XTIUSD", "WTIUSD", "CRUDEOIL", "OIL"],
+    "NAS100": ["NAS100", "US100", "USTEC", "NDX100"],
+    "US30": ["US30", "DJ30", "DOW30"],
+    "US500": ["US500", "SPX500", "SP500"],
+    # weekend fallback symbols keep their Yahoo-style desk names in the
+    # journal, so positions must map back to them, dash included
+    "BTC-USD": ["BTCUSD"],
+    "ETH-USD": ["ETHUSD"],
+}
+
+# TradeLocker name -> canonical watchlist name, for mapping open positions
+# back after a restart (before any forward lookup has warmed the cache).
+_REVERSE_ALIASES: Dict[str, str] = {
+    candidate: desk
+    for desk, candidates in TRADELOCKER_ALIASES.items()
+    for candidate in candidates
+    if candidate != desk
+}
 
 
 def _is_forex_pair(symbol: str) -> bool:
@@ -72,6 +111,8 @@ class TradeLockerBroker(Broker):
             )
         self.live = live or os.environ.get("TRADELOCKER_LIVE") == "1"
         self.is_paper = not self.live
+        self._id_cache: Dict[str, int] = {}
+        self._desk_symbol_by_id: Dict[int, str] = {}
         self.api = TLAPI(
             environment=LIVE_URL if self.live else DEMO_URL,
             username=email,
@@ -81,7 +122,38 @@ class TradeLockerBroker(Broker):
         )
 
     def _instrument_id(self, symbol: str) -> int:
-        return int(self.api.get_instrument_id_from_symbol_name(_clean_symbol(symbol)))
+        # cache under the desk's own name (dashes and all) -- positions()
+        # must hand back exactly what the journal recorded
+        key = symbol.upper()
+        if key in self._id_cache:
+            return self._id_cache[key]
+        candidates = list(
+            dict.fromkeys(TRADELOCKER_ALIASES.get(key, []) + [_clean_symbol(symbol)])
+        )
+        for name in candidates:
+            try:
+                iid = int(self.api.get_instrument_id_from_symbol_name(name))
+            except Exception:
+                continue
+            self._id_cache[key] = iid
+            self._desk_symbol_by_id[iid] = key
+            return iid
+        raise ValueError(
+            f"TradeLocker: no instrument found for {symbol} "
+            f"(tried {', '.join(candidates)}). Run scripts/preflight_funded.py "
+            "to see what this account actually calls it."
+        )
+
+    def _desk_symbol(self, instrument_id: int) -> str:
+        """Map a position's instrument back to the name the desk/journal uses."""
+        if instrument_id in self._desk_symbol_by_id:
+            return self._desk_symbol_by_id[instrument_id]
+        tl_name = str(
+            self.api.get_symbol_name_from_instrument_id(instrument_id)
+        ).upper()
+        desk_name = _REVERSE_ALIASES.get(tl_name, tl_name)
+        self._desk_symbol_by_id[instrument_id] = desk_name
+        return desk_name
 
     def cash(self) -> float:
         state = self.api.get_account_state()
@@ -103,9 +175,7 @@ class TradeLockerBroker(Broker):
         if df is None or len(df) == 0:
             return result
         for _, row in df.iterrows():
-            symbol = self.api.get_symbol_name_from_instrument_id(
-                int(row["tradableInstrumentId"])
-            )
+            symbol = self._desk_symbol(int(row["tradableInstrumentId"]))
             qty = float(row["qty"])
             if str(row.get("side", "buy")).lower() == "sell":
                 qty = -qty
@@ -132,5 +202,74 @@ class TradeLockerBroker(Broker):
     def buy(self, symbol: str, quantity: float) -> OrderResult:
         return self._order(symbol, quantity, "buy")
 
+    def buy_bracket(
+        self, symbol: str, quantity: float, stop_loss_pct: float, take_profit_pct: float
+    ) -> OrderResult:
+        """Entry with server-side stop-loss and take-profit attached.
+
+        Uses TradeLocker's offset type so both legs are measured from the
+        actual fill price, not the pre-order quote. There is deliberately
+        no fallback to an unprotected plain buy: on a funded account the
+        desk's polled stops vanish whenever this container restarts, and
+        a position with no server-side stop across that gap is exactly
+        how a 3% daily limit gets blown. No bracket, no trade.
+        """
+        try:
+            iid = self._instrument_id(symbol)
+            lots = _units_to_lots(symbol, quantity)
+            ref_price = float(self.api.get_latest_asking_price(iid))
+            order_id = self.api.create_order(
+                iid, quantity=lots, side="buy", type_="market",
+                stop_loss=round(ref_price * stop_loss_pct, 5),
+                stop_loss_type="offset",
+                take_profit=round(ref_price * take_profit_pct, 5),
+                take_profit_type="offset",
+            )
+            if not order_id:
+                return OrderResult(
+                    False, _clean_symbol(symbol), "buy", lots,
+                    error="bracket order rejected -- refusing to enter unprotected",
+                )
+            return OrderResult(True, _clean_symbol(symbol), "buy", lots,
+                               order_id=str(order_id))
+        except Exception as exc:
+            return OrderResult(False, _clean_symbol(symbol), "buy", quantity,
+                               error=f"bracket order failed ({exc}) -- no unprotected entry")
+
     def sell(self, symbol: str, quantity: float) -> OrderResult:
-        return self._order(symbol, quantity, "sell")
+        """Exit: close open long positions via the position endpoint.
+
+        A naked sell order on a hedging-mode account (the prop-firm
+        default) would open a short alongside the long instead of closing
+        it. Only if there is genuinely nothing to close does this fall
+        through to a plain sell order (the desk is long-only, so that
+        path is effectively unused).
+        """
+        try:
+            iid = self._instrument_id(symbol)
+            lots_wanted = _units_to_lots(symbol, quantity)
+            df = self.api.get_all_positions()
+            closed = 0.0
+            if df is not None and len(df):
+                mine = df[df["tradableInstrumentId"] == iid]
+                for _, row in mine.iterrows():
+                    if str(row.get("side", "buy")).lower() != "buy":
+                        continue
+                    remaining = lots_wanted - closed
+                    if remaining <= 0:
+                        break
+                    pos_qty = float(row["qty"])
+                    take = min(pos_qty, remaining)
+                    # close_quantity=0 means "close the whole position"
+                    ok = self.api.close_position(
+                        position_id=int(row["id"]),
+                        close_quantity=0 if take >= pos_qty else take,
+                    )
+                    if ok:
+                        closed += take
+            if closed > 0:
+                return OrderResult(True, _clean_symbol(symbol), "sell", closed)
+            return self._order(symbol, quantity, "sell")
+        except Exception as exc:
+            return OrderResult(False, _clean_symbol(symbol), "sell", quantity,
+                               error=str(exc))

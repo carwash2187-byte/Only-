@@ -28,6 +28,15 @@ hasn't been tried).
   guard memory in the gitignored, restart-fragile `bot_data/` instead —
   always export it before the first run against any new broker, real or
   demo.
+- **The two funded TradeLocker accounts** use their own committed state
+  dirs: `BOT_DATA_DIR=funded_state_acct1` and
+  `BOT_DATA_DIR=funded_state_acct2` (one per process — this is what keeps
+  the two accounts' journals, Q-tables and drawdown limits fully separate;
+  see `test_two_funded_accounts_of_the_same_broker_type_stay_fully_separate`).
+  Launch both with `bash scripts/run_funded_accounts.sh`, which runs
+  `scripts/preflight_funded.py` first and refuses to start a bot whose
+  preflight fails. Credentials live only in the gitignored
+  `bot_data/tradelocker_acct1.env` / `bot_data/tradelocker_acct2.env`.
 
 ## Running the live desk
 

@@ -1355,6 +1355,22 @@
       "notes": "user watchlist | quant desk: RL agent says exit",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "65a52bd5a2bf",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4073,
+      "entry_price": 1843.6914045410156,
+      "entry_time": "2026-07-18T04:25:36.091359+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }

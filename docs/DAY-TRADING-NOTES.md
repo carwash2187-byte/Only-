@@ -1133,3 +1133,68 @@ env vars. Both default to TradeLocker's demo environment until
 `TRADELOCKER_LIVE=1` is explicitly set per-process.
 
 84 tests passing.
+
+## Session 30 (funded-account go-live prep: TradeLocker connector hardening + preflight + two-bot launcher)
+
+User hands over the two funded TradeLocker accounts tomorrow. Audited the
+connector the way a real fill would exercise it and found three genuine
+gaps -- each one a way a funded account could get hurt operationally even
+with perfect strategy code:
+
+1. **No server-side stop-loss.** `TradeLockerBroker` had no
+   `buy_bracket`, so entries fell back to a plain market buy and ALL
+   protection lived in the desk's polled stop checks. This container
+   restarts frequently; a restart with an open unprotected position means
+   no stop at all until the keep-alive notices. On a 3% daily-loss
+   account that is the single most likely blow-up path. Implemented
+   `buy_bracket` using TLAPI's `stop_loss`/`take_profit` with
+   `type="offset"` (measured from the actual fill, not the pre-order
+   quote). Deliberate policy: if the bracket is rejected there is NO
+   fallback to an unprotected buy -- a missed trade is recoverable, an
+   unprotected funded position is not.
+
+2. **Exits could have opened shorts.** Prop-firm TradeLocker accounts
+   default to hedging mode, where a naked sell order OPENS a short
+   alongside the long instead of closing it (doubling margin and leaving
+   two exposed positions). `sell()` now goes through TLAPI's
+   `close_position` endpoint against the account's actual open long
+   positions (partial closes pass the partial quantity; full closes pass
+   0 = whole position), and only falls through to a plain sell order if
+   there is genuinely nothing to close.
+
+3. **Symbol renames looked like closed trades.** Firms name CFDs
+   differently (gold is usually XAUUSD, Nasdaq can be US100/USTEC...).
+   The desk journals "GOLD"; if positions() reported "XAUUSD" the desk's
+   reconciler would treat GOLD as an orphan whose bracket leg must have
+   fired and close the journal entry -- while a real position sat open
+   unmanaged. Added `TRADELOCKER_ALIASES` (forward resolution, first
+   name the firm recognises wins, cached) and reverse mapping in
+   `positions()` so both directions agree with the journal, including
+   after a cold restart with a position already open. Same fix covers
+   the weekend fallback's Yahoo-style names (BTC-USD <-> BTCUSD).
+
+Go-live tooling:
+- `scripts/preflight_funded.py`: read-only connection check -- auth,
+  balance/equity, existing positions, resolves all 17 watchlist symbols
+  to this firm's instrument names with live ask prices and min lot
+  sizes. Optional `--order-test` (refuses on live) does one smallest-size
+  EURUSD bracket round-trip on demo: order in, position visible under
+  the desk's name, closed via the position endpoint, confirmed gone.
+- `scripts/run_funded_accounts.sh`: launches both account bots as fully
+  isolated processes (BOT_DATA_DIR=funded_state_acct1/2, credentials
+  from gitignored bot_data/tradelocker_acct{1,2}.env), and refuses to
+  start any bot whose preflight fails.
+- `funded_state_acct1/` + `funded_state_acct2/` committed so each
+  account's journal/Q-table/guard limits survive container restarts from
+  day one (CLAUDE.md updated with the convention).
+
+Tests (mocked TLAPI, no credentials or network):
+`test_tradelocker_demo_by_default_and_alias_resolution`,
+`test_tradelocker_positions_map_back_to_desk_names_after_restart`,
+`test_tradelocker_bracket_attaches_stops_and_never_enters_unprotected`,
+`test_tradelocker_sell_closes_position_instead_of_opening_short`,
+`test_tradelocker_weekend_crypto_round_trips_to_journal_name`.
+
+Still demo-first: nothing trades real money until `TRADELOCKER_LIVE=1`
+is set per account, and that only happens after the demo run has proven
+itself. 89 tests passing.

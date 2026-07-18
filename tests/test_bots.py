@@ -1833,3 +1833,136 @@ def test_drop_forming_bar_keeps_daily_bars_untouched():
     idx = pd.date_range("2026-01-01", periods=30, freq="1D")
     df = pd.DataFrame({"close": range(30)}, index=idx)
     assert len(_drop_forming_bar(df)) == len(df)
+
+
+# ---------------------------------------------------------------------------
+# TradeLocker connector safety (mocked TLAPI -- no credentials, no network)
+# ---------------------------------------------------------------------------
+
+class _FakeTLAPI:
+    """Stands in for tradelocker.TLAPI: a firm that names gold XAUUSD and
+    the Nasdaq index US100, with one EURUSD long already open."""
+
+    INSTRUMENTS = {"EURUSD": 1, "XAUUSD": 101, "US100": 202}
+
+    def __init__(self, *args, **kwargs):
+        self.orders = []
+        self.closed = []
+        self.reject_orders = False
+        self.positions_rows = []
+
+    def get_instrument_id_from_symbol_name(self, name):
+        if name not in self.INSTRUMENTS:
+            raise ValueError(f"No instrument found with symbol_name='{name}'")
+        return self.INSTRUMENTS[name]
+
+    def get_symbol_name_from_instrument_id(self, iid):
+        return {v: k for k, v in self.INSTRUMENTS.items()}[int(iid)]
+
+    def get_all_positions(self):
+        return pd.DataFrame(
+            self.positions_rows,
+            columns=["id", "tradableInstrumentId", "side", "qty", "avgPrice"],
+        )
+
+    def get_latest_asking_price(self, iid):
+        return {1: 1.1000, 101: 2400.0, 202: 20000.0}[int(iid)]
+
+    def get_account_state(self):
+        return {"availableFunds": 5000.0, "equity": 5000.0}
+
+    def create_order(self, iid, quantity, side, type_="market", **kwargs):
+        if self.reject_orders:
+            return None
+        self.orders.append({"iid": iid, "quantity": quantity, "side": side, **kwargs})
+        return len(self.orders)
+
+    def close_position(self, order_id=0, position_id=0, close_quantity=0):
+        self.closed.append({"position_id": position_id, "close_quantity": close_quantity})
+        return True
+
+
+@pytest.fixture
+def tl_broker(monkeypatch):
+    import tradelocker
+
+    from bots.brokers.tradelocker_broker import TradeLockerBroker
+
+    monkeypatch.setattr(tradelocker, "TLAPI", _FakeTLAPI)
+    monkeypatch.setenv("TRADELOCKER_EMAIL", "x@y.z")
+    monkeypatch.setenv("TRADELOCKER_PASSWORD", "pw")
+    monkeypatch.setenv("TRADELOCKER_SERVER", "DEMO-SRV")
+    monkeypatch.delenv("TRADELOCKER_LIVE", raising=False)
+    return TradeLockerBroker()
+
+
+def test_tradelocker_demo_by_default_and_alias_resolution(tl_broker):
+    assert tl_broker.is_paper  # never live without TRADELOCKER_LIVE=1
+    # watchlist names resolve to whatever this firm calls the instrument
+    assert tl_broker._instrument_id("GOLD") == 101
+    assert tl_broker._instrument_id("NAS100") == 202
+    assert tl_broker.price("GOLD") == 2400.0
+    with pytest.raises(ValueError, match="US500"):
+        tl_broker._instrument_id("US500")  # firm doesn't offer it -> loud error
+
+
+def test_tradelocker_positions_map_back_to_desk_names_after_restart(tl_broker):
+    # Fresh broker, no forward lookups yet (the container-restart case):
+    # an open XAUUSD position must come back as GOLD, or the desk's
+    # reconciler would mistake the rename for a closed trade.
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2390.0]]
+    assert tl_broker.positions() == {"GOLD": 0.5}
+
+
+def test_tradelocker_bracket_attaches_stops_and_never_enters_unprotected(tl_broker):
+    result = tl_broker.buy_bracket("EURUSD", 100_000, 0.005, 0.01)
+    assert result.ok
+    order = tl_broker.api.orders[-1]
+    # offsets measured from the 1.10 ask: 0.5% stop, 1% target
+    assert order["stop_loss"] == pytest.approx(0.0055)
+    assert order["stop_loss_type"] == "offset"
+    assert order["take_profit"] == pytest.approx(0.011)
+    assert order["take_profit_type"] == "offset"
+
+    # bracket rejected -> NO fallback to an unprotected plain buy
+    tl_broker.api.reject_orders = True
+    before = len(tl_broker.api.orders)
+    result = tl_broker.buy_bracket("EURUSD", 100_000, 0.005, 0.01)
+    assert not result.ok and "unprotected" in result.error
+    assert len(tl_broker.api.orders) == before
+
+
+def test_tradelocker_sell_closes_position_instead_of_opening_short(tl_broker):
+    # hedging-mode accounts: a naked sell would OPEN a short next to the
+    # long; exits must go through the position endpoint instead
+    tl_broker.api.positions_rows = [[9, 1, "buy", 1.0, 1.0950]]
+    result = tl_broker.sell("EURUSD", 100_000)  # 1.0 lots
+    assert result.ok
+    assert tl_broker.api.closed == [{"position_id": 9, "close_quantity": 0}]
+    assert tl_broker.api.orders == []  # no sell order was ever submitted
+
+    # partial exit passes the partial quantity through
+    tl_broker.api.closed.clear()
+    tl_broker.sell("EURUSD", 50_000)  # 0.5 of the 1.0-lot position
+    assert tl_broker.api.closed == [{"position_id": 9, "close_quantity": 0.5}]
+
+
+def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):
+    # the weekend fallback journals "BTC-USD" (Yahoo-style); TradeLocker
+    # calls it BTCUSD. Both directions must agree or the reconciler
+    # orphan-closes a live weekend position.
+    tl_broker.api.INSTRUMENTS = dict(tl_broker.api.INSTRUMENTS, BTCUSD=303)
+    assert tl_broker._instrument_id("BTC-USD") == 303
+    tl_broker.api.positions_rows = [[11, 303, "buy", 0.02, 60000.0]]
+    assert tl_broker.positions() == {"BTC-USD": 0.02}
+
+    # and on a fresh broker (post-restart, cold cache) the reverse alias
+    # still maps it home
+    import tradelocker
+
+    from bots.brokers.tradelocker_broker import TradeLockerBroker
+
+    fresh = TradeLockerBroker()
+    fresh.api.INSTRUMENTS = dict(fresh.api.INSTRUMENTS, BTCUSD=303)
+    fresh.api.positions_rows = [[11, 303, "buy", 0.02, 60000.0]]
+    assert fresh.positions() == {"BTC-USD": 0.02}
