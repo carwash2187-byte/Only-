@@ -1477,3 +1477,50 @@ Tests: extended `test_index_alias_resolution` (aliases + spread ordering
 SI>GC, RTY>ES) and the weekend-symbols default.
 
 100 tests passing.
+
+## Session 36 (video study: 4 full MambaFX-ecosystem transcripts, via the youtube-transcript skill)
+
+Directive: find a way to "watch" trading videos and study hard. Installed
+the `baoyu-youtube-transcript` skill (17.4K installs) and pulled FULL
+transcripts of four videos -- one from MambaFX's own channel, two from a
+former student (LumiixTrades) who now trades funded/prop rules, one from
+a daily MambaFX-strategy live-trader (CAFX):
+- MambaFX: "INSANE Scalping Strategy For SMALL Forex Accounts"
+- LumiixTrades: "Mambafx Strategy Is Not What You Think" (Q&A breakdown)
+- LumiixTrades: "I Mastered MambaFx Scalping Strategy And Made $4.1k"
+- CAFX: "Easy Breakout Strategy | 1 Minute scalping | NAS100"
+
+**What the transcripts independently confirm about our existing design
+(strong validation, no changes needed):**
+- The raw Mamba breakout chase produces "lots of fake outs, lots of
+  losses" unless you swing his size -- his own former student says
+  copying it under prop-firm rules doesn't work, and his fix is exactly
+  our orb_retest_required: wait for the level to HOLD/retest, don't
+  chase the break.
+- CAFX live-states "my two rules: my two losses a day rule" -- the
+  IDENTICAL number our max_consecutive_losses=2 uses.
+- Both students move stops to breakeven quickly (our breakeven_at_1r),
+  anchor direction and targets off higher-timeframe levels (our
+  htf_confirm), and trade the NY open window hardest (our session
+  weighting).
+- MambaFX himself closes with: back test, demo trade for months first.
+  The exact bar this project holds itself to.
+
+**Genuinely new techniques observed -- each DEFERRED with reasons, not
+rushed in the night before the funded handoff:**
+1. *Fakeout-flip (stop-and-reverse)*: on a failed breakout, reverse into
+   the opposite direction. Our desk is long-only; adding shorting is an
+   architectural change needing its own research/tests. Real candidate,
+   not a rush job.
+2. *Aggressive trailing after +1R* (trail under successive higher lows)
+   instead of a fixed 2R target -- how they turn 2R days into 5-7R days.
+   Trailing-vs-fixed-target evidence is genuinely mixed (captures trend
+   days, gives back chop days); session 34's asymmetric-exit fix must
+   prove itself on real trades first before the exit machinery changes
+   again.
+3. *Structure-based targets at HTF levels* instead of mechanical 2R --
+   needs S/R level detection; same deferral logic.
+
+No risk parameters changed. Transcripts cached under youtube-transcript/
+(gitignored). Study can continue with more videos on request -- the
+pipeline is one command per video now.

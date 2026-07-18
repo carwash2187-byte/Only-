@@ -224,3 +224,4 @@ reports/
 
 # Bot stack local state (paper accounts, Q-tables, trade journals)
 bot_data/
+youtube-transcript/
