@@ -44,14 +44,16 @@ launch() {
     # without the "Trade on Weekends" add-on -- the bot sits weekends out.
     # (Their FAQ also requires the "EA's Allowed" add-on for bots AT ALL --
     # make sure it was purchased on this account before launching.)
+    # PID file lets scripts/keepalive.sh tell the two (identically named)
+    # funded bot processes apart and revive exactly the one that died.
     (set -a; source "$envfile"; set +a; \
      BOT_DATA_DIR="$statedir" nohup python -m bots autopilot \
         --broker tradelocker --funded --timeframe 1m --interval 1 \
         --market forex --symbols "$SYMBOLS" --weekend-symbols none \
-        > "/tmp/autopilot_acct${n}.log" 2>&1 &)
+        > "/tmp/autopilot_acct${n}.log" 2>&1 & echo $! > "/tmp/funded_acct${n}.pid")
     sleep 2
-    if pgrep -f "autopilot.*tradelocker" > /dev/null; then
-        echo "acct${n}: running (log: /tmp/autopilot_acct${n}.log)"
+    if kill -0 "$(cat "/tmp/funded_acct${n}.pid" 2>/dev/null)" 2>/dev/null; then
+        echo "acct${n}: running (pid $(cat /tmp/funded_acct${n}.pid), log: /tmp/autopilot_acct${n}.log)"
     else
         echo "acct${n}: FAILED to stay up -- check /tmp/autopilot_acct${n}.log"
         return 1
