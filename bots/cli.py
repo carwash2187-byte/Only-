@@ -132,6 +132,22 @@ def cmd_journal(_args) -> None:
     print(TradeJournal().summary() or "Journal is empty.")
 
 
+def cmd_payout(_args) -> None:
+    from bots.journal import TradeJournal
+
+    r = TradeJournal().payout_readiness()
+    print(f"realized profit: ${r['profit']:.2f}")
+    print(f"days since first trade: {r['days_since_first_trade']}")
+    print(f"trading days: {r['trading_days']}")
+    print(f"best day share of profit: {r['best_day_share']:.0%}")
+    if r["eligible"]:
+        print("READY TO CASH OUT -- request the payout from the firm's dashboard")
+    else:
+        print("not payable yet:")
+        for b in r["blockers"]:
+            print(f"  - {b}")
+
+
 def resolve_weekend_symbols(raw: str, market: str, funded: bool):
     """Weekend crypto fallback selection. "none" disables it entirely: some
     prop firms (Clarity Traders among them) ban weekend trading outright
@@ -328,6 +344,7 @@ def main() -> None:
     p_trade.add_argument("--live-i-understand-the-risk", action="store_true")
 
     sub.add_parser("journal", help="show performance and lessons learned")
+    sub.add_parser("payout", help="grade the journal against prop-firm payout gates")
 
     p_bt = sub.add_parser("backtest", help="honest out-of-sample test on unseen data")
     p_bt.add_argument("--symbol", default="SPY")
@@ -392,6 +409,7 @@ def main() -> None:
         "signals": cmd_signals,
         "trade": cmd_trade,
         "journal": cmd_journal,
+        "payout": cmd_payout,
         "backtest": cmd_backtest,
         "autopilot": cmd_autopilot,
         "watch": cmd_watch,

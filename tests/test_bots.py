@@ -2256,3 +2256,38 @@ def test_trail_after_target_lets_winners_run_then_locks_gains(price_df, tmp_path
     assert sells and "trailing stop hit" in sells[0].reason
     # exit price is far above the original 2% target -- the runner ran
     assert broker.price_overrides["DEMO"] > 102.0
+
+
+def test_payout_readiness_gates_and_eligibility(journal):
+    from datetime import datetime, timedelta, timezone
+
+    # young account, no profit: blocked for the right reasons
+    r = journal.payout_readiness()
+    assert not r["eligible"]
+    assert any("minimum" in b for b in r["blockers"])
+
+    # build 15 days of steady closed profit, $10/day -- old enough, spread
+    # enough, big enough
+    now = datetime.now(timezone.utc)
+    for i in range(15):
+        t = journal.open_trade("EURUSD", "long", 1000, 1.10, setup="daytrade")
+        t.entry_time = (now - timedelta(days=16 - i)).isoformat()
+        journal.close_trade(t.trade_id, 1.11)
+        t.pnl = 10.0
+        t.exit_time = t.entry_time
+    journal.save()
+    r = journal.payout_readiness()
+    assert r["eligible"], r["blockers"]
+    assert r["profit"] == pytest.approx(150.0)
+    assert r["trading_days"] >= 5
+
+    # one monster day dominating profit: consistency gate blocks the payout
+    t = journal.open_trade("EURUSD", "long", 1000, 1.10, setup="daytrade")
+    t.entry_time = (now - timedelta(days=1)).isoformat()
+    journal.close_trade(t.trade_id, 1.20)
+    t.pnl = 500.0
+    t.exit_time = t.entry_time
+    journal.save()
+    r = journal.payout_readiness()
+    assert not r["eligible"]
+    assert any("consistency" in b for b in r["blockers"])

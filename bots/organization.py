@@ -712,6 +712,20 @@ class TradingDesk:
                 report.actions.extend(flatten.actions)
                 return report
 
+        # Payout radar: the desk can't press the withdraw button (that is
+        # the owner's dashboard + wallet), but it knows its own journal --
+        # the moment the account clears the payout gates, say so loudly.
+        try:
+            payout = self.journal.payout_readiness()
+            if payout["eligible"]:
+                report.notes.append(
+                    f"[payout] READY TO CASH OUT: ${payout['profit']:.2f} realized "
+                    f"across {payout['trading_days']} trading days, consistency OK -- "
+                    "request the payout from the firm's dashboard"
+                )
+        except Exception:
+            pass
+
         # 2a2. Friday close-out (prop rule): firms like Clarity Traders ban
         #      holding over the weekend without a paid add-on. Close every
         #      non-crypto position in the last half hour before the Friday

@@ -1599,3 +1599,37 @@ loosening filters over.
 3. Have a USDT wallet address ready for payouts.
 4. Send each account's TradeLocker email/password/server -> preflight
    -> demo-first -> `bash scripts/run_funded_accounts.sh`.
+
+## Session 39 (payout radar: the bot now knows when its money is withdrawable)
+
+Directive: "make sure it can cash out and get actual money on its own."
+Honest boundary stated up front: TLAPI has no withdrawal endpoints --
+payouts happen in the prop firm's own dashboard, tied to the owner's
+identity and USDT wallet. No bot can or should move that money. What IS
+automatable: the journal already contains everything needed to grade the
+account against the payout gates in real time.
+
+Implemented `TradeJournal.payout_readiness()`: profit vs the $100
+minimum, days since first trade vs the 14-day cycle, distinct trading
+days vs the minimum-days gate, and best-day-share-of-profit vs the
+consistency cap (10% default per Clarity's Instant FAQ example). Wired
+into the desk loop -- the minute all gates clear, every cycle prints
+"[payout] READY TO CASH OUT: $X across N trading days" -- and into the
+CLI as `python -m bots payout` (works per account via BOT_DATA_DIR).
+Current paper account grades honestly: -$5.01 real net, 4 days in, not
+payable, correct blockers listed.
+
+Additional research findings folded in (Tradeify/ThinkCapital/QuantVPS
+payout guides): consistency caps industry-wide run 20-50% (Clarity's
+10%-of-payout is strict); a breach only DELAYS payout, never terminates;
+some firms flag >3x day-to-day position-size swings as "gambling
+behavior" -- our sizing only ever shrinks defensively (anti-martingale,
+drawdown taper), never ramps up, so it is structurally on the safe side
+of that detector; several firms hold a high-water-mark buffer before
+first payout -- read the specific number off the purchase page.
+
+Test: `test_payout_readiness_gates_and_eligibility` (young account
+blocked; 15 steady $10 days eligible; one $500 monster day trips the
+consistency gate and blocks again).
+
+103 tests passing.

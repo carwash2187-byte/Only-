@@ -263,6 +263,67 @@ class TradeJournal:
     def should_avoid(self, setup: str, min_trades: int = MIN_TRADES_FOR_LESSON) -> bool:
         return setup in self.losing_setups(min_trades=min_trades)
 
+    def payout_readiness(
+        self,
+        min_payout: float = 100.0,
+        max_day_share: float = 0.10,
+        min_days_since_first: int = 14,
+        min_trading_days: int = 5,
+    ) -> Dict[str, object]:
+        """Grade this account's journal against typical prop-firm payout
+        gates (Clarity Instant defaults: request every 14 days from first
+        trade, $100 minimum, no single day over ~10% of the requested
+        amount, minimum trading days). The bot cannot press the withdraw
+        button -- that is the account owner's dashboard + wallet -- but it
+        CAN know the moment the money is requestable and say so."""
+        from datetime import datetime, timezone
+
+        closed = [
+            t for t in self.trades.values()
+            if not t.is_open and t.pnl is not None and "admin" not in t.tags
+        ]
+        profit = sum(t.pnl for t in closed)
+        entries = [t.entry_time for t in self.trades.values() if "admin" not in t.tags]
+        days_since_first = 0
+        if entries:
+            first = datetime.fromisoformat(min(entries))
+            if first.tzinfo is None:
+                first = first.replace(tzinfo=timezone.utc)
+            days_since_first = (datetime.now(timezone.utc) - first).days
+        trading_days = len({
+            _entry_trading_day(t.entry_time)
+            for t in self.trades.values() if "admin" not in t.tags
+        })
+        day_pnl: Dict[str, float] = {}
+        for t in closed:
+            day = _entry_trading_day(t.exit_time or t.entry_time)
+            day_pnl[day] = day_pnl.get(day, 0.0) + t.pnl
+        best_day = max(day_pnl.values()) if day_pnl else 0.0
+        day_share = (best_day / profit) if profit > 0 else 0.0
+
+        blockers = []
+        if profit < min_payout:
+            blockers.append(f"profit ${profit:.2f} below the ${min_payout:.0f} minimum")
+        if days_since_first < min_days_since_first:
+            blockers.append(
+                f"only {days_since_first} days since first trade (need {min_days_since_first})"
+            )
+        if trading_days < min_trading_days:
+            blockers.append(f"only {trading_days} trading days (need {min_trading_days})")
+        if profit > 0 and day_share > max_day_share:
+            blockers.append(
+                f"best day is {day_share:.0%} of profit (consistency cap {max_day_share:.0%}) "
+                "-- keep grinding smaller days until it dilutes"
+            )
+        return {
+            "eligible": not blockers,
+            "blockers": blockers,
+            "profit": profit,
+            "days_since_first_trade": days_since_first,
+            "trading_days": trading_days,
+            "best_day_share": day_share,
+        }
+
     def symbol_stats(self, symbol: str) -> Dict[str, float]:
         """Closed-trade record for one symbol: {'trades', 'pnl', 'win_rate'}.
         Admin records (never-filled orders, migrations) excluded. This is
