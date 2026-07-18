@@ -270,6 +270,30 @@ def build() -> str:
     else:
         metrics_html = '<span class="chip">not enough closed trades yet</span>'
 
+    # Payout radar: same gates the desk loop checks (session 39) -- the
+    # bot can't press the withdraw button, but it knows when you could.
+    try:
+        from bots.journal import TradeJournal
+
+        payout = TradeJournal().payout_readiness()
+        if payout["eligible"]:
+            payout_html = (
+                f'<p class="progress-note"><strong>READY TO CASH OUT:</strong> '
+                f'${payout["profit"]:.2f} realized across {payout["trading_days"]} '
+                "trading days, consistency OK — request the payout from the "
+                "firm's dashboard (paper account: this proves the pipeline).</p>"
+            )
+        else:
+            blockers = "".join(f"<li>{b}</li>" for b in payout["blockers"])
+            payout_html = (
+                f'<p class="progress-note">Realized profit ${payout["profit"]:.2f} '
+                f'over {payout["trading_days"]} trading days '
+                f'({payout["days_since_first_trade"]} days since first trade). '
+                f"Not withdrawable yet:</p><ul>{blockers}</ul>"
+            )
+    except Exception as exc:
+        payout_html = f'<p class="progress-note">payout radar unavailable ({exc})</p>'
+
     return TEMPLATE.format(
         generated=generated,
         broker_label=broker_label,
@@ -290,6 +314,7 @@ def build() -> str:
         verdict_pct=verdict_pct,
         metrics_html=metrics_html,
         chart_svg=chart_svg,
+        payout_html=payout_html,
     )
 
 
@@ -673,6 +698,11 @@ footer strong {{ color: var(--ink); }}
     <p class="progress-note">The desk's results only mean something after ~25 closed
     trades. Below that, wins or losses are noise, not skill — this bar fills as
     positions close.</p>
+  </section>
+
+  <section>
+    <h2>Payout radar (when profit becomes withdrawable)</h2>
+    {payout_html}
   </section>
 
   <section>
