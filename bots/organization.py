@@ -69,6 +69,7 @@ class DeskConfig:
     friday_flatten: bool = False  # close all non-crypto positions in the last half hour before Friday 5pm ET (prop rule: no weekend holding without an add-on)
     symbol_cooldown_minutes: int = 0  # after a losing close on a symbol, wait this long before re-entering IT (0 = off; anti-revenge-trading)
     trail_after_target: bool = False  # hybrid exit: at the fixed target, convert to an ATR trailing stop (floor +1R) instead of cashing out -- OFF until session 34's exit fix proves itself on real trades
+    vol_spike_entry_filter: float = 0.0  # 0 = off; e.g. 3.0: skip NEW entries when the last completed bar's range exceeds this multiple of ATR14 (don't chase a flash move into wide spreads)
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
 
@@ -151,6 +152,10 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # the journal on every close -- no human, no LLM, no tokens.
         symbol_cooldown_minutes=30,
         symbol_probation=True,
+        # Session 40: don't enter right after a bar 3x its own ATR --
+        # documented weekend-crypto 2-3x volatility spikes and flash
+        # moves are the widest-spread moments to be buying into.
+        vol_spike_entry_filter=3.0,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -1156,6 +1161,28 @@ class TradingDesk:
                 return DeskAction("skip", symbol, "quant desk: RL agent is bearish here")
             if cfg.atr_stops:
                 symbol_atr = atr_pct(df)
+            if cfg.vol_spike_entry_filter > 0 and not manual:
+                # Flash-move guard (session 40): weekend crypto moves run
+                # 2-3x weekday volatility on thin books (Kaiko), and an
+                # entry right after an outsized candle is a chase into the
+                # widest spreads of the move -- on any market, any day.
+                spike_atr = symbol_atr if symbol_atr is not None else atr_pct(df)
+                try:
+                    cols = {str(c).lower(): c for c in df.columns}
+                    if spike_atr and "high" in cols and "low" in cols:
+                        last = df.iloc[-1]
+                        last_range = (
+                            float(last[cols["high"]]) - float(last[cols["low"]])
+                        ) / float(last[cols["close"]])
+                        if last_range > cfg.vol_spike_entry_filter * spike_atr:
+                            return DeskAction(
+                                "skip", symbol,
+                                f"flash-move guard: last bar ranged {last_range:.2%}, "
+                                f">{cfg.vol_spike_entry_filter:.0f}x ATR ({spike_atr:.2%}) "
+                                "-- not chasing a spike into wide spreads",
+                            )
+                except Exception:
+                    pass
             if cfg.min_adx > 0 and not manual:
                 adx = adx_value(df)
                 if adx is not None and adx < cfg.min_adx:

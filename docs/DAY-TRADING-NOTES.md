@@ -1633,3 +1633,39 @@ blocked; 15 steady $10 days eligible; one $500 monster day trips the
 consistency gate and blocks again).
 
 103 tests passing.
+
+## Session 40 (flash-move guard; "is there something better than crypto on weekends" answered with evidence)
+
+Two questions researched:
+
+**1. Better weekend markets than crypto?** No -- checked the actual
+alternatives: broker "weekend prices" on Nasdaq/Dow/DAX are synthetic
+quotes the broker itself sets (counterparty-priced, not exchange
+prices); Middle-East exchanges (DFM/Tadawul/Kuwait) trade weekends but
+the bot has zero data/spread/correlation research on them; binary
+options are a different instrument class entirely; tokenized assets
+need a different platform. Crypto remains the only weekend market with
+real data, real spread modeling and real training history here.
+Irrelevant to the funded accounts either way (weekend trading banned
+without the add-on -- those bots sit weekends out by config).
+
+**2. When even the best crypto is bad, does the desk know to sit out?**
+Research (Kaiko, Xangle): weekend BTC volume share fell 24%->17%
+(2018->2023), weekend moves run 2-3x weekday volatility on thin books,
+and -- surprise -- hourly slippage PEAKS around 14:00 UTC (US hours
+pressure liquidity), so a naive "block overnight hours" rule has no
+evidence behind it and was NOT built. What the evidence does support:
+never enter right after an outsized candle -- that is chasing a flash
+move into the widest spreads of the move, the exact liquidation-cascade
+pattern documented on weekend books.
+
+Implemented `DeskConfig.vol_spike_entry_filter` (funded: 3.0): a NEW
+entry is refused when the last completed bar's range exceeds 3x ATR14.
+All markets, all days -- flash chasing hurts on a Tuesday too. Skips are
+logged with the actual numbers ("last bar ranged 5.02%, >3x ATR"). This
+was session 31's deferred candidate C, now landed with the weekend
+evidence that justifies it.
+
+Test: `test_vol_spike_filter_blocks_entry_after_flash_bar`.
+
+104 tests passing.

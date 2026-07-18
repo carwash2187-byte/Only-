@@ -2291,3 +2291,33 @@ def test_payout_readiness_gates_and_eligibility(journal):
     r = journal.payout_readiness()
     assert not r["eligible"]
     assert any("consistency" in b for b in r["blockers"])
+
+
+def test_vol_spike_filter_blocks_entry_after_flash_bar(tmp_path, journal):
+    rng = np.random.default_rng(11)
+    n = 60
+    closes = 100 * np.exp(np.cumsum(rng.normal(0.0005, 0.001, n)))
+    df = pd.DataFrame({
+        "high": closes * 1.001, "low": closes * 0.999, "close": closes,
+    })
+    # last completed bar is a flash move: ~5% range vs ~0.2% typical
+    df.loc[df.index[-1], "high"] = closes[-1] * 1.05
+    df.loc[df.index[-1], "low"] = closes[-1] * 0.998
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"BTC-USD": float(closes[-1])},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          vol_spike_entry_filter=3.0),
+    )
+    action = desk._consider_entry("BTC-USD", "test", equity=10_000)
+    assert action.action == "skip" and "flash-move guard" in action.reason
+
+    # calm last bar: the filter stays out of the way
+    df.loc[df.index[-1], "high"] = closes[-1] * 1.001
+    df.loc[df.index[-1], "low"] = closes[-1] * 0.999
+    action = desk._consider_entry("BTC-USD", "test", equity=10_000)
+    assert "flash-move guard" not in (action.reason or "")
