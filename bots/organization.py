@@ -68,6 +68,7 @@ class DeskConfig:
     rollover_blackout: bool = False  # no new non-crypto entries around the 5pm ET rollover (spreads spike, futures venues pause 5-6pm ET)
     friday_flatten: bool = False  # close all non-crypto positions in the last half hour before Friday 5pm ET (prop rule: no weekend holding without an add-on)
     symbol_cooldown_minutes: int = 0  # after a losing close on a symbol, wait this long before re-entering IT (0 = off; anti-revenge-trading)
+    trail_after_target: bool = False  # hybrid exit: at the fixed target, convert to an ATR trailing stop (floor +1R) instead of cashing out -- OFF until session 34's exit fix proves itself on real trades
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
 
@@ -996,6 +997,25 @@ class TradingDesk:
                 reason = f"stop loss hit ({change:+.1%})"
             elif breakeven_armed and change <= 0.0:
                 reason = f"breakeven stop hit (was +1R, now {change:+.1%}) -- risk-free exit"
+            elif change >= target_pct and cfg.trail_after_target:
+                # Session 37 hybrid exit (evidence: ATR-trail beat fixed
+                # trails, PF 1.6 vs 1.1, in comparative NQ backtests; the
+                # video-study traders turn 2R days into 5-7R days exactly
+                # here): once the fixed target is REACHED, don't cash out --
+                # trail one stop-distance below the trade's high-water mark,
+                # floored so the exit can never drop below +1R. Chop gives
+                # back part of the last R; real trend days keep running.
+                hwm = change
+                for tag in list(record.tags):
+                    if tag.startswith("hwm:"):
+                        hwm = max(hwm, float(tag.split(":", 1)[1]))
+                        record.tags.remove(tag)
+                record.tags.append(f"hwm:{hwm:.6f}")
+                self.journal.save()
+                trail_floor = max(hwm - stop_pct, target_pct - stop_pct)
+                if change <= trail_floor:
+                    reason = (f"trailing stop hit ({change:+.1%} off a "
+                              f"{hwm:+.1%} high-water mark, target was {target_pct:+.1%})")
             elif change >= target_pct:
                 reason = f"take profit hit ({change:+.1%})"
             elif cfg.max_hold_minutes > 0 and not breakeven_armed:

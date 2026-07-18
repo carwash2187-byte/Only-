@@ -1524,3 +1524,37 @@ rushed in the night before the funded handoff:**
 No risk parameters changed. Transcripts cached under youtube-transcript/
 (gitignored). Study can continue with more videos on request -- the
 pipeline is one command per video now.
+
+## Session 37 (hybrid trail-after-target exit -- built, tested, deliberately OFF)
+
+Followed up session 36's #1 deferred candidate with a real evidence pass
+on trailing stops vs fixed targets:
+- Comparative NQ backtest (Oct 2024-Jan 2025): fixed 20-tick trail PF
+  1.1 / 42% WR; ATR 1.5x trail PF 1.6 / 48% WR; structure trail PF 1.8 /
+  51% WR (proptradingvibes writeup). ATR-based trailing meaningfully
+  beats naive fixed-distance trailing.
+- Long-running systematic trend-following research cuts the other way:
+  adding trailing stops REDUCED total return in most tests, because the
+  top 10-15% of trades produce nearly all profit and trails truncate
+  exactly those. Evidence is genuinely two-sided.
+- The reconciling pattern (multiple practitioner sources + both video
+  traders from session 36): HYBRID -- fixed stop/target discipline until
+  the trade reaches the original target, THEN convert to a trail so only
+  already-won trades can run. Floor at +1R so a converted trade can
+  never give back more than the last R.
+
+Implemented exactly that shape: `DeskConfig.trail_after_target` -- at
+the fixed target, instead of cashing out, the trade records a high-water
+mark (persisted in the journal record's tags, survives restarts) and
+exits when price falls one stop-distance off that mark, floored at
+target - 1R. **Default OFF everywhere, including funded config**: the
+session 34 asymmetric-exit fix changes the same machinery and must show
+its effect on real trades first -- two overlapping exit changes at once
+would make the journal unreadable as evidence. Flip criterion: after
+~30 real trades under session 34's exit, if winners are reaching the 2R
+target consistently, turn this on and compare the next 30.
+
+Tests: `test_fixed_target_still_exits_by_default`,
+`test_trail_after_target_lets_winners_run_then_locks_gains`.
+
+102 tests passing.

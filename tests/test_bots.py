@@ -2208,3 +2208,51 @@ def test_symbol_probation_halves_size_when_net_negative(price_df, tmp_path, jour
         probation_dollars = probation.quantity * 190.0
         clean_dollars = clean.quantity * 1.1
         assert probation_dollars == pytest.approx(clean_dollars / 2, rel=0.05)
+
+
+# ---------------------------------------------------------------------------
+# Session 37: hybrid exit -- trail after target (config-gated, default OFF)
+# ---------------------------------------------------------------------------
+
+def _trail_desk(tmp_path, journal, price_df, trail):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    broker.buy("DEMO", 10)
+    journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade")
+    config = DeskConfig(news_blackout=False, min_copy_score=99,
+                        risk_per_trade_pct=0.0, stop_loss_pct=0.01,
+                        take_profit_pct=0.02, breakeven_at_1r=False,
+                        trail_after_target=trail)
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    agent.signal = lambda *a, **k: "hold"
+    return broker, make_desk(tmp_path, broker, journal, price_df,
+                             config=config, agent=agent)
+
+
+def test_fixed_target_still_exits_by_default(price_df, tmp_path, journal):
+    broker, desk = _trail_desk(tmp_path, journal, price_df, trail=False)
+    broker.price_overrides["DEMO"] = 102.1  # past the 2% target
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "take profit hit" in sells[0].reason
+
+
+def test_trail_after_target_lets_winners_run_then_locks_gains(price_df, tmp_path, journal):
+    broker, desk = _trail_desk(tmp_path, journal, price_df, trail=True)
+    # reaching the target no longer exits -- the trade converts to a trail
+    broker.price_overrides["DEMO"] = 102.1
+    report = desk.run_once(symbols=[])
+    assert not [a for a in report.actions if a.action == "sell" and a.ok]
+    # runs to +4%: still holding (trail is 1 stop-distance = 1% below hwm)
+    broker.price_overrides["DEMO"] = 104.0
+    report = desk.run_once(symbols=[])
+    assert not [a for a in report.actions if a.action == "sell" and a.ok]
+    # pulls back 1% off the 4% high-water mark: trail fires, gains locked
+    broker.price_overrides["DEMO"] = 102.9
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "trailing stop hit" in sells[0].reason
+    # exit price is far above the original 2% target -- the runner ran
+    assert broker.price_overrides["DEMO"] > 102.0
