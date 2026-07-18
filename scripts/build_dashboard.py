@@ -294,6 +294,25 @@ def build() -> str:
     except Exception as exc:
         payout_html = f'<p class="progress-note">payout radar unavailable ({exc})</p>'
 
+    # Live activity: tail the autopilot's own cycle log so the dashboard
+    # shows what the desk decided in its last few minutes, verbatim.
+    import glob as _glob
+    import html as _html
+
+    live_log = "(no live log found -- is the autopilot running?)"
+    candidates = ["/tmp/autopilot_paper.log"] + _glob.glob(
+        "/tmp/claude-*/**/autopilot.log", recursive=True
+    )
+    for log_path in candidates:
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="replace") as fh:
+                lines = fh.readlines()[-35:]
+            if lines:
+                live_log = _html.escape("".join(lines))
+                break
+        except OSError:
+            continue
+
     return TEMPLATE.format(
         generated=generated,
         broker_label=broker_label,
@@ -315,6 +334,7 @@ def build() -> str:
         metrics_html=metrics_html,
         chart_svg=chart_svg,
         payout_html=payout_html,
+        live_log=live_log,
     )
 
 
@@ -698,6 +718,11 @@ footer strong {{ color: var(--ink); }}
     <p class="progress-note">The desk's results only mean something after ~25 closed
     trades. Below that, wins or losses are noise, not skill — this bar fills as
     positions close.</p>
+  </section>
+
+  <section>
+    <h2>Live desk activity (the bot's last minutes of decisions)</h2>
+    <div class="table-wrap"><pre style="font-size:12px;line-height:1.5;white-space:pre-wrap">{live_log}</pre></div>
   </section>
 
   <section>
