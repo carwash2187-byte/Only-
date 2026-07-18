@@ -9,3 +9,4 @@
 - 2026-07-17T19:47 **AMZN** long -2.44 (-0.32%) setup=`copytrade:trend-up|rsi-overbought|pos-out` -- AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding | quant desk: RL agent says exit
 - 2026-07-18T02:21 **PLTR** long -2.00 (-0.27%) setup=`copytrade:trend-up|rsi-overbought|pos-out` -- PLTR (score 2.0): Scion Asset Management (Michael Burry) top-1 holding | time stop: 437 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.3%)
 - 2026-07-18T02:34 **ETH-USD** long -0.59 (-0.08%) setup=`copytrade:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | quant desk: RL agent says exit
+- 2026-07-18T07:05 **ETH-USD** long -0.77 (-0.10%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | time stop: 160 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
