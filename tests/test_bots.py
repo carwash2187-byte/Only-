@@ -1,5 +1,7 @@
 """Tests for the bots/ stack: journal, RL agent, paper broker, trading desk."""
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -1428,6 +1430,42 @@ def test_funded_account_config_matches_screenshot_numbers():
     assert cfg.max_daily_loss_pct == 0.03
     assert cfg.max_total_drawdown_pct == 0.05
     assert cfg.day_trading and cfg.atr_stops and cfg.news_blackout
+
+
+def test_guard_state_isolated_per_broker_and_respects_bot_data_dir(tmp_path, journal, monkeypatch):
+    # Real-world scenario this protects: connecting a new broker (e.g.
+    # TradeLocker for a funded account) must NOT read yesterday's daily
+    # baseline or drawdown peak from a completely different broker/equity
+    # scale -- that's exactly the "-900% false drawdown" bug from early in
+    # this project. Verifies the fix still holds without needing real
+    # TradeLocker credentials: any broker with a distinct .name gets its
+    # own isolated guard state file, located wherever BOT_DATA_DIR points.
+    monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))
+
+    class FakeFundedBroker(PaperBroker):
+        name = "tradelocker"
+
+    broker = FakeFundedBroker(starting_cash=50_000, state_path=str(tmp_path / "tl_acct.json"))
+    desk = TradingDesk(
+        broker=broker, journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_total_drawdown_pct=0.05),
+    )
+    assert os.path.basename(desk.guard.state_path) == "day_state_tradelocker.json"
+    assert os.path.basename(desk.max_drawdown_guard.state_path) == "max_drawdown_state_tradelocker.json"
+    # both land inside BOT_DATA_DIR, not the default bot_data/ or paper's dir
+    assert os.path.dirname(desk.guard.state_path) == str(tmp_path)
+    assert os.path.dirname(desk.max_drawdown_guard.state_path) == str(tmp_path)
+
+    # a $10k paper account's guard state must be a completely separate file
+    paper_broker = PaperBroker(starting_cash=10_000, state_path=str(tmp_path / "paper_acct.json"))
+    paper_desk = TradingDesk(
+        broker=paper_broker, journal=TradeJournal(path=str(tmp_path / "paper_journal.json")),
+        agent=QTraderAgent(model_path=str(tmp_path / "q2.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_total_drawdown_pct=0.05),
+    )
+    assert paper_desk.guard.state_path != desk.guard.state_path
+    assert paper_desk.max_drawdown_guard.state_path != desk.max_drawdown_guard.state_path
 
 
 def test_desk_halts_on_total_drawdown_breach(price_df, tmp_path, journal):

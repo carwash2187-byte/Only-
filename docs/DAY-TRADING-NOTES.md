@@ -1058,3 +1058,33 @@ Added `test_paper_broker_default_has_no_spread_cost`,
 `test_spread_pct_widens_crypto_on_weekends`,
 `test_is_weekend_forex_gap`, `test_weekend_crypto_trades_get_half_size`
 (82 tests passing).
+
+## Session 28 (verified the funded-account safety net before, not after, connecting one)
+
+Asked to make sure the safety guards won't fail when a real funded
+account (TradeLocker) gets connected. Flagged a possible gap in the
+previous reply -- rather than just asserting it was fixed, verified it
+properly this time before doing anything else.
+
+Turned out the isolation was already correct: `TradingDesk.__init__`
+already namespaces both drawdown guards' state files by
+`self.broker.name` (`day_state_tradelocker.json`,
+`max_drawdown_state_tradelocker.json` -- separate from the paper
+account's files, so connecting a new broker can never read a stale or
+wrong-scale baseline, the exact "-900% false drawdown" class of bug from
+early in this project). What actually mattered was proving it and
+writing down the one real condition it depends on: those files only
+survive a container restart if `BOT_DATA_DIR` points at the
+git-committed `paper_state/` directory -- pointing a new broker at the
+default gitignored `bot_data/` instead would put its guard memory
+somewhere that doesn't survive a restart, silently weakening the
+protection. Added `test_guard_state_isolated_per_broker_and_respects_bot_data_dir`
+(no real TradeLocker credentials needed -- a fake broker with
+`.name = "tradelocker"` proves the same code path) and made this
+explicit in `CLAUDE.md` so it can't be forgotten when TradeLocker is
+actually connected. `TradeLockerBroker` itself (`bots/brokers/
+tradelocker_broker.py`) already existed from an earlier session, defaults
+to TradeLocker's demo environment, and only touches real money if
+`TRADELOCKER_LIVE=1` is explicitly set.
+
+83 tests passing.

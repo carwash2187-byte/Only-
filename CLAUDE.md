@@ -17,6 +17,17 @@ hasn't been tried).
 - `bot_data/` (the default when `BOT_DATA_DIR` is unset) is gitignored —
   never commit anything under it, and never commit real broker credentials
   (`bot_data/alpaca.env`, etc.) anywhere.
+- **This applies to every broker, not just `paper`** — including
+  TradeLocker or any future funded-account connector. The daily/max
+  drawdown guards already isolate their state per broker name
+  automatically (`day_state_<broker>.json`, `max_drawdown_state_<broker>.json`
+  — see `test_guard_state_isolated_per_broker_and_respects_bot_data_dir`),
+  but that isolation only survives a container restart if `BOT_DATA_DIR`
+  points at the git-committed `paper_state/` directory. Connecting a new
+  broker without exporting `BOT_DATA_DIR=paper_state` first would put its
+  guard memory in the gitignored, restart-fragile `bot_data/` instead —
+  always export it before the first run against any new broker, real or
+  demo.
 
 ## Running the live desk
 
