@@ -1387,6 +1387,38 @@
       "notes": "user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "07e564aa7e22",
+      "symbol": "SOL-USD",
+      "side": "long",
+      "quantity": 9.948,
+      "entry_price": 75.47772244262696,
+      "entry_time": "2026-07-18T21:08:12.847387+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "62f5935f7db3",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0116,
+      "entry_price": 64675.200345703124,
+      "entry_time": "2026-07-18T21:08:14.412626+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
