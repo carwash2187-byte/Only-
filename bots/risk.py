@@ -75,6 +75,29 @@ class DrawdownGuard:
         start = float(state.get("start_equity") or 0.0)
         return (equity / start - 1.0) if start > 0 else 0.0
 
+    def loss_headroom_pct(self, equity: float, budget_pct: float = 0.8) -> float:
+        """How much more (as a fraction of CURRENT equity) the account can
+        lose before consuming `budget_pct` of the daily loss limit.
+
+        The unconsumed (1 - budget_pct) is deliberately never risked: stops
+        are not guaranteed fills, and slippage/spread widening on a fast
+        move routinely pushes the realized loss past the intended stop. On
+        a funded account the daily limit is a hard termination line, so the
+        desk budgets only 80% of it by default and keeps 20% as slippage
+        insurance -- the standard buffer discipline funded traders use.
+        """
+        from bots.journal import trading_day
+
+        usable = self.max_daily_loss_pct * budget_pct
+        state = self._load()
+        if state.get("date") != trading_day():
+            return usable  # fresh day, full budget
+        start = float(state.get("start_equity") or 0.0)
+        if start <= 0 or equity <= 0:
+            return usable
+        floor_equity = start * (1.0 - usable)
+        return max((equity - floor_equity) / equity, 0.0)
+
 
 class MaxDrawdownGuard:
     """The other funded-account limit: total drawdown from the account's
@@ -118,6 +141,18 @@ class MaxDrawdownGuard:
                 f"funded accounts get terminated, no new trades until manually reviewed"
             )
         return False, f"total drawdown from peak: {drawdown:.1%} (limit {self.max_total_drawdown_pct:.0%})"
+
+    def loss_headroom_pct(self, equity: float, budget_pct: float = 0.8) -> float:
+        """How much more (as a fraction of CURRENT equity) the account can
+        lose before consuming `budget_pct` of the max total drawdown from
+        peak. Same slippage-insurance logic as the daily version: the last
+        (1 - budget_pct) of the ceiling is never knowingly put at risk."""
+        state = self._load()
+        peak = float(state.get("peak_equity") or equity)
+        if peak <= 0 or equity <= 0:
+            return self.max_total_drawdown_pct * budget_pct
+        floor_equity = peak * (1.0 - self.max_total_drawdown_pct * budget_pct)
+        return max((equity - floor_equity) / equity, 0.0)
 
     def size_multiplier(self, equity: float) -> float:
         """Taper position size down as drawdown approaches the hard ceiling,

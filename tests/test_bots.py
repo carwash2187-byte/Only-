@@ -1966,3 +1966,162 @@ def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):
     fresh.api.INSTRUMENTS = dict(fresh.api.INSTRUMENTS, BTCUSD=303)
     fresh.api.positions_rows = [[11, 303, "buy", 0.02, 60000.0]]
     assert fresh.positions() == {"BTC-USD": 0.02}
+
+
+# ---------------------------------------------------------------------------
+# Session 31: bad-market survival -- loss-budget headroom + rollover blackout
+# ---------------------------------------------------------------------------
+
+def test_daily_loss_headroom_shrinks_as_the_day_gets_worse(tmp_path):
+    guard = DrawdownGuard(max_daily_loss_pct=0.03, state_path=str(tmp_path / "d.json"))
+    guard.check(10_000)  # day baseline
+    # fresh day: full budget = 80% of 3% = 2.4%
+    assert guard.loss_headroom_pct(10_000, 0.8) == pytest.approx(0.024)
+    # down 1.6% on the day: only 0.8% of the budget remains (as a fraction
+    # of current equity, slightly larger denominator)
+    remaining = guard.loss_headroom_pct(9_840, 0.8)
+    assert remaining == pytest.approx((9_840 - 9_760) / 9_840)
+    # past the 2.4% consumption point: nothing left, even though the hard
+    # 3% halt has NOT tripped yet -- the last 0.6% is slippage insurance
+    assert guard.loss_headroom_pct(9_750, 0.8) == 0.0
+    halted, _ = guard.check(9_750)
+    assert not halted  # proves headroom hits zero BEFORE the breach line
+
+
+def test_entry_risk_is_capped_to_remaining_daily_headroom(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    guard = DrawdownGuard(max_daily_loss_pct=0.03, state_path=str(tmp_path / "d.json"))
+    guard.check(100_000)
+    # simulate being down 1.6% on the day by re-checking at lower equity
+    guard.check(98_400)
+
+    desk = TradingDesk(
+        broker=broker, journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(
+            news_blackout=False, min_copy_score=0,
+            risk_per_trade_pct=0.015, stop_loss_pct=0.01, take_profit_pct=0.02,
+        ),
+        history_fn=lambda _s: price_df,
+        guard=guard,
+        manual_signals_path=str(tmp_path / "manual.json"),
+    )
+    action = desk._consider_entry("DEMO", "test", equity=98_400)
+    if action.action == "buy":
+        # risk was capped: quantity * stop distance <= remaining headroom
+        worst_loss = action.quantity * 100.0 * 0.01
+        assert worst_loss <= 98_400 * guard.loss_headroom_pct(98_400, 0.8) * 1.01
+    # deep in the hole: entries refuse outright while check() still says go
+    guard.check(97_500)
+    action = desk._consider_entry("DEMO", "test", equity=97_500)
+    assert action.action == "skip"
+    assert "loss budget is spent" in action.reason
+
+
+def test_max_drawdown_headroom_caps_toward_the_account_ceiling(tmp_path):
+    from bots.risk import MaxDrawdownGuard
+
+    guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=str(tmp_path / "m.json"))
+    guard.check(10_000)  # peak recorded
+    # fresh: 80% of 5% = 4% headroom
+    assert guard.loss_headroom_pct(10_000, 0.8) == pytest.approx(0.04)
+    # equity at 96.5% of peak: only 0.5% of the budgeted floor remains
+    remaining = guard.loss_headroom_pct(9_650, 0.8)
+    assert remaining == pytest.approx((9_650 - 9_600) / 9_650)
+    # below the budgeted floor: zero, though the hard 5% halt hasn't hit
+    assert guard.loss_headroom_pct(9_550, 0.8) == 0.0
+    halted, _ = guard.check(9_550)
+    assert not halted
+
+
+def test_rollover_window_detection():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.organization import is_rollover_window
+
+    ny = ZoneInfo("America/New_York")
+    assert is_rollover_window(datetime(2026, 7, 15, 17, 0, tzinfo=ny))   # 5pm sharp
+    assert is_rollover_window(datetime(2026, 7, 15, 16, 45, tzinfo=ny))  # drain starts
+    assert is_rollover_window(datetime(2026, 7, 15, 18, 14, tzinfo=ny))  # still re-quoting
+    assert not is_rollover_window(datetime(2026, 7, 15, 16, 44, tzinfo=ny))
+    assert not is_rollover_window(datetime(2026, 7, 15, 18, 15, tzinfo=ny))
+    assert not is_rollover_window(datetime(2026, 7, 15, 12, 0, tzinfo=ny))  # midday
+
+
+def test_rollover_blackout_blocks_forex_entries_but_not_crypto(price_df, tmp_path, journal, monkeypatch):
+    import bots.organization as org
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "BTC-USD": 60_000.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, rollover_blackout=True),
+    )
+    monkeypatch.setattr(org, "is_rollover_window", lambda now=None: True)
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert action.action == "skip" and "rollover blackout" in action.reason
+    # crypto trades straight through the rollover window
+    action = desk._consider_entry("BTC-USD", "test", equity=10_000)
+    assert "rollover" not in (action.reason or "")
+
+
+def test_friday_close_window_detection():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.organization import is_friday_close_window
+
+    ny = ZoneInfo("America/New_York")
+    # 2026-07-17 is a Friday
+    assert is_friday_close_window(datetime(2026, 7, 17, 16, 30, tzinfo=ny))
+    assert is_friday_close_window(datetime(2026, 7, 17, 16, 59, tzinfo=ny))
+    assert not is_friday_close_window(datetime(2026, 7, 17, 16, 29, tzinfo=ny))
+    assert not is_friday_close_window(datetime(2026, 7, 17, 17, 0, tzinfo=ny))
+    # same time Thursday: not the weekly close
+    assert not is_friday_close_window(datetime(2026, 7, 16, 16, 45, tzinfo=ny))
+
+
+def test_friday_flatten_closes_positions_before_the_weekend(price_df, tmp_path, journal, monkeypatch):
+    import bots.organization as org
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1, "BTC-USD": 60_000.0},
+    )
+    broker.buy("EURUSD", 1_000)
+    broker.buy("BTC-USD", 0.01)
+    journal.open_trade("EURUSD", "long", 1_000, 1.1, setup="daytrade")
+    journal.open_trade("BTC-USD", "long", 0.01, 60_000.0, setup="daytrade")
+
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, friday_flatten=True),
+    )
+    monkeypatch.setattr(org, "is_friday_close_window", lambda now=None: True)
+    report = desk.run_once(symbols=["EURUSD"])
+    # forex position force-closed before the weekend; crypto (24/7, exempt
+    # from the weekend-holding rule's intent here) is left alone
+    assert broker.positions().get("EURUSD", 0) == 0
+    assert broker.positions().get("BTC-USD", 0) > 0
+    assert any("Friday close-out" in n for n in report.notes)
+    # and no new entries started during the window
+    assert not [a for a in report.actions if a.action == "buy"]
+
+
+def test_weekend_symbols_none_disables_fallback():
+    # "--weekend-symbols none" must translate to no weekend fallback at all
+    # (prop accounts without the weekend add-on may not trade Sat/Sun)
+    from bots.cli import resolve_weekend_symbols
+
+    assert resolve_weekend_symbols("none", "forex", funded=True) is None
+    assert resolve_weekend_symbols("NONE", "forex", funded=True) is None
+    # default funded-forex behaviour unchanged
+    assert resolve_weekend_symbols("", "forex", funded=True) == ["BTC-USD", "ETH-USD"]
+    assert resolve_weekend_symbols("", "stocks", funded=True) is None
+    assert resolve_weekend_symbols("SOL-USD", "forex", funded=True) == ["SOL-USD"]

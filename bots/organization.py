@@ -64,6 +64,9 @@ class DeskConfig:
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
     asian_session_budget_pct: float = 0.0  # 0 = off; e.g. 0.4: only 40% of max_trades_per_day may be spent during the Asian session, saving the rest for London/NY
     weekend_crypto_caution: bool = True  # halve risk sizing on crypto trades during the weekend forex-closed window (documented thinner liquidity, session 19)
+    loss_budget_pct: float = 0.8  # only ever risk this fraction of the daily/max loss limits; the rest is slippage insurance (stops are not guaranteed fills)
+    rollover_blackout: bool = False  # no new non-crypto entries around the 5pm ET rollover (spreads spike, futures venues pause 5-6pm ET)
+    friday_flatten: bool = False  # close all non-crypto positions in the last half hour before Friday 5pm ET (prop rule: no weekend holding without an add-on)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -125,6 +128,16 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # hours: at most 40% of max_trades_per_day may be spent while the
         # Asian session is the live one.
         asian_session_budget_pct=0.4,
+        # Session 31: ~79% of funded-account failures are daily-drawdown
+        # breaches, and the 5pm ET rollover is a documented spread-spike /
+        # liquidity-vacuum window (futures venues literally pause 5-6pm
+        # ET). Entries are blocked around rollover, and per-trade risk is
+        # hard-capped to the REMAINING slice of 80% of each loss limit so
+        # no single stop-out (even with slippage) should cross the line.
+        rollover_blackout=True,
+        # Clarity Traders (and many firms): no weekend holding without a
+        # paid add-on -- everything non-crypto closes before Friday 5pm ET.
+        friday_flatten=True,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -344,6 +357,42 @@ def is_weekend_forex_gap(now=None) -> bool:
     if wd == 6 and hour < 17:  # Sunday before reopen
         return True
     return False
+
+
+def is_rollover_window(now=None) -> bool:
+    """True around the 5pm ET daily rollover: banks pause pricing, spreads
+    spike 5-20x for minutes (a 20-pip EURUSD spread is documented), and the
+    CME futures venues behind US30/NAS100/US500/GOLD/OIL literally halt
+    5-6pm ET. A stop can be TRIGGERED by the widened quote alone, so new
+    entries here start life exposed to a phantom stop-out. Window: 4:45pm
+    to 6:15pm ET, covering the pre-rollover liquidity drain and the
+    post-reopen re-quote period."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+        ZoneInfo("America/New_York")
+    )
+    minutes = now.hour * 60 + now.minute
+    return (16 * 60 + 45) <= minutes < (18 * 60 + 15)
+
+
+def is_friday_close_window(now=None) -> bool:
+    """True in the last half hour before the Friday 5pm ET weekly close.
+    Prop firms commonly ban holding positions over the weekend unless a
+    specific add-on was purchased (Clarity Traders: 'Without this add-on,
+    all positions must be closed before market close on Friday') -- the
+    desk uses this window to close everything down in time."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+        ZoneInfo("America/New_York")
+    )
+    if now.weekday() != 4:  # Friday only
+        return False
+    minutes = now.hour * 60 + now.minute
+    return (16 * 60 + 30) <= minutes < (17 * 60)
 
 
 # Higher-timeframe confirmation: entries taken on a low timeframe (5m/1m
@@ -647,6 +696,31 @@ class TradingDesk:
                 )
                 report.actions.extend(flatten.actions)
                 return report
+
+        # 2a2. Friday close-out (prop rule): firms like Clarity Traders ban
+        #      holding over the weekend without a paid add-on. Close every
+        #      non-crypto position in the last half hour before the Friday
+        #      5pm ET close and open nothing new until the week ends.
+        if cfg.friday_flatten and is_friday_close_window():
+            non_crypto = [
+                s for s in positions if not s.upper().endswith(("-USD", "-USDT"))
+            ]
+            if non_crypto:
+                report.notes.append(
+                    "[risk] Friday close-out: closing all non-crypto positions "
+                    "before the weekend (no-weekend-holding rule)"
+                )
+                flatten = self.flatten_all(
+                    reason="Friday close-out: no weekend holding on this account",
+                    symbols=non_crypto,
+                )
+                report.actions.extend(flatten.actions)
+            else:
+                report.notes.append(
+                    "[risk] Friday close-out window: flat into the weekend, "
+                    "no new entries until the close"
+                )
+            return report
 
         # 2b. News blackout: high-impact releases (NFP/CPI/FOMC) blow spreads
         #     out and are hard-prohibited windows on most funded accounts.
@@ -1004,6 +1078,21 @@ class TradingDesk:
     ) -> DeskAction:
         cfg = self.config
 
+        # Rollover blackout: never START a trade into the 5pm ET liquidity
+        # vacuum (crypto trades 24/7 through it and is exempt). Exits and
+        # server-side stops on existing positions keep working.
+        if (
+            cfg.rollover_blackout
+            and not symbol.upper().endswith(("-USD", "-USDT"))
+            and is_rollover_window()
+        ):
+            return DeskAction(
+                "skip", symbol,
+                "rollover blackout: 4:45-6:15pm ET -- spreads spike at the "
+                "daily close and futures venues pause; a fresh entry here "
+                "risks a phantom stop-out on the widened quote alone",
+            )
+
         # Quant desk vote (needs history; a missing feed means no veto). Manual
         # mirror calls carry the caller's setup tag so the journal can grade
         # that human's real performance separately.
@@ -1111,6 +1200,39 @@ class TradingDesk:
                 " (weekend crypto: half size -- documented thinner liquidity "
                 "since spot ETFs concentrated market-making into weekday hours)"
             )
+        # Loss-budget headroom (session 31): cap this trade's risk to what's
+        # LEFT of 80% of each loss limit, so no single stop-out -- even one
+        # that slips past the stop -- should be able to cross a funded
+        # account's termination line. ~79% of funded-account failures are
+        # daily-drawdown breaches, and they happen exactly here: a normal-
+        # sized trade taken late in an already-red day.
+        if cfg.loss_budget_pct > 0:
+            headrooms = []
+            if self.guard is not None:
+                headrooms.append(
+                    ("daily loss limit",
+                     self.guard.loss_headroom_pct(equity, cfg.loss_budget_pct))
+                )
+            if self.max_drawdown_guard is not None:
+                headrooms.append(
+                    ("max drawdown limit",
+                     self.max_drawdown_guard.loss_headroom_pct(equity, cfg.loss_budget_pct))
+                )
+            for limit_name, headroom in headrooms:
+                if headroom <= 0.0:
+                    return DeskAction(
+                        "skip", symbol,
+                        f"risk desk: today's loss budget is spent "
+                        f"({cfg.loss_budget_pct:.0%} of the {limit_name} -- the "
+                        "remainder is slippage insurance, not tradeable risk)",
+                    )
+                if risk_pct > headroom:
+                    sizing_note += (
+                        f" (headroom cap: risking {headroom:.2%} not {risk_pct:.2%} -- "
+                        f"only that much of the {limit_name} budget is left today)"
+                    )
+                    risk_pct = headroom
+
         risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0

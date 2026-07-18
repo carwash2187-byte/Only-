@@ -124,7 +124,12 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
         journal = TradeJournal(path=f"{tmp}/journal.json")
         guard = DrawdownGuard(state_path=f"{tmp}/day.json")
         dd_guard = MaxDrawdownGuard(state_path=f"{tmp}/dd.json")
-        config = funded_account_config(news_blackout=False)  # no live network calendar in a sim
+        # wall-clock-based guards off in a replay: the news calendar is live
+        # network data, and the rollover/Friday-close windows key off REAL
+        # time, not the historical bar being replayed
+        config = funded_account_config(
+            news_blackout=False, rollover_blackout=False, friday_flatten=False
+        )
         agent = QTraderAgent(model_path=f"{tmp}/q.json")
 
         state = {"ts": master_index[0]}

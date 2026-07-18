@@ -132,6 +132,18 @@ def cmd_journal(_args) -> None:
     print(TradeJournal().summary() or "Journal is empty.")
 
 
+def resolve_weekend_symbols(raw: str, market: str, funded: bool):
+    """Weekend crypto fallback selection. "none" disables it entirely: some
+    prop firms (Clarity Traders among them) ban weekend trading outright
+    unless a specific add-on was purchased -- for those accounts the bot
+    must sit the weekend out, not find something else to trade."""
+    if raw.strip().lower() == "none":
+        return None
+    if raw:
+        return raw.split(",")
+    return ["BTC-USD", "ETH-USD"] if (market == "forex" and funded) else None
+
+
 def cmd_autopilot(args) -> None:
     from bots.autopilot import run_autopilot
     from bots.brokers import get_broker
@@ -180,8 +192,8 @@ def cmd_autopilot(args) -> None:
     # trades now carry an explicit extra caution (DeskConfig.weekend_crypto_caution,
     # on by default) that halves position size specifically during this
     # window -- 24/7 coverage without pretending the weekend risk isn't real.
-    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else (
-        ["BTC-USD", "ETH-USD"] if (args.market == "forex" and args.funded) else None
+    weekend_symbols = resolve_weekend_symbols(
+        args.weekend_symbols, args.market, args.funded
     )
     from bots.marketdata import resolve_symbol
 

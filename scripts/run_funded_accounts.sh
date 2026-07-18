@@ -40,10 +40,14 @@ launch() {
     fi
 
     echo "acct${n}: starting autopilot (state in $statedir/)..."
+    # --weekend-symbols none: Clarity Traders bans weekend trading/holding
+    # without the "Trade on Weekends" add-on -- the bot sits weekends out.
+    # (Their FAQ also requires the "EA's Allowed" add-on for bots AT ALL --
+    # make sure it was purchased on this account before launching.)
     (set -a; source "$envfile"; set +a; \
      BOT_DATA_DIR="$statedir" nohup python -m bots autopilot \
         --broker tradelocker --funded --timeframe 1m --interval 1 \
-        --market forex --symbols "$SYMBOLS" \
+        --market forex --symbols "$SYMBOLS" --weekend-symbols none \
         > "/tmp/autopilot_acct${n}.log" 2>&1 &)
     sleep 2
     if pgrep -f "autopilot.*tradelocker" > /dev/null; then

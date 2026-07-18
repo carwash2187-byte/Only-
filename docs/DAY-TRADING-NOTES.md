@@ -1198,3 +1198,100 @@ Tests (mocked TLAPI, no credentials or network):
 Still demo-first: nothing trades real money until `TRADELOCKER_LIVE=1`
 is set per account, and that only happens after the demo run has proven
 itself. 89 tests passing.
+
+## Session 31 (bad-market survival: loss-budget headroom cap + rollover blackout)
+
+Directive: study bad markets every way possible before tomorrow's funded
+handoff. Researched how funded accounts actually die, then closed the two
+gaps the evidence pointed at.
+
+**Research findings (real sources, not folklore):**
+- One prop-firm operator reports ~78.7% of ALL challenge failures are
+  daily-drawdown breaches -- not max drawdown, not rule violations: the
+  daily line. The standard professional mitigation is budget discipline:
+  never consume more than ~80% of the daily limit; the last ~20% is
+  insurance against slippage/spread widening, because stops are NOT
+  guaranteed fills (cleo.finance breach-analysis, FXNX buffer-strategy
+  guides, The5ers/ThinkCapital drawdown explainers all converge on this).
+- The 5pm ET daily rollover is a documented liquidity vacuum: banks pause
+  pricing, spreads on even EURUSD can hit ~20 pips (Forex Peace Army
+  thread with broker data, FOREX.com rollover FAQ), and a funded-account
+  help center (FundingPips) explicitly warns the widened quote alone can
+  trigger stops and daily-loss breaches with no real price move. The CME
+  futures venues behind US30/NAS100/US500/GOLD/OIL literally pause 5-6pm
+  ET every day.
+
+**The gap this exposed in our own desk:** sizing knew risk_per_trade_pct,
+anti-martingale, and the drawdown taper -- but nothing connected a NEW
+trade's risk to how much of today's 3% was already gone. Concrete failure:
+day at -1.6%, normal 1.5%-risk entry, stop hits -> -3.1% -> funded account
+terminated. The DrawdownGuard's halt only fires AFTER the line is crossed;
+for a prop account that is one cycle too late. This is precisely the
+"normal-sized trade late in a red day" breach pattern the research says
+kills most accounts.
+
+**Implemented:**
+- `DrawdownGuard.loss_headroom_pct(equity, budget_pct)` and
+  `MaxDrawdownGuard.loss_headroom_pct(...)`: remaining tradeable risk (as
+  a fraction of current equity) before consuming `budget_pct` (default
+  80%) of each limit.
+- `_consider_entry` now caps every trade's risk_pct to the smaller of the
+  two headrooms and refuses entries outright once a budget is spent --
+  BEFORE the hard halt would trip, with the last 20% never knowingly
+  risked. Applies after all other sizing adjustments so it is a true
+  ceiling, never an increase.
+- `DeskConfig.loss_budget_pct = 0.8` (on for every config),
+  `DeskConfig.rollover_blackout` (default off, ON in
+  funded_account_config): no new non-crypto entries 4:45-6:15pm ET.
+  Crypto is exempt (24/7 venue, no rollover). Exits/server-side stops
+  unaffected. Stress-test replay disables it alongside news_blackout
+  (both key off real wall-clock, meaningless against historical bars).
+
+Tests: `test_daily_loss_headroom_shrinks_as_the_day_gets_worse` (proves
+headroom hits zero BEFORE the 3% halt line),
+`test_entry_risk_is_capped_to_remaining_daily_headroom`,
+`test_max_drawdown_headroom_caps_toward_the_account_ceiling`,
+`test_rollover_window_detection`,
+`test_rollover_blackout_blocks_forex_entries_but_not_crypto`.
+
+94 tests passing.
+
+### Session 31 addendum: Clarity Traders' actual rule sheet (fetched from their own FAQ)
+
+Since the funded accounts are being bought from MambaFX's firm (Clarity
+Traders), fetched their FAQ directly rather than trusting review-site
+summaries (which contradicted each other on the important points):
+
+- **Bots require a paid add-on**: "Automated trading and Expert Advisors
+  are allowed only if you have purchased the EA's Allowed add-on." HFT
+  and latency arbitrage are banned outright (we are neither -- 1-minute
+  polling). ACTION FOR PURCHASE DAY: both accounts MUST include the
+  "EA's Allowed" add-on or the bot itself is a rule violation.
+- **News trading is permitted** ("traders are responsible for managing
+  increased volatility, slippage, and execution risks") -- so the +/-10min
+  entry blackout stays as risk discipline, and no flatten-before-news
+  logic is required for compliance at this firm.
+- **Weekend holding/trading is banned without the "Trade on Weekends"
+  add-on**: "Without this add-on, all positions must be closed before
+  market close on Friday." TWO code changes shipped for this:
+  `DeskConfig.friday_flatten` (ON in funded config) closes every
+  non-crypto position in the 4:30-5:00pm ET Friday window and blocks new
+  entries until the close; and `--weekend-symbols none` (used by
+  scripts/run_funded_accounts.sh) fully disables the weekend crypto
+  fallback on the funded accounts, since ANY weekend trade would break
+  the rule. The paper-trading desk keeps its 24/7 crypto fallback -- this
+  split is per-account-rules, not global.
+- **Instant account consistency rule**: no single day may exceed ~10% of
+  a requested payout (their example: $1k/day max toward a $10k payout).
+  Payout-shaping, not a termination trigger; the 3% daily profit target
+  already caps day size. Documented for payout planning, no code change.
+- Their Instant account limits (3% daily / 5% overall) exactly match the
+  rules screenshot and funded_account_config's numbers.
+
+Tests added: `test_friday_close_window_detection`,
+`test_friday_flatten_closes_positions_before_the_weekend`,
+`test_weekend_symbols_none_disables_fallback` (via the new
+`bots.cli.resolve_weekend_symbols` helper, extracted so the actual CLI
+logic is what gets tested).
+
+97 tests passing.
