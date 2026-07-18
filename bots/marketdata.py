@@ -29,6 +29,8 @@ INDEX_ALIASES = {
     "US500": "ES=F", "SPX": "ES=F", "SPX500": "ES=F", "SP500": "ES=F",
     "GOLD": "GC=F", "XAUUSD": "GC=F", "XAU": "GC=F",
     "OIL": "CL=F", "WTI": "CL=F", "CRUDE": "CL=F", "USOIL": "CL=F",
+    "SILVER": "SI=F", "XAGUSD": "SI=F", "XAG": "SI=F",
+    "US2000": "RTY=F", "RUSSELL": "RTY=F", "RUT": "RTY=F",
 }
 
 

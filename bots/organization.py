@@ -161,8 +161,10 @@ def funded_account_config(**overrides) -> "DeskConfig":
 CORRELATION_GROUPS = {
     "us-tech": {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "GOOG", "META",
                 "TSLA", "AVGO", "AMD", "QQQ", "NQ=F"},
-    "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F"},
-    "gold": {"GC=F", "GLD", "IAU", "XAUUSD"},
+    "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F", "RTY=F"},
+    # silver rides gold's macro drivers (~0.8 daily correlation) -- two
+    # metals positions are one doubled metals bet, so they share a cluster
+    "gold": {"GC=F", "GLD", "IAU", "XAUUSD", "SI=F", "SLV", "XAGUSD"},
     "oil": {"CL=F", "USO", "XLE"},
     # Any pair with USD as one leg moves together on a broad USD swing,
     # even with different signs -- that's still one concentrated bet on

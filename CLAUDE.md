@@ -43,7 +43,7 @@ hasn't been tried).
 ```
 BOT_DATA_DIR=paper_state python -m bots autopilot --broker paper --funded \
   --timeframe 1m --interval 1 --market forex \
-  --symbols EURUSD,GBPUSD,USDJPY,AUDUSD,NZDUSD,USDCHF,USDCAD,EURJPY,GBPJPY,AUDJPY,EURGBP,EURCHF,US30,NAS100,US500,GOLD,OIL
+  --symbols EURUSD,GBPUSD,USDJPY,AUDUSD,NZDUSD,USDCHF,USDCAD,EURJPY,GBPJPY,AUDJPY,EURGBP,EURCHF,US30,NAS100,US500,US2000,GOLD,SILVER,OIL
 ```
 
 `--funded` applies `funded_account_config()` in `bots/organization.py` —

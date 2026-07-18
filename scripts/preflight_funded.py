@@ -31,7 +31,7 @@ import time
 WATCHLIST = [
     "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
     "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
-    "US30", "NAS100", "US500", "GOLD", "OIL",
+    "US30", "NAS100", "US500", "US2000", "GOLD", "SILVER", "OIL",
 ]
 
 

@@ -41,7 +41,7 @@ from bots.organization import DrawdownGuard, MaxDrawdownGuard, TradingDesk, fund
 WATCHLIST = [
     "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
     "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
-    "YM=F", "NQ=F", "ES=F", "GC=F", "CL=F",
+    "YM=F", "NQ=F", "ES=F", "RTY=F", "GC=F", "SI=F", "CL=F",
 ]
 
 

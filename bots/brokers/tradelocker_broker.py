@@ -53,14 +53,17 @@ MIN_LOT = 0.01
 # the first name that resolves on the connected account wins and is cached.
 TRADELOCKER_ALIASES: Dict[str, list] = {
     "GOLD": ["XAUUSD", "GOLD"],
+    "SILVER": ["XAGUSD", "SILVER"],
     "OIL": ["USOIL", "XTIUSD", "WTIUSD", "CRUDEOIL", "OIL"],
     "NAS100": ["NAS100", "US100", "USTEC", "NDX100"],
     "US30": ["US30", "DJ30", "DOW30"],
     "US500": ["US500", "SPX500", "SP500"],
+    "US2000": ["US2000", "RUS2000", "RTY2000", "USSC2000"],
     # weekend fallback symbols keep their Yahoo-style desk names in the
     # journal, so positions must map back to them, dash included
     "BTC-USD": ["BTCUSD"],
     "ETH-USD": ["ETHUSD"],
+    "SOL-USD": ["SOLUSD"],
 }
 
 # TradeLocker name -> canonical watchlist name, for mapping open positions

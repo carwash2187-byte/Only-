@@ -718,6 +718,15 @@ def test_index_alias_resolution():
     assert resolve_symbol("XAUUSD") == "GC=F"
     assert resolve_symbol("OIL") == "CL=F"
     assert resolve_symbol("WTI") == "CL=F"
+    assert resolve_symbol("SILVER") == "SI=F"
+    assert resolve_symbol("XAGUSD") == "SI=F"
+    assert resolve_symbol("US2000") == "RTY=F"
+    assert resolve_symbol("RUSSELL") == "RTY=F"
+    # session 35 widening: the new instruments carry real spread costs too
+    from bots.spreads import spread_pct
+
+    assert spread_pct("SI=F") > spread_pct("GC=F")  # silver wider than gold
+    assert spread_pct("RTY=F") > spread_pct("ES=F")  # Russell wider than S&P
     # unknown symbols pass through unchanged
     assert resolve_symbol("EURUSD") == "EURUSD"
     assert resolve_symbol("YM=F") == "YM=F"
@@ -2129,8 +2138,8 @@ def test_weekend_symbols_none_disables_fallback():
 
     assert resolve_weekend_symbols("none", "forex", funded=True) is None
     assert resolve_weekend_symbols("NONE", "forex", funded=True) is None
-    # default funded-forex behaviour unchanged
-    assert resolve_weekend_symbols("", "forex", funded=True) == ["BTC-USD", "ETH-USD"]
+    # default funded-forex behaviour: the three deepest 24/7 crypto books
+    assert resolve_weekend_symbols("", "forex", funded=True) == ["BTC-USD", "ETH-USD", "SOL-USD"]
     assert resolve_weekend_symbols("", "stocks", funded=True) is None
     assert resolve_weekend_symbols("SOL-USD", "forex", funded=True) == ["SOL-USD"]
 

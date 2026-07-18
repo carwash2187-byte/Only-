@@ -141,7 +141,7 @@ def resolve_weekend_symbols(raw: str, market: str, funded: bool):
         return None
     if raw:
         return raw.split(",")
-    return ["BTC-USD", "ETH-USD"] if (market == "forex" and funded) else None
+    return ["BTC-USD", "ETH-USD", "SOL-USD"] if (market == "forex" and funded) else None
 
 
 def cmd_autopilot(args) -> None:

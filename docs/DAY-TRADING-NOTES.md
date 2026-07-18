@@ -1444,3 +1444,36 @@ Updated test: `test_rl_exit_still_works_before_breakeven_armed` now
 asserts both directions (green pre-1R: hands off; red pre-1R: cut).
 
 100 tests passing.
+
+## Session 35 (widen the menu, not the risk: SILVER + US2000 + SOL weekend, ranked and switched every cycle)
+
+Directive: "trade other things, find the best ones, always switch, don't
+be fixed." The honesty-norm lever for "not making enough" is explicitly
+"widen the candidate watchlist over loosening a risk filter" -- so that's
+what this session does. The switching engine already exists
+(`tradeability_score` re-ranks every candidate every cycle on trend
+strength + movement potential + session liquidity, best setup gets first
+claim on the risk budget); it just needed a bigger menu.
+
+Added, with full plumbing (Yahoo aliases, TradeLocker names, spread
+costs, correlation caps, all watchlists, preflight, practice/stress
+watchlist):
+- **SILVER (SI=F / XAGUSD)** -- deep, trends hard, but rides gold's macro
+  drivers (~0.8 daily correlation), so it joins the metals correlation
+  cluster: gold+silver together can never exceed the per-cluster cap and
+  become one doubled metals bet. Spread modeled wider than gold (0.03%).
+- **US2000 (RTY=F / Russell 2000)** -- the fourth US index future; joins
+  the us-broad cluster with ES/YM. Spread modeled wider than ES/NQ.
+- **SOL-USD** added to the weekend crypto fallback (paper account only;
+  funded accounts stay weekend-off per Clarity rules) -- the #3 deepest
+  24/7 book, same half-size weekend caution as BTC/ETH.
+
+Verified real 5m data flows for all three before wiring (SI=F 1307 bars,
+RTY=F 1304, SOL-USD 1394 over 5d). Watchlist: 17 -> 19 instruments.
+Weekday shots on goal +2, weekend +1, all at the same risk bar -- more
+places to find a trade, no lowering of what counts as one.
+
+Tests: extended `test_index_alias_resolution` (aliases + spread ordering
+SI>GC, RTY>ES) and the weekend-symbols default.
+
+100 tests passing.

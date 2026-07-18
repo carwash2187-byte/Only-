@@ -39,6 +39,10 @@ def spread_pct(symbol: str, now=None) -> float:
         return 0.00004
     if compact == "GC=F":
         return 0.0001
+    if compact == "SI=F":
+        return 0.0003  # silver: wider than gold relative to price
+    if compact == "RTY=F":
+        return 0.0001  # Russell: liquid but a step below ES/NQ/YM
     if compact == "CL=F":
         return 0.0003
     if compact.endswith(("-USD", "-USDT")):
