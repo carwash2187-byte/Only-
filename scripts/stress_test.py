@@ -35,7 +35,14 @@ from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
 from bots.organization import DrawdownGuard, MaxDrawdownGuard, TradingDesk, funded_account_config
 
-WATCHLIST = ["EURUSD", "GBPUSD", "USDJPY", "YM=F", "NQ=F", "ES=F", "GC=F", "CL=F"]
+# The FULL live watchlist (same 17 instruments the autopilot actually
+# trades) -- earlier sessions practiced on only 8 of them, meaning the 9
+# forex crosses the desk trades live had never been seen in training.
+WATCHLIST = [
+    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
+    "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
+    "YM=F", "NQ=F", "ES=F", "GC=F", "CL=F",
+]
 
 
 def find_roughest_days(dfs: dict, n: int = 1) -> list:
