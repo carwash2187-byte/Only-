@@ -1088,3 +1088,48 @@ to TradeLocker's demo environment, and only touches real money if
 `TRADELOCKER_LIVE=1` is explicitly set.
 
 83 tests passing.
+
+## Session 29 (proved two funded accounts of the *same* broker type stay fully separate, ahead of buying them)
+
+User is about to buy two separate funded TradeLocker accounts (different
+logins, same MambaFX-referenced rule set as before: 10x leverage, 3%
+daily loss, 5% max drawdown) and wants both traded independently, "like
+two bots."
+
+Session 28 proved isolation across different broker *types* (paper vs.
+a fake `tradelocker`). That's not the same claim as two accounts of the
+*same* type -- both real accounts here would report `broker.name ==
+"tradelocker"`, so it was worth checking the isolation logic doesn't
+secretly key off broker type/name colliding before either account was
+ever real. It doesn't: `TradeJournal()`, `QTraderAgent()`,
+`DrawdownGuard`, and `MaxDrawdownGuard` all resolve their file paths via
+`bots.paths.data_path()`, which reads `BOT_DATA_DIR` from the
+environment at call time -- not from anything broker-specific. So the
+actual isolation boundary is "one `BOT_DATA_DIR` per process," which
+composes cleanly: two processes, two `BOT_DATA_DIR` values, zero shared
+state, regardless of both brokers sharing the name `tradelocker`. No
+code changes were needed -- this is architecture that already existed,
+just unverified for this exact shape of the scenario.
+
+Also confirmed `TradeLockerBroker` has no local-file persistence to
+worry about (unlike `PaperBroker`'s `paper_account.json`) -- it reads
+account state live from TradeLocker's API via `TLAPI`, so there's no
+extra file to accidentally point at the same path across two accounts.
+
+Added `test_two_funded_accounts_of_the_same_broker_type_stay_fully_separate`:
+two `FakeFundedBroker(PaperBroker)` instances, both `.name =
+"tradelocker"`, constructed under two different `BOT_DATA_DIR` values;
+account 1 takes a loss and its guard records a 4% daily drawdown;
+asserts account 2's journal path, guard state path, and Q-table model
+path are all distinct from account 1's, and that account 2's guard is
+still flat/unhalted -- proving one account's losses can never bleed into
+the other's limits.
+
+**Practical upshot for running two accounts:** two fully separate
+`BOT_DATA_DIR` directories, two independent `python -m bots autopilot
+--broker tradelocker --funded ...` background processes, each with its
+own `TRADELOCKER_EMAIL` / `TRADELOCKER_PASSWORD` / `TRADELOCKER_SERVER`
+env vars. Both default to TradeLocker's demo environment until
+`TRADELOCKER_LIVE=1` is explicitly set per-process.
+
+84 tests passing.

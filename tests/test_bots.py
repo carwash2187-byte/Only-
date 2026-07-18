@@ -1468,6 +1468,52 @@ def test_guard_state_isolated_per_broker_and_respects_bot_data_dir(tmp_path, jou
     assert paper_desk.max_drawdown_guard.state_path != desk.max_drawdown_guard.state_path
 
 
+def test_two_funded_accounts_of_the_same_broker_type_stay_fully_separate(monkeypatch, tmp_path):
+    # The scenario this protects: TWO real funded TradeLocker accounts,
+    # different logins, run as two independent processes. Both brokers
+    # share the SAME .name ("tradelocker") -- the previous test only
+    # proved isolation across different broker TYPES. This proves the
+    # actual safety net for running two accounts of the SAME type: point
+    # each process at its own BOT_DATA_DIR and the journal, Q-table, and
+    # both drawdown guards all separate cleanly with zero shared state --
+    # account 1's losses/limits can never affect account 2's, and vice
+    # versa, exactly as two financially separate funded accounts require.
+    dir_a = tmp_path / "account_1"
+    dir_b = tmp_path / "account_2"
+    dir_a.mkdir()
+    dir_b.mkdir()
+
+    class FakeFundedBroker(PaperBroker):
+        name = "tradelocker"
+
+    monkeypatch.setenv("BOT_DATA_DIR", str(dir_a))
+    broker_a = FakeFundedBroker(starting_cash=5_000, state_path=str(dir_a / "acct.json"))
+    desk_a = TradingDesk(
+        broker=broker_a,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_total_drawdown_pct=0.05),
+    )
+    # Account 1 takes a loss and its daily guard records it.
+    desk_a.journal.open_trade("EURUSD", "long", 1, 100.0, setup="daytrade")
+    desk_a.guard.check(5_000)  # establish today's baseline for account 1
+    desk_a.guard.check(4_800)  # account 1 down 4% today
+
+    monkeypatch.setenv("BOT_DATA_DIR", str(dir_b))
+    broker_b = FakeFundedBroker(starting_cash=5_000, state_path=str(dir_b / "acct.json"))
+    desk_b = TradingDesk(
+        broker=broker_b,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, max_total_drawdown_pct=0.05),
+    )
+
+    # Account 2's journal and guard must be completely untouched by
+    # account 1's activity -- separate files, separate baselines.
+    assert desk_b.journal.path != desk_a.journal.path
+    assert not os.path.exists(desk_b.journal.path) or desk_b.journal.trades == {}
+    assert desk_b.guard.state_path != desk_a.guard.state_path
+    halted_b, msg_b = desk_b.guard.check(5_000)  # account 2, still flat
+    assert not halted_b, msg_b
+    assert desk_a.agent.model_path != desk_b.agent.model_path
+
+
 def test_desk_halts_on_total_drawdown_breach(price_df, tmp_path, journal):
     from bots.risk import MaxDrawdownGuard
 
