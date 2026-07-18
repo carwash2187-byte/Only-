@@ -1337,3 +1337,31 @@ and even working, it surfaces memecoin flow -- wrong market for a forex
 prop desk, and feeding any external signal into the funded accounts is
 the banned pattern above. Evaluated and rejected on evidence, same
 treatment as every other shiny object.
+
+### Session 32 addendum: deep-hourly training tried and REJECTED (numbers included)
+
+Ran the new `--practice-deep` mode: 8 instruments x up to ~17k hourly bars
+(Oct 2023 -> Jul 2026) x 6 episodes -- by far the largest training run to
+date. Results argued against keeping it:
+
+- **+0 new states.** The state abstraction saturates at 220 states; 2.3
+  years of hourly bars only re-weighted existing Q-values, it taught the
+  agent nothing structurally new.
+- **Raw greedy policy was strongly net-negative on 2 of 8 instruments**
+  over the training window itself: GC=F 1,585 eval trades at 42% win rate,
+  -118.4%; CL=F 1,330 trades at 51%, -128.3% (ES=F -7.4% despite a 60%
+  win rate; YM=F the lone positive at +2.8%). The live desk never trades
+  the raw signal without its filter stack, but the raw brain got WORSE
+  where it traded most.
+- **Timeframe mismatch risk**: states are shared across timeframes, so
+  hourly-outcome re-weighting directly moves the Q-values the live 1m/5m
+  desk reads. Negative transfer with zero demonstrated benefit fails the
+  project's own evidence bar.
+
+Action taken: Q-table restored from the pre-deep git snapshot, and the
+5-minute practice mode (rough + trend windows -- the timeframe the desk
+actually trades) re-run on the full 17-symbol watchlist, which also
+finally gives the 9 forex crosses their first training reps. The
+`--practice-deep` code stays in the repo for future re-evaluation (e.g.
+if the state abstraction ever gains timeframe awareness), documented here
+as tried-and-rejected, same treatment as scale-out exits (session 16).
