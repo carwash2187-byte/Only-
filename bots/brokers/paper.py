@@ -24,11 +24,17 @@ class PaperBroker(Broker):
         starting_cash: float = 10_000.0,
         state_path: Optional[str] = None,
         price_overrides: Optional[Dict[str, float]] = None,
+        model_spread: bool = False,
     ):
         self.state_path = state_path or data_path("paper_account.json")
         self.price_overrides = price_overrides or {}
         self._cash = starting_cash
         self._positions: Dict[str, float] = {}
+        # Off by default so every existing offline test's exact expected
+        # fill prices stay unchanged; the live desk turns this on (session
+        # 27) so its numbers reflect real transaction cost instead of
+        # frictionless fills.
+        self.model_spread = model_spread
         self._load()
 
     def _load(self) -> None:
@@ -60,10 +66,18 @@ class PaperBroker(Broker):
 
         return marketdata.get_price(symbol)
 
+    def _spread_adjusted(self, symbol: str, mid: float, side: str) -> float:
+        if not self.model_spread:
+            return mid
+        from bots.spreads import spread_pct
+
+        half = spread_pct(symbol) / 2.0
+        return mid * (1 + half) if side == "buy" else mid * (1 - half)
+
     def buy(self, symbol: str, quantity: float) -> OrderResult:
         symbol = symbol.upper()
         try:
-            fill = self.price(symbol)
+            fill = self._spread_adjusted(symbol, self.price(symbol), "buy")
         except Exception as exc:
             return OrderResult(False, symbol, "buy", quantity, error=str(exc))
         cost = fill * quantity
@@ -85,7 +99,7 @@ class PaperBroker(Broker):
                 False, symbol, "sell", quantity, error=f"only hold {held} shares"
             )
         try:
-            fill = self.price(symbol)
+            fill = self._spread_adjusted(symbol, self.price(symbol), "sell")
         except Exception as exc:
             return OrderResult(False, symbol, "sell", quantity, error=str(exc))
         self._cash += fill * quantity

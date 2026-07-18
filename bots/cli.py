@@ -95,7 +95,10 @@ def cmd_trade(args) -> None:
     from bots.brokers import get_broker
     from bots.organization import DeskConfig, TradingDesk
 
-    broker = get_broker(args.broker)
+    # Realistic spread cost on the paper broker (session 27): frictionless
+    # fills made every number here more optimistic than a real account.
+    broker_kwargs = {"model_spread": True} if args.broker == "paper" else {}
+    broker = get_broker(args.broker, **broker_kwargs)
     if not broker.is_paper and not args.live_i_understand_the_risk:
         raise SystemExit(
             f"Broker '{args.broker}' trades REAL money and has no paper mode. "
@@ -134,7 +137,11 @@ def cmd_autopilot(args) -> None:
     from bots.brokers import get_broker
     from bots.organization import DeskConfig, TradingDesk
 
-    broker = get_broker(args.broker)
+    # Realistic spread cost on the paper broker (session 27): the desk's
+    # numbers had been computed on frictionless fills, which no real
+    # account gets. Real brokers charge a real spread on every trade.
+    broker_kwargs = {"model_spread": True} if args.broker == "paper" else {}
+    broker = get_broker(args.broker, **broker_kwargs)
     if not broker.is_paper and not args.live_i_understand_the_risk:
         raise SystemExit(
             f"Broker '{args.broker}' trades REAL money. "
@@ -164,14 +171,18 @@ def cmd_autopilot(args) -> None:
             timeframe=timeframe,
         )
     desk = TradingDesk(broker=broker, config=config)
-    # Not auto-enabled by default anymore (session 19): 2026 data shows
-    # weekend crypto liquidity has gotten WORSE since spot ETFs concentrated
-    # institutional market-making into weekday hours, not better -- trading
-    # costs +11%, depth -9%, and real cascading-liquidation events on thin
-    # weekend books (see docs/DAY-TRADING-NOTES.md session 19). The
-    # mechanism stays available for anyone who explicitly opts in with
-    # --weekend-symbols; the desk just doesn't reach for it on its own.
-    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else None
+    # Re-enabled by explicit user request (session 27) after session 19
+    # found real 2026 evidence that weekend crypto liquidity has gotten
+    # WORSE since spot ETFs concentrated institutional market-making into
+    # weekday hours (+11% trading costs, -9% depth, real cascading-
+    # liquidation events on thin weekend books). Rather than either
+    # ignore that evidence or refuse continuous coverage, weekend crypto
+    # trades now carry an explicit extra caution (DeskConfig.weekend_crypto_caution,
+    # on by default) that halves position size specifically during this
+    # window -- 24/7 coverage without pretending the weekend risk isn't real.
+    weekend_symbols = args.weekend_symbols.split(",") if args.weekend_symbols else (
+        ["BTC-USD", "ETH-USD"] if (args.market == "forex" and args.funded) else None
+    )
     from bots.marketdata import resolve_symbol
 
     symbols = (

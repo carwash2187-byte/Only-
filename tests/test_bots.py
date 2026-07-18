@@ -1210,6 +1210,91 @@ def test_rl_exit_still_works_before_breakeven_armed(price_df, tmp_path, journal)
     assert sells and "RL agent says exit" in sells[0].reason, report.describe()
 
 
+def test_paper_broker_default_has_no_spread_cost(tmp_path):
+    # Existing behavior must stay untouched by default -- 79+ other tests
+    # assert exact fill prices and rely on this.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1000},
+    )
+    result = broker.buy("EURUSD", 10)
+    assert result.ok and result.fill_price == pytest.approx(1.1000)
+
+
+def test_paper_broker_model_spread_charges_realistic_cost(tmp_path):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1000}, model_spread=True,
+    )
+    buy = broker.buy("EURUSD", 10)
+    assert buy.ok
+    assert buy.fill_price > 1.1000  # bought at the ask, above mid
+    sell = broker.sell("EURUSD", 10)
+    assert sell.ok
+    assert sell.fill_price < 1.1000  # sold at the bid, below mid
+    # round trip at the same mid price should show a small net cost, not
+    # break even -- this is the whole point (no more frictionless fills)
+    assert broker.cash() < 10_000
+
+
+def test_spread_pct_widens_crypto_on_weekends(monkeypatch):
+    import bots.organization as org_mod
+    from bots.spreads import spread_pct
+
+    monkeypatch.setattr(org_mod, "is_weekend_forex_gap", lambda now=None: False)
+    weekday = spread_pct("BTC-USD")
+    monkeypatch.setattr(org_mod, "is_weekend_forex_gap", lambda now=None: True)
+    weekend = spread_pct("BTC-USD")
+    assert weekend > weekday
+    assert spread_pct("EURUSD") < spread_pct("EURJPY")  # major tighter than JPY cross
+
+
+def test_is_weekend_forex_gap():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from bots.organization import is_weekend_forex_gap
+
+    ny = ZoneInfo("America/New_York")
+    assert is_weekend_forex_gap(datetime(2026, 7, 18, 12, 0, tzinfo=ny))  # Saturday
+    assert is_weekend_forex_gap(datetime(2026, 7, 17, 18, 0, tzinfo=ny))  # Friday 6pm
+    assert not is_weekend_forex_gap(datetime(2026, 7, 17, 16, 0, tzinfo=ny))  # Friday 4pm
+    assert is_weekend_forex_gap(datetime(2026, 7, 19, 10, 0, tzinfo=ny))  # Sunday 10am
+    assert not is_weekend_forex_gap(datetime(2026, 7, 19, 18, 0, tzinfo=ny))  # Sunday 6pm
+    assert not is_weekend_forex_gap(datetime(2026, 7, 15, 12, 0, tzinfo=ny))  # Wednesday
+
+
+def test_weekend_crypto_trades_get_half_size(price_df, tmp_path, journal, monkeypatch):
+    import bots.organization as org_mod
+
+    monkeypatch.setattr(org_mod, "is_weekend_forex_gap", lambda now=None: True)
+
+    broker = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"BTC-USD": 60_000.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0, risk_per_trade_pct=0.005)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=["BTC-USD"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1
+    assert "weekend crypto" in buys[0].reason
+
+    # same setup with the caution disabled -> full size, no note
+    config2 = DeskConfig(news_blackout=False, min_copy_score=0, risk_per_trade_pct=0.005,
+                         weekend_crypto_caution=False)
+    broker2 = PaperBroker(
+        starting_cash=100_000, state_path=str(tmp_path / "acct2.json"),
+        price_overrides={"BTC-USD": 60_000.0},
+    )
+    journal2 = TradeJournal(path=str(tmp_path / "journal2.json"))
+    desk2 = make_desk(tmp_path, broker2, journal2, price_df, config=config2)
+    report2 = desk2.run_once(symbols=["BTC-USD"])
+    full_buy = [a for a in report2.actions if a.action == "buy" and a.ok][0]
+    assert "weekend crypto" not in full_buy.reason
+    assert buys[0].quantity == pytest.approx(full_buy.quantity / 2.0, rel=0.05)
+
+
 def test_loss_streak_rule_blocks_entries(price_df, tmp_path, journal):
     for i in range(3):
         t = journal.open_trade(f"L{i}", "long", 1, 100.0, setup="s")

@@ -63,6 +63,7 @@ class DeskConfig:
     high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
     asian_session_budget_pct: float = 0.0  # 0 = off; e.g. 0.4: only 40% of max_trades_per_day may be spent during the Asian session, saving the rest for London/NY
+    weekend_crypto_caution: bool = True  # halve risk sizing on crypto trades during the weekend forex-closed window (documented thinner liquidity, session 19)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -319,6 +320,30 @@ def active_forex_session(now=None) -> str:
     if 12 <= hour < 17:
         return "newyork"
     return "asian"
+
+
+def is_weekend_forex_gap(now=None) -> bool:
+    """True during the ~Friday 5pm ET to Sunday 5pm ET forex/index closure
+    -- the window the weekend crypto fallback (autopilot.py) covers.
+    Session 19 found weekend crypto liquidity has gotten measurably worse
+    since spot ETFs concentrated institutional market-making into weekday
+    hours (+11% trading costs, -9% depth vs weekdays); this flags that
+    window so entries taken in it can be sized more cautiously instead of
+    pretending it's an ordinary trading session."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+        ZoneInfo("America/New_York")
+    )
+    wd, hour = now.weekday(), now.hour
+    if wd == 5:  # Saturday
+        return True
+    if wd == 4 and hour >= 17:  # Friday evening
+        return True
+    if wd == 6 and hour < 17:  # Sunday before reopen
+        return True
+    return False
 
 
 # Higher-timeframe confirmation: entries taken on a low timeframe (5m/1m
@@ -1076,6 +1101,16 @@ class TradingDesk:
                 sizing_note += f" (drawdown taper: {dd_mult:.0%} size, approaching the max-loss ceiling)"
         if high_conviction:
             sizing_note += " (high-conviction override: exceptionally strong trend, bypassed the daily trade cap)"
+        if (
+            cfg.weekend_crypto_caution
+            and symbol.upper().endswith(("-USD", "-USDT"))
+            and is_weekend_forex_gap()
+        ):
+            risk_pct /= 2.0
+            sizing_note += (
+                " (weekend crypto: half size -- documented thinner liquidity "
+                "since spot ETFs concentrated market-making into weekday hours)"
+            )
         risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
         budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
         quantity = round(budget / price, 4) if price > 0 else 0.0

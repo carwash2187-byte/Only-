@@ -1013,3 +1013,48 @@ increase -- a bug fix in how existing profit was being realized.
 
 Added `test_rl_exit_does_not_cut_a_breakeven_armed_winner_short` and
 `test_rl_exit_still_works_before_breakeven_armed` (77 tests passing).
+
+## Session 27 (24/7 restored with an evidence-linked safeguard, and a real gap found: zero spread cost)
+
+**24/7, not 24/5 -- reconciled with session 19's evidence rather than
+either ignoring it or refusing.** The weekend crypto fallback stays
+removed *as an unguarded default* was the honest call in session 19, but
+"never trade weekends at all" isn't the only honest option once there's
+a way to price in the documented risk instead of pretending it doesn't
+exist. Added `is_weekend_forex_gap()` and
+`DeskConfig.weekend_crypto_caution` (on by default): weekend crypto
+trades now automatically get **half size**, specifically because of the
+session-19 findings (+11% costs, -9% depth since spot ETFs concentrated
+weekday liquidity). Re-enabled the `--weekend-symbols` default
+(BTC-USD/ETH-USD) in `cmd_autopilot`. Net effect: genuine 24/7 coverage,
+with the weekend risk explicitly priced in rather than either denied or
+ignored.
+
+**Real gap found while studying what the bot doesn't account for yet:**
+`PaperBroker` filled every single order at the exact quoted mid-price --
+zero spread cost. Every number on the dashboard (win rate, P&L, risk of
+ruin) had been computed as if trading were frictionless, which no real
+account is. Research confirmed this is a well-documented, common paper-
+trading blind spot: "a strategy with a 1.5 Sharpe ratio in a frictionless
+backtest may collapse below 0.5 after realistic fill modeling."
+([QuantMedia](https://quantmedia.io/paper-slippage-latency-modeling.html),
+[Substack](https://algorithmictoken.substack.com/p/market-structure-lens-1-the-cost))
+
+**Implemented `bots/spreads.py`**: category-based spread-cost lookup
+sourced from real typical retail/institutional spread data (forex majors
+~1 pip, JPY crosses and forex crosses wider, index futures 1-2 ticks
+very tight relative to price, gold/oil wider, crypto 3-5x forex and
+doubled again on weekends via the same `is_weekend_forex_gap()`).
+`PaperBroker` gained an opt-in `model_spread` flag -- **off by default**
+so the 79 existing tests' exact expected fill-price assertions stay
+completely unchanged, **on** for the live desk (`cmd_autopilot` and
+`cmd_trade`, both wired) so its numbers now reflect real transaction
+cost instead of a systematically optimistic frictionless fill. Buys fill
+at the modeled ask (above mid), sells at the modeled bid (below mid) --
+standard bid/ask fill modeling, not a flat fee.
+
+Added `test_paper_broker_default_has_no_spread_cost`,
+`test_paper_broker_model_spread_charges_realistic_cost`,
+`test_spread_pct_widens_crypto_on_weekends`,
+`test_is_weekend_forex_gap`, `test_weekend_crypto_trades_get_half_size`
+(82 tests passing).
