@@ -1558,3 +1558,44 @@ Tests: `test_fixed_target_still_exits_by_default`,
 `test_trail_after_target_lets_winners_run_then_locks_gains`.
 
 102 tests passing.
+
+## Session 38 (the cash-out playbook: how profits actually become money at Clarity)
+
+Studied the part nobody had researched yet: the payout pipeline. Facts
+gathered (their site + review aggregators; numbers conflict between
+sources in places, so VERIFY IN THE DASHBOARD once the accounts exist):
+
+- **Cadence**: Instant accounts allow payout requests every 14 days,
+  starting 14 days after the first trade. Some plans also carry a
+  minimum-trading-days requirement (sources quote 1-5 days depending on
+  plan) -- a day with zero trades does NOT count as a trading day.
+- **Minimum payout $100**, requested from the account dashboard.
+  Payouts are made in USDT (crypto) -- the user needs a crypto wallet
+  address ready or the money has nowhere to land.
+- **Profit split**: marketed "up to 90-100%" depending on plan/add-ons;
+  the real number for our specific accounts must be read off the
+  purchase page at buy time.
+- **Consistency rule decides payout eligibility, not just termination**:
+  their FAQ example says no single day may exceed ~10% of a requested
+  payout on Instant accounts (review sites quote a 30% rule for other
+  account types -- another number to verify at purchase). Concentrated
+  profits = delayed payouts.
+
+**Why the desk's shape already matches the payout rules:** the 3% daily
+profit target caps day size, the daily loss guard caps day damage, and
+steady multi-day grinding is exactly what a "no single day too big"
+eligibility rule pays. One monster day would literally be less
+withdrawable than five modest ones. Also noted: if a payout clock needs
+trading days, long no-trade streaks (e.g. every filter red for days)
+would slow the calendar -- worth watching in the journal, NOT worth
+loosening filters over.
+
+**Purchase-day checklist (consolidated from sessions 30-38):**
+1. Buy both accounts WITH the "EA's Allowed" add-on (bots banned
+   without it). Skip "Trade on Weekends" unless weekend crypto is
+   wanted -- the funded bots are configured weekend-off either way.
+2. Note each account's exact profit split + consistency numbers from
+   the purchase page.
+3. Have a USDT wallet address ready for payouts.
+4. Send each account's TradeLocker email/password/server -> preflight
+   -> demo-first -> `bash scripts/run_funded_accounts.sh`.
