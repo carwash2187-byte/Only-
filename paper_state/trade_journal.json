@@ -1323,6 +1323,38 @@
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding | time stop: 437 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.5%)",
       "tags": [],
       "stop_pct": null
+    },
+    {
+      "trade_id": "c2fdf6cc5d87",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4072,
+      "entry_price": 1844.221698852539,
+      "entry_time": "2026-07-18T02:28:06.574603+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": 1842.778101196289,
+      "exit_time": "2026-07-18T02:34:34.615980+00:00",
+      "pnl": -0.5878329656249792,
+      "pnl_pct": -0.07827679595940884,
+      "notes": "user watchlist | quant desk: RL agent says exit",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "7743e53f813c",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4077,
+      "entry_price": 1841.9205,
+      "entry_time": "2026-07-18T02:56:10.899794+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
