@@ -10,3 +10,4 @@
 - 2026-07-18T02:21 **PLTR** long -2.00 (-0.27%) setup=`copytrade:trend-up|rsi-overbought|pos-out` -- PLTR (score 2.0): Scion Asset Management (Michael Burry) top-1 holding | time stop: 437 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.3%)
 - 2026-07-18T02:34 **ETH-USD** long -0.59 (-0.08%) setup=`copytrade:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | quant desk: RL agent says exit
 - 2026-07-18T07:05 **ETH-USD** long -0.77 (-0.10%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | time stop: 160 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
+- 2026-07-18T07:10 **BTC-USD** long -0.21 (-0.03%) setup=`copytrade:trend-up|rsi-neutral|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)

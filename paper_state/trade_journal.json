@@ -1380,11 +1380,11 @@
       "entry_price": 63931.95,
       "entry_time": "2026-07-18T05:10:08.522706+00:00",
       "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 63914.04652148438,
+      "exit_time": "2026-07-18T07:10:12.826755+00:00",
+      "pnl": -0.20947069863273282,
+      "pnl_pct": -0.02800396126759752,
+      "notes": "user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)",
       "tags": [],
       "stop_pct": 0.003
     }
