@@ -130,6 +130,38 @@ def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
           "(it loaded its agent at startup, in memory).")
 
 
+def practice_deep_history(episodes: int = 6) -> None:
+    """The closest real thing to 'years of experience overnight': train the
+    live Q-agent on ~2 YEARS of hourly bars (Yahoo's 1h limit is 730 days)
+    across the whole watchlist -- every real volatility event, trend run,
+    and dead zone in that window, replayed with learning on. Roughly 10x
+    the bars of the 60-day intraday practice mode. Same guarantees: only
+    the Q-table is updated; the journal/track record is never touched."""
+    agent = QTraderAgent()  # default model_path -> respects BOT_DATA_DIR
+    loaded = agent.load()
+    before = len(agent.q)
+    print(f"live model: {'loaded existing table' if loaded else 'starting fresh'} "
+          f"({before} known states)")
+    for sym in WATCHLIST:
+        try:
+            df = marketdata.get_history(sym, period="730d", interval="1h")
+        except Exception as exc:
+            print(f"  {sym}: unavailable ({exc}), skipping")
+            continue
+        if len(df) < 500:
+            print(f"  {sym}: only {len(df)} hourly bars, skipping")
+            continue
+        stats = agent.train(df, episodes=episodes)
+        print(f"  {sym} ({len(df)} hourly bars x {episodes} episodes, "
+              f"{df.index[0].date()} -> {df.index[-1].date()}): "
+              f"{stats['trades']} eval trades, win rate {stats['win_rate']:.0%}, "
+              f"return {stats['total_return_pct']:+.1f}%")
+    agent.save()
+    print(f"\nsaved -- live model now knows {len(agent.q)} states "
+          f"({len(agent.q) - before:+d} vs before). Restart the live autopilot "
+          "to pick this up.")
+
+
 def stress_test(starting_cash: float = 5_000.0) -> None:
     dfs = fetch_rough_window()
     master_index = sorted(set().union(*[set(df.index) for df in dfs.values()]))
@@ -219,7 +251,9 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
 
 
 if __name__ == "__main__":
-    if "--practice" in sys.argv:
+    if "--practice-deep" in sys.argv:
+        practice_deep_history()
+    elif "--practice" in sys.argv:
         practice_on_rough_windows()
     else:
         stress_test()
