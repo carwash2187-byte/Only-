@@ -1348,11 +1348,11 @@
       "entry_price": 1841.9205,
       "entry_time": "2026-07-18T02:56:10.899794+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 1843.4778244018555,
+      "exit_time": "2026-07-18T03:58:44.489929+00:00",
+      "pnl": 0.6349211586365147,
+      "pnl_pct": 0.0845489477887762,
+      "notes": "user watchlist | quant desk: RL agent says exit",
       "tags": [],
       "stop_pct": 0.003
     }
