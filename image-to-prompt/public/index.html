@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Image &rarr; Prompt</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Image <span class="arrow">&rarr;</span> Prompt</h1>
+    <p class="subtitle">Drop in an image, get a ready-to-use prompt for AI image &amp; video generators.</p>
+
+    <label id="dropzone" for="file-input" class="dropzone">
+      <img id="preview" class="preview" alt="Selected preview" hidden />
+      <div id="dropzone-hint" class="dropzone-hint">
+        <span class="dropzone-icon">&#8593;</span>
+        <span>Drag &amp; drop an image, or click to choose one</span>
+      </div>
+    </label>
+    <input id="file-input" type="file" accept="image/*" hidden />
+
+    <button id="generate-btn" disabled>Generate Prompt</button>
+
+    <div id="status" class="status" hidden></div>
+
+    <div id="result-box" class="result-box" hidden>
+      <div class="result-header">
+        <span>Prompt</span>
+        <button id="copy-btn" class="copy-btn">Copy</button>
+      </div>
+      <p id="result-text"></p>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
