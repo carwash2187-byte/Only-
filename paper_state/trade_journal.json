@@ -1444,11 +1444,11 @@
       "entry_price": 75.4877219467163,
       "entry_time": "2026-07-19T00:06:58.431852+00:00",
       "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 75.962,
+      "exit_time": "2026-07-19T05:05:21.594471+00:00",
+      "pnl": 4.717975790650237,
+      "pnl_pct": 0.6282850257667949,
+      "notes": "user watchlist | take profit hit (+0.7%)",
       "tags": [
         "breakeven-armed"
       ],
