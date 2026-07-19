@@ -2523,3 +2523,48 @@ def test_zone_filter_allows_entry_at_a_well_tested_level(tmp_path, journal):
     )
     action = desk._consider_entry("EURUSD", "test", equity=10_000)
     assert "zone filter" not in (action.reason or "")
+
+
+# ---------------------------------------------------------------------------
+# Session 43: per-symbol news blackout (protect a pair around ITS currencies'
+# high-impact news, not just USD)
+# ---------------------------------------------------------------------------
+
+def test_currencies_for_symbol():
+    from bots.organization import currencies_for_symbol
+
+    assert currencies_for_symbol("EURJPY") == {"EUR", "JPY"}
+    assert currencies_for_symbol("eurusd") == {"EUR", "USD"}
+    assert currencies_for_symbol("GOLD") == set()   # USD-driven, cycle guard covers it
+    assert currencies_for_symbol("US30") == set()
+
+
+def test_per_symbol_news_blocks_only_affected_pairs(tmp_path, journal, price_df):
+    from datetime import datetime, timezone
+
+    from bots.learning import QTraderAgent
+    from bots.newsguard import NewsGuard
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    jpy_event = [{"country": "JPY", "impact": "High",
+                  "title": "BOJ Rate Decision", "date": now_iso}]
+    guard = NewsGuard(currencies=("USD",), fetch_fn=lambda: jpy_event)
+
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    agent.signal = lambda *a, **k: "hold"  # don't let the RL vote veto first
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "a.json"),
+        price_overrides={"EURJPY": 160.0, "AUDUSD": 0.65},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=True, min_copy_score=0), agent=agent,
+    )
+    desk._news_guard = guard
+
+    # EURJPY carries the JPY leg -> blocked by the BOJ event
+    a = desk._consider_entry("EURJPY", "test", equity=10_000)
+    assert a.action == "skip" and "news blackout" in a.reason, a.reason
+    # AUDUSD has neither EUR nor JPY -> the BOJ event doesn't touch it
+    a = desk._consider_entry("AUDUSD", "test", equity=10_000)
+    assert "news blackout" not in (a.reason or "")

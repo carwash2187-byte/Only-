@@ -1768,3 +1768,38 @@ Tests: `test_zone_touch_count_collapses_consecutive_bars_into_one_touch`,
 `test_zone_filter_allows_entry_at_a_well_tested_level`.
 
 113 tests passing.
+
+## Session 43 (per-symbol news blackout: watch every traded currency, not just USD)
+
+Directive (paraphrased): have the bot look at the news for the specific
+things it trades so it isn't blindsided by a blow-up. Found a real gap
+doing exactly that check: `funded_account_config` turns on
+`news_blackout=True` but leaves `news_currencies=("USD",)` -- so the desk
+only dodged USD releases, while trading EURJPY, GBPJPY, EURGBP, AUDJPY,
+etc. straight through ECB / Bank-of-Japan / BoE / RBA decisions that tear
+those pairs' spreads apart just as badly. The existing guard protected
+maybe half of what the desk actually trades.
+
+Honest scope note first: this is NOT "predict the news / see it early"
+(that's insider trading and was refused). This is the legal, real thing
+-- the economic calendar is public; everyone knows WHEN high-impact
+releases hit. The desk already avoids USD releases; this extends the same
+defensive dodge to every currency it holds.
+
+Implemented:
+- `NewsGuard.blackout(now, currencies=...)` -- optional per-call currency
+  override (the weekly ForexFactory feed already contains every country's
+  events; only the filter needed to change).
+- `currencies_for_symbol()` -- splits a 6-letter pair into its two legs
+  (EURJPY -> {EUR, JPY}); indices/metals/oil return empty (USD-driven,
+  already covered by the cycle-level USD guard).
+- `_consider_entry` now runs a per-symbol news check: block THIS symbol
+  around high-impact news for EITHER of its currencies, without freezing
+  unrelated pairs -- a BOJ decision stops EURJPY/GBPJPY/AUDJPY/USDJPY
+  entries while AUDUSD keeps trading. More protection, not fewer trades on
+  unaffected pairs.
+
+Tests: `test_currencies_for_symbol`,
+`test_per_symbol_news_blocks_only_affected_pairs`.
+
+115 tests passing.

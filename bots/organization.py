@@ -235,6 +235,17 @@ def atr_pct(df, period: int = 14) -> Optional[float]:
         return None
 
 
+def currencies_for_symbol(symbol: str) -> set:
+    """The currencies whose news moves this symbol. A 6-letter forex pair
+    splits into its two legs (EURJPY -> {EUR, JPY}); everything else
+    (indices, metals, oil, crypto) is USD-driven and already covered by
+    the cycle-level USD news guard, so returns an empty set here."""
+    s = symbol.upper().replace("_", "").replace("/", "")
+    if len(s) == 6 and s.isalpha():
+        return {s[:3], s[3:]}
+    return set()
+
+
 def zone_touch_count(df, level: float, tolerance_pct: float = 0.0015,
                       lookback_bars: int = 300) -> int:
     """How many distinct times price has approached `level` (within
@@ -1276,6 +1287,26 @@ class TradingDesk:
                         )
         except Exception:
             pass
+
+        # Per-symbol news blackout (session 43): the cycle-level guard only
+        # watches USD; but a pair like EURJPY gets torn apart by an ECB or
+        # Bank-of-Japan decision just as badly. Block THIS symbol around
+        # high-impact news for EITHER of its currencies, without freezing
+        # unrelated pairs. Non-forex (indices/metals/oil) is USD-driven and
+        # already covered by the cycle-level guard.
+        if cfg.news_blackout and not manual:
+            non_usd = currencies_for_symbol(symbol) - {"USD"}
+            if non_usd:
+                try:
+                    if not hasattr(self, "_news_guard"):
+                        from bots.newsguard import NewsGuard
+
+                        self._news_guard = NewsGuard(currencies=cfg.news_currencies)
+                    blocked, msg = self._news_guard.blackout(currencies=non_usd)
+                    if blocked:
+                        return DeskAction("skip", symbol, f"news blackout ({symbol}): {msg}")
+                except Exception:
+                    pass
 
         if cfg.htf_confirm and not manual:
             htf = HTF_MAP.get(cfg.timeframe)

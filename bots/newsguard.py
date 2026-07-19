@@ -76,13 +76,24 @@ class NewsGuard:
             self._fetched_at = time.time()
         return self._events
 
-    def blackout(self, now: Optional[datetime] = None) -> Tuple[bool, str]:
+    def blackout(
+        self,
+        now: Optional[datetime] = None,
+        currencies: Optional[set] = None,
+    ) -> Tuple[bool, str]:
         """(blocked, reason). Blocked when `now` falls inside the window
-        around any qualifying event."""
+        around any qualifying event.
+
+        `currencies`, if given, overrides the guard's default set for this
+        one call -- lets the desk ask "is there news for THIS symbol's
+        currencies?" (e.g. {EUR, JPY} for EURJPY) so a Bank-of-Japan
+        decision blacks out the JPY crosses without freezing unrelated
+        pairs like AUDUSD."""
         now = now or datetime.now(timezone.utc)
+        check = self.currencies if currencies is None else {c.upper() for c in currencies}
         try:
             for event in self._get_events():
-                if event.get("country", "").upper() not in self.currencies:
+                if event.get("country", "").upper() not in check:
                     continue
                 if IMPACT_RANK.get(event.get("impact", "Low"), 0) < self.min_rank:
                     continue
