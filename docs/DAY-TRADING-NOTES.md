@@ -1669,3 +1669,44 @@ evidence that justifies it.
 Test: `test_vol_spike_filter_blocks_entry_after_flash_bar`.
 
 104 tests passing.
+
+## Session 41 (ADR exhaustion filter + live bid/ask spread veto)
+
+Research pass: what does the desk still not know that costs real money?
+Two evidence-backed gaps closed.
+
+**1. Average Daily Range (ADR) exhaustion.** Multiple practitioner
+sources agree: once price has traveled 90-100%+ of its 14-day average
+daily range, continuation odds measurably drop -- late entries are
+buying the top of an already-spent day, and false breakouts cluster
+here. Implemented `DeskConfig.adr_exhaustion_pct` (funded: 1.0 = 100%):
+computes today's high-low range vs the trailing 14-day average from the
+same `df` already fetched for the signal, refuses new entries once
+consumed. Needs >=4 days of history to activate (no false triggers on
+thin data). Manual mirror calls exempt (a human already judged the
+setup).
+
+**2. Live bid/ask spread veto.** Every prior spread-aware feature
+(session 27's cost modeling, session 31's rollover blackout) inferred
+"the spread is probably wide" from the clock. This adds `Broker.live_spread_pct()`
+-- an optional hook brokers can implement to report the ACTUAL spread
+being quoted right now. `TradeLockerBroker` computes it from
+`get_latest_bid_price`/`get_latest_asking_price`; `PaperBroker` reports
+it when `model_spread` is on (via `bots.spreads.spread_pct`); the base
+class defaults to None so brokers that can't report one are never
+penalized. `DeskConfig.max_live_spread_multiple` (funded: 3.0) refuses
+entry when the live spread exceeds 3x the symbol's normal spread --
+catches real-time blowouts a clock-based rule would miss (illiquid
+condition outside any modeled window) without needing a new heuristic
+for every possible cause.
+
+Bug caught before commit: the ADR block was first written nested inside
+`if cfg.htf_confirm`, so it silently never ran unless htf_confirm was
+also on -- caught by its own test failing, moved to run unconditionally
+on `adr_exhaustion_pct` alone.
+
+Tests: `test_adr_exhaustion_blocks_late_entries`,
+`test_live_spread_veto_blocks_blown_out_spreads`,
+`test_tradelocker_live_spread_from_bid_ask`.
+
+107 tests passing.

@@ -188,6 +188,18 @@ class TradeLockerBroker(Broker):
     def price(self, symbol: str) -> float:
         return float(self.api.get_latest_asking_price(self._instrument_id(symbol)))
 
+    def live_spread_pct(self, symbol: str):
+        try:
+            iid = self._instrument_id(symbol)
+            ask = float(self.api.get_latest_asking_price(iid))
+            bid = float(self.api.get_latest_bid_price(iid))
+            mid = (ask + bid) / 2.0
+            if mid <= 0 or ask < bid:
+                return None
+            return (ask - bid) / mid
+        except Exception:
+            return None
+
     def _order(self, symbol: str, quantity: float, side: str) -> OrderResult:
         try:
             lots = _units_to_lots(symbol, quantity)

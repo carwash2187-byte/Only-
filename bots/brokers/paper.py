@@ -66,6 +66,13 @@ class PaperBroker(Broker):
 
         return marketdata.get_price(symbol)
 
+    def live_spread_pct(self, symbol: str):
+        if not self.model_spread:
+            return None
+        from bots.spreads import spread_pct
+
+        return spread_pct(symbol)
+
     def _spread_adjusted(self, symbol: str, mid: float, side: str) -> float:
         if not self.model_spread:
             return mid

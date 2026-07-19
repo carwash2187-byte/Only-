@@ -65,6 +65,13 @@ class Broker(ABC):
         """
         return self.buy(symbol, quantity)
 
+    def live_spread_pct(self, symbol: str):
+        """Current bid/ask spread as a fraction of price, or None when the
+        venue can't report one. Lets the desk refuse entries into a
+        momentarily blown-out spread instead of trusting time-of-day
+        heuristics alone."""
+        return None
+
     def has_pending_order(self, symbol: str) -> bool:
         """True if symbol has an order placed but not yet filled.
 

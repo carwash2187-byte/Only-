@@ -70,6 +70,8 @@ class DeskConfig:
     symbol_cooldown_minutes: int = 0  # after a losing close on a symbol, wait this long before re-entering IT (0 = off; anti-revenge-trading)
     trail_after_target: bool = False  # hybrid exit: at the fixed target, convert to an ATR trailing stop (floor +1R) instead of cashing out -- OFF until session 34's exit fix proves itself on real trades
     vol_spike_entry_filter: float = 0.0  # 0 = off; e.g. 3.0: skip NEW entries when the last completed bar's range exceeds this multiple of ATR14 (don't chase a flash move into wide spreads)
+    adr_exhaustion_pct: float = 0.0  # 0 = off; e.g. 1.0: skip NEW entries once today's range has consumed this fraction of the 14-day average daily range (late entries into a spent day have poor odds)
+    max_live_spread_multiple: float = 0.0  # 0 = off; e.g. 3.0: skip entries when the broker's LIVE bid/ask spread is this many times the symbol's normal spread (measured, not guessed)
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
 
@@ -156,6 +158,13 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # documented weekend-crypto 2-3x volatility spikes and flash
         # moves are the widest-spread moments to be buying into.
         vol_spike_entry_filter=3.0,
+        # Session 41: don't buy late into a day that has already moved its
+        # whole average range (90-100%% ADR consumed = continuation odds
+        # drop, practitioner-documented), and never enter into a live
+        # spread 3x its normal width -- measured from the broker's actual
+        # bid/ask at entry time, not inferred from the clock.
+        adr_exhaustion_pct=1.0,
+        max_live_spread_multiple=3.0,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -1220,6 +1229,34 @@ class TradingDesk:
                 except Exception:
                     pass
 
+        if cfg.adr_exhaustion_pct > 0 and not manual:
+            # Session 41: 90-100% of the average daily range already
+            # traveled means continuation odds have measurably dropped
+            # (practitioner-documented ADR discipline) -- a long taken
+            # here is buying the top of a spent day.
+            try:
+                cols = {str(c).lower(): c for c in df.columns}
+                if ("high" in cols and "low" in cols
+                        and hasattr(df.index, "normalize")):
+                    by_day = df.groupby(df.index.normalize())
+                    day_ranges = (
+                        by_day[cols["high"]].max() - by_day[cols["low"]].min()
+                    )
+                    if len(day_ranges) >= 4:
+                        today_range = float(day_ranges.iloc[-1])
+                        adr = float(day_ranges.iloc[:-1].tail(14).mean())
+                        if adr > 0:
+                            used = today_range / adr
+                            if used >= cfg.adr_exhaustion_pct:
+                                return DeskAction(
+                                    "skip", symbol,
+                                    f"ADR exhaustion: today already ranged "
+                                    f"{used:.0%} of the average daily range -- "
+                                    "late entries into a spent day have poor odds",
+                                )
+            except Exception:
+                pass
+
         setup = f"{setup_base}{setup_suffix}"
 
         # Lessons learned: refuse setups with proven negative expectancy.
@@ -1250,6 +1287,26 @@ class TradingDesk:
             price = self.broker.price(symbol)
         except Exception as exc:
             return DeskAction("skip", symbol, f"no price data: {exc}")
+
+        if cfg.max_live_spread_multiple > 0 and not manual:
+            # Session 41: measure the spread actually being quoted right
+            # now instead of only inferring from the clock. A spread 3x its
+            # normal width means the fill starts that much deeper in the
+            # hole -- the exact mechanism behind news/rollover stop-outs.
+            try:
+                from bots.spreads import spread_pct as _normal_spread
+
+                live = self.broker.live_spread_pct(symbol)
+                normal = _normal_spread(symbol)
+                if live and normal and live > cfg.max_live_spread_multiple * normal:
+                    return DeskAction(
+                        "skip", symbol,
+                        f"spread veto: live spread {live:.3%} is "
+                        f"{live / normal:.1f}x the normal {normal:.3%} -- "
+                        "entries here start deep in the hole",
+                    )
+            except Exception:
+                pass
 
         # Position sizing, scalper style: risk at most risk_per_trade_pct of
         # equity if the stop-loss gets hit, and never more than

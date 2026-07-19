@@ -2321,3 +2321,85 @@ def test_vol_spike_filter_blocks_entry_after_flash_bar(tmp_path, journal):
     df.loc[df.index[-1], "low"] = closes[-1] * 0.999
     action = desk._consider_entry("BTC-USD", "test", equity=10_000)
     assert "flash-move guard" not in (action.reason or "")
+
+
+def test_adr_exhaustion_blocks_late_entries(tmp_path, journal):
+    rng = np.random.default_rng(21)
+    frames = []
+    # five prior days each ranging ~1.0 around a 100 base
+    for d in range(5):
+        idx = pd.date_range(f"2026-07-{6 + d} 00:00", periods=96, freq="15min")
+        base = 100 + rng.normal(0, 0.1)
+        closes = base + rng.normal(0, 0.1, 96)
+        frames.append(pd.DataFrame({
+            "high": closes + 0.5, "low": closes - 0.5, "close": closes,
+        }, index=idx))
+    # today: already ranged ~1.5 (150% of ADR)
+    idx = pd.date_range("2026-07-11 00:00", periods=48, freq="15min")
+    closes = 100 + rng.normal(0, 0.1, 48)
+    today = pd.DataFrame({
+        "high": closes + 0.75, "low": closes - 0.75, "close": closes,
+    }, index=idx)
+    df = pd.concat(frames + [today])
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": float(closes[-1])},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          adr_exhaustion_pct=1.0),
+    )
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert action.action == "skip" and "ADR exhaustion" in action.reason
+
+    # a fresh day with most of its range left is allowed through
+    quiet = pd.DataFrame({
+        "high": closes[:48] + 0.1, "low": closes[:48] - 0.1, "close": closes[:48],
+    }, index=idx)
+    df2 = pd.concat(frames + [quiet])
+    desk2 = make_desk(
+        tmp_path, broker, journal, df2,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          adr_exhaustion_pct=1.0),
+    )
+    action = desk2._consider_entry("EURUSD", "test", equity=10_000)
+    assert "ADR exhaustion" not in (action.reason or "")
+
+
+def test_live_spread_veto_blocks_blown_out_spreads(price_df, tmp_path, journal):
+    class WideSpreadBroker(PaperBroker):
+        def live_spread_pct(self, symbol):
+            return 0.0010  # 10x EURUSD's normal 0.0001
+
+    broker = WideSpreadBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": 1.1},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_live_spread_multiple=3.0),
+    )
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert action.action == "skip" and "spread veto" in action.reason
+
+    # a venue that can't report a live spread is not penalized
+    normal = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "b.json"),
+        price_overrides={"EURUSD": 1.1},
+    )
+    desk = make_desk(
+        tmp_path, normal, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_live_spread_multiple=3.0),
+    )
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert "spread veto" not in (action.reason or "")
+
+
+def test_tradelocker_live_spread_from_bid_ask(tl_broker):
+    tl_broker.api.get_latest_bid_price = lambda iid: 1.0999
+    live = tl_broker.live_spread_pct("EURUSD")  # ask fixed at 1.1000
+    assert live == pytest.approx(0.0001 / 1.09995, rel=1e-3)
