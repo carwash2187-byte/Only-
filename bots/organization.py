@@ -98,7 +98,12 @@ def funded_account_config(**overrides) -> "DeskConfig":
         reduce_size_after_loss=True,
         min_adx=20.0,
         day_trading=True,
-        timeframe="5m",
+        # Law, not a suggestion (user directive): 1-minute candles, matching
+        # MambaFX's own documented timeframe -- previously this only held
+        # because every launch script happened to pass --timeframe 1m;
+        # now it's the actual default so nothing can launch a funded
+        # account on anything else by accident.
+        timeframe="1m",
         stop_loss_pct=0.015,
         take_profit_pct=0.03,
         max_trades_per_day=10,

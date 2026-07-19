@@ -1710,3 +1710,29 @@ Tests: `test_adr_exhaustion_blocks_late_entries`,
 `test_tradelocker_live_spread_from_bid_ask`.
 
 107 tests passing.
+
+## Session 42 (1-minute candles made the actual law, not a lucky CLI flag)
+
+User directive: "make that a law it's not 5, mamba does 1." Investigated
+before changing anything -- the desk WAS already trading 1-minute
+candles, but only because every launch command (paper bot, both funded
+launchers) happened to pass `--timeframe 1m`, which overrode
+`funded_account_config()`'s internal default of `timeframe="5m"`. That's
+fragile: a script that ever omitted the flag would have silently traded
+5m instead, with no error.
+
+Fixed at the source instead of patching call sites: `funded_account_config()`
+now defaults to `timeframe="1m"` directly (matching MambaFX's own
+documented 1-minute scalping timeframe from the session 36 video study).
+Also fixed `cmd_autopilot`'s fallback logic in bots/cli.py, which
+separately computed `"5m"` as the funded fallback when `--timeframe`
+isn't passed -- now funded accounts fall back to `"1m"` specifically,
+non-funded day-trading keeps its own `"5m"` default. HTF_MAP already had
+`"1m": "15m"` so higher-timeframe confirmation is unaffected.
+
+Tests: `test_funded_config_defaults_to_one_minute_candles` (config-level
+default), `test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag`
+(proves the CLI path can't silently fall back to 5m even with the flag
+omitted entirely).
+
+109 tests passing.

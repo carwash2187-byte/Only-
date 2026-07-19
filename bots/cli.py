@@ -175,7 +175,13 @@ def cmd_autopilot(args) -> None:
             f"Broker '{args.broker}' trades REAL money. "
             "Re-run with --live-i-understand-the-risk to proceed."
         )
-    timeframe = args.timeframe or ("5m" if (args.day_trading or args.funded) else "1d")
+    # Law: funded accounts trade 1-minute candles, matching MambaFX's own
+    # documented timeframe -- not just when --timeframe 1m happens to be
+    # passed, but as the actual fallback if it's ever omitted.
+    if args.funded:
+        timeframe = args.timeframe or "1m"
+    else:
+        timeframe = args.timeframe or ("5m" if args.day_trading else "1d")
     if args.funded:
         from bots.organization import funded_account_config
 

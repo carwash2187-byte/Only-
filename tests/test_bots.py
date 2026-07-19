@@ -2403,3 +2403,48 @@ def test_tradelocker_live_spread_from_bid_ask(tl_broker):
     tl_broker.api.get_latest_bid_price = lambda iid: 1.0999
     live = tl_broker.live_spread_pct("EURUSD")  # ask fixed at 1.1000
     assert live == pytest.approx(0.0001 / 1.09995, rel=1e-3)
+
+
+def test_funded_config_defaults_to_one_minute_candles():
+    # Law, not a suggestion: funded accounts trade 1-minute candles,
+    # matching MambaFX's own documented timeframe. Must hold even if a
+    # launch script forgets to pass --timeframe explicitly.
+    from bots.organization import funded_account_config
+
+    assert funded_account_config().timeframe == "1m"
+
+
+def test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag():
+    from bots.cli import cmd_autopilot
+
+    class FakeArgs:
+        broker = "paper"
+        live_i_understand_the_risk = False
+        timeframe = None  # simulates --timeframe never being passed
+        funded = True
+        day_trading = False
+        llm_committee = False
+        symbols = "EURUSD"
+        stock_symbols = ""
+        market = "forex"
+        weekend_symbols = "none"
+        interval = 1
+
+    captured = {}
+
+    def fake_run_autopilot(*, desk, **kwargs):
+        captured["timeframe"] = desk.config.timeframe
+        raise SystemExit(0)  # stop before it actually loops
+
+    import bots.autopilot as autopilot_mod
+
+    orig = autopilot_mod.run_autopilot
+    autopilot_mod.run_autopilot = fake_run_autopilot
+    try:
+        try:
+            cmd_autopilot(FakeArgs())
+        except SystemExit:
+            pass
+    finally:
+        autopilot_mod.run_autopilot = orig
+    assert captured["timeframe"] == "1m"
