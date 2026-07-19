@@ -1483,7 +1483,9 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "user watchlist",
-      "tags": [],
+      "tags": [
+        "breakeven-armed"
+      ],
       "stop_pct": 0.003
     }
   ]
