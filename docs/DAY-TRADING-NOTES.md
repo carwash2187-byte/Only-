@@ -1767,4 +1767,4 @@ Tests: `test_zone_touch_count_collapses_consecutive_bars_into_one_touch`,
 `test_zone_filter_blocks_entry_at_a_fresh_untested_level`,
 `test_zone_filter_allows_entry_at_a_well_tested_level`.
 
-111 tests passing.
+113 tests passing.
