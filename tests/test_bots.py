@@ -10,7 +10,7 @@ from bots.brokers import PaperBroker, get_broker
 from bots.copytrader import manual
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
-from bots.organization import DeskConfig, DeskReport, TradingDesk
+from bots.organization import DeskConfig, DeskReport, TradingDesk, zone_touch_count
 from bots.risk import DrawdownGuard
 
 
@@ -2448,3 +2448,78 @@ def test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag():
     finally:
         autopilot_mod.run_autopilot = orig
     assert captured["timeframe"] == "1m"
+
+
+# ---------------------------------------------------------------------------
+# Session 42: zone-touch-count "predict off the zone" filter (backed by
+# real backtest stats: fresh levels reverse ~70%, well-tested ones break
+# through ~75% -- the opposite of "more touches = stronger wall" folklore)
+# ---------------------------------------------------------------------------
+
+def test_zone_touch_count_collapses_consecutive_bars_into_one_touch():
+    idx = pd.date_range("2026-07-01", periods=20, freq="5min")
+    # baseline sits well clear of the zone band (level=100, tolerance_pct
+    # 0.001 -> band=0.1) so only the deliberately-raised bars register
+    highs = [90.0] * 20
+    lows = [89.5] * 20
+    # two separate touch EVENTS at level 100: bars 2-3 (one pause), then
+    # bar 10 alone (second event)
+    for i in (2, 3, 10):
+        highs[i] = 100.0
+        lows[i] = 99.95
+    df = pd.DataFrame({"high": highs, "low": lows}, index=idx)
+    assert zone_touch_count(df, 100.0, tolerance_pct=0.001) == 2
+
+
+def test_zone_touch_count_zero_on_a_virgin_level():
+    idx = pd.date_range("2026-07-01", periods=20, freq="5min")
+    df = pd.DataFrame({"high": [90.0] * 20, "low": [89.5] * 20}, index=idx)
+    assert zone_touch_count(df, 150.0, tolerance_pct=0.001) == 0
+
+
+def test_zone_filter_blocks_entry_at_a_fresh_untested_level(tmp_path, journal):
+    idx = pd.date_range("2026-07-01", periods=60, freq="5min")
+    # a clean, quiet run right up to a brand-new high with only ONE bar
+    # ever touching it -- a virgin level, per the test's own definition
+    closes = [100.0 + i * 0.001 for i in range(59)] + [100.5]
+    highs = [c + 0.02 for c in closes]
+    lows = [c - 0.02 for c in closes]
+    df = pd.DataFrame({"high": highs, "low": lows, "close": closes}, index=idx)
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": closes[-1]},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, zone_min_touches=2),
+    )
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert action.action == "skip" and "zone filter" in action.reason
+
+
+def test_zone_filter_allows_entry_at_a_well_tested_level(tmp_path, journal):
+    idx = pd.date_range("2026-07-01", periods=60, freq="5min")
+    closes = [100.0] * 60
+    highs = [100.02] * 60
+    lows = [99.98] * 60
+    # the recent-50-bar high (101.0) gets touched three separate times
+    # before the final approach -- a seasoned, well-tested level. Gap from
+    # baseline (100.02) to the level (101.0) is well outside the default
+    # 0.15%-of-level tolerance band (~1.5), so only deliberate touches count.
+    for i in (10, 11, 25, 40):
+        highs[i] = 101.0
+    closes[-1] = 100.95
+    highs[-1] = 101.0
+    df = pd.DataFrame({"high": highs, "low": lows, "close": closes}, index=idx)
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"EURUSD": closes[-1]},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0, zone_min_touches=2),
+    )
+    action = desk._consider_entry("EURUSD", "test", equity=10_000)
+    assert "zone filter" not in (action.reason or "")

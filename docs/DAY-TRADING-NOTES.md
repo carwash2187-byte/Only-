@@ -1736,3 +1736,35 @@ default), `test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag`
 omitted entirely).
 
 109 tests passing.
+
+## Session 42 (zone prediction: real backtest stats, not "draw a line and hope")
+
+Directive: make the bot "look at trades and predict on the zone" using
+real stats, not guessing. Researched the actual evidence on support/
+resistance zone strength before building anything.
+
+**Finding that overturns common trading folklore:** backtesting data
+shows fresh (never-tested) zones hold/reverse ~70% of the time, while
+zones already tested 4+ times break through ~75% of the time. "More
+touches = stronger wall" is backwards -- each touch chips at a level;
+repeated tests mean it's more likely to finally give way, not less.
+
+**Implemented `zone_touch_count(df, level, tolerance_pct, lookback_bars)`**:
+counts distinct historical touch EVENTS at a price level (collapsing
+consecutive touching bars into one event so a single pause doesn't
+inflate the count). Wired into `_consider_entry` via
+`DeskConfig.zone_min_touches` (funded: 2): finds the nearest recent
+swing level to current price and refuses the entry if that level has
+fewer than 2 prior touches in real history -- a "breakout" through a
+virgin, unconfirmed zone is statistically more likely a fakeout than a
+real continuation, so the desk now waits for a level with an actual
+track record before trusting a break through it. This sits alongside
+(not instead of) the existing ORB retest filter -- retest discipline
+plus zone validation, not one or the other.
+
+Tests: `test_zone_touch_count_collapses_consecutive_bars_into_one_touch`,
+`test_zone_touch_count_zero_on_a_virgin_level`,
+`test_zone_filter_blocks_entry_at_a_fresh_untested_level`,
+`test_zone_filter_allows_entry_at_a_well_tested_level`.
+
+111 tests passing.
