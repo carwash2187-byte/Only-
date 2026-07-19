@@ -13,3 +13,4 @@
 - 2026-07-18T07:10 **BTC-USD** long -0.21 (-0.03%) setup=`copytrade:trend-up|rsi-neutral|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
 - 2026-07-18T21:55 **SOL-USD** long -0.65 (-0.09%) setup=`copytrade:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
 - 2026-07-18T23:08 **BTC-USD** long -0.00 (-0.00%) setup=`copytrade:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
+- 2026-07-19T10:06 **SOL-USD** long -1.15 (-0.15%) setup=`copytrade:trend-up|rsi-oversold|vwap-above|pos-out` -- user watchlist | breakeven stop hit (was +1R, now -0.1%) -- risk-free exit

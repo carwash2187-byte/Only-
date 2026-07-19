@@ -1478,11 +1478,11 @@
       "entry_price": 76.038,
       "entry_time": "2026-07-19T07:08:58.483330+00:00",
       "setup": "copytrade:trend-up|rsi-oversold|vwap-above|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 75.92201908493043,
+      "exit_time": "2026-07-19T10:06:42.807233+00:00",
+      "pnl": -1.1462393836325677,
+      "pnl_pct": -0.15253020209575752,
+      "notes": "user watchlist | breakeven stop hit (was +1R, now -0.1%) -- risk-free exit",
       "tags": [
         "breakeven-armed"
       ],
