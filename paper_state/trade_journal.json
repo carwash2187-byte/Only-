@@ -1453,6 +1453,38 @@
         "breakeven-armed"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "6b0aacd39f69",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4023,
+      "entry_price": 1868.2636210327148,
+      "entry_time": "2026-07-19T07:05:39.303746+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "c01c6aef8507",
+      "symbol": "SOL-USD",
+      "side": "long",
+      "quantity": 9.883,
+      "entry_price": 76.038,
+      "entry_time": "2026-07-19T07:08:58.483330+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
