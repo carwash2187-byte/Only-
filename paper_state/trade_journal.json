@@ -1519,6 +1519,22 @@
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
       "tags": [],
       "stop_pct": null
+    },
+    {
+      "trade_id": "5d52775f17cd",
+      "symbol": "CL=F",
+      "side": "long",
+      "quantity": 8.8234,
+      "entry_price": 85.14276675300599,
+      "entry_time": "2026-07-22T06:08:09.923925+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
