@@ -2850,3 +2850,67 @@ def test_run_challenge_monte_carlo_reports_consistent_rates():
     total = r["pass_rate"] + r["fail_rate"] + r["undecided_rate"]
     assert abs(total - 1.0) < 1e-9
     assert r["undecided_rate"] == 1.0  # untrained agent trades nothing
+
+
+# --- real-data block-bootstrap validation (session 46 continued) -----------
+
+def _fake_real_pool(rng, n=2000, start=100.0):
+    """A small synthetic stand-in for a real OHLCV pool, so these tests
+    don't depend on network access to Yahoo Finance."""
+    from bots.learning.scenarios import _ohlc_from_close
+    rets = rng.normal(0.0001, 0.001, n)
+    close = start * np.cumprod(1.0 + rets)
+    return _ohlc_from_close(close, rng, n)
+
+
+def test_block_bootstrap_tape_is_continuous_and_right_length():
+    from bots.learning.challenge_sim_real import _block_bootstrap_tape
+    import numpy as np
+
+    rng = np.random.default_rng(1)
+    pools = {"FAKE1": _fake_real_pool(np.random.default_rng(2)),
+             "FAKE2": _fake_real_pool(np.random.default_rng(3), start=50.0)}
+    df = _block_bootstrap_tape(pools, rng, bars=1500, block_size=100)
+    assert len(df) == 1500
+    assert (df["close"] > 0).all()
+    # no seam should produce an absurd jump (continuity-adjusted)
+    rel_jumps = (df["close"].diff().abs() / df["close"].shift()).dropna()
+    assert rel_jumps.max() < 0.2
+
+
+def test_block_bootstrap_deterministic_for_same_seed():
+    from bots.learning.challenge_sim_real import _block_bootstrap_tape
+    import numpy as np
+
+    pools = {"FAKE1": _fake_real_pool(np.random.default_rng(2))}
+    df1 = _block_bootstrap_tape(pools, np.random.default_rng(5), bars=800, block_size=80)
+    df2 = _block_bootstrap_tape(pools, np.random.default_rng(5), bars=800, block_size=80)
+    assert np.allclose(df1["close"].values, df2["close"].values)
+
+
+def test_run_real_data_monte_carlo_uses_supplied_pools_not_network():
+    from bots.learning.agent import QTraderAgent
+    from bots.learning.challenge_sim_real import run_real_data_monte_carlo
+    import numpy as np
+
+    pools = {"FAKE1": _fake_real_pool(np.random.default_rng(2)),
+             "FAKE2": _fake_real_pool(np.random.default_rng(3), start=50.0)}
+    agent = QTraderAgent(model_path="/dev/null")
+    r = run_real_data_monte_carlo(
+        n_attempts=6, bars_per_attempt=600, block_size=80,
+        agent=agent, pools=pools, seed=1,
+    )
+    assert r["attempts"] == 6
+    assert set(r["symbols_used"]) == {"FAKE1", "FAKE2"}
+    total = r["pass_rate"] + r["fail_rate"] + r["undecided_rate"]
+    assert abs(total - 1.0) < 1e-9
+
+
+def test_run_real_data_monte_carlo_raises_without_any_pool():
+    from bots.learning.challenge_sim_real import run_real_data_monte_carlo
+
+    try:
+        run_real_data_monte_carlo(n_attempts=1, pools={})
+        assert False, "expected RuntimeError for empty pools"
+    except RuntimeError:
+        pass
