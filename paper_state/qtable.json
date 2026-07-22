@@ -987,7 +987,7 @@
     },
     "trend-up|rsi-neutral|vwap-below|pos-out": {
       "hold": 0.0008219867214739453,
-      "buy": 0.0021736848825354097,
+      "buy": 0.0018597235930234927,
       "sell": 0.0010499494732399794
     },
     "trend-up|rsi-oversold|vwap-below|pos-out": {
@@ -997,7 +997,7 @@
     },
     "trend-down|rsi-neutral|vwap-above|pos-out": {
       "hold": 0.0015387682317514687,
-      "buy": 0.0009379012543223552,
+      "buy": 0.0008870684395344189,
       "sell": 0.001131031592391197
     },
     "trend-up|rsi-neutral|vwap-above|pos-out": {
@@ -1032,7 +1032,7 @@
     },
     "trend-down|rsi-neutral|vwap-below|pos-out": {
       "hold": 0.0013362120734535083,
-      "buy": 0.0031188311480052503,
+      "buy": 0.002640861677788176,
       "sell": 0.0008057653855986713
     },
     "trend-down|rsi-overbought|vwap-below|pos-out": {
