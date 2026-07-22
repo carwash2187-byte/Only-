@@ -1537,6 +1537,22 @@
         "breakeven-armed"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "265680d62602",
+      "symbol": "YM=F",
+      "side": "long",
+      "quantity": 0.0144,
+      "entry_price": 52405.04807999999,
+      "entry_time": "2026-07-22T10:10:57.389025+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
