@@ -1487,6 +1487,38 @@
         "breakeven-armed"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "fdc054625492",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 0.4025,
+      "entry_price": 1867.2432136230468,
+      "entry_time": "2026-07-19T10:32:41.503438+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
+      "exit_price": 1866.2763559570315,
+      "exit_time": "2026-07-19T10:37:03.888831+00:00",
+      "pnl": -0.38916021057118144,
+      "pnl_pct": -0.051779953407316004,
+      "notes": "user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "fbbd31a044b9",
+      "symbol": "TSM",
+      "side": "long",
+      "quantity": 1.769,
+      "entry_price": 424.62060060119626,
+      "entry_time": "2026-07-22T05:57:27.245783+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
+      "tags": [],
+      "stop_pct": null
     }
   ]
 }
