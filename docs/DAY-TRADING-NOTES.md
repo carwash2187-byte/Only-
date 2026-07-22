@@ -2336,3 +2336,37 @@ pool (more symbols, longer real history) -- flagged as the honest next
 step, not done.
 
 139 tests passing (no code changes this addendum, research/measurement only).
+
+### Session 46 addendum 8: a third seed produced a real failure -- the 0% fail rate does not hold
+
+A third independent-seed ~30-day real-data run (same settings as
+addendums 4 and 7): **42.5% pass, 5.0% fail (2/40 attempts), 52.5%
+undecided, avg gain +6.70%.**
+
+This is the important part: **2 of these 40 real-data-based simulated
+attempts hit the -6% max-drawdown floor.** Every prior real-data run this
+session (100+40+40 attempts across addendums 2, 4, and 7) had shown 0%
+fails, which was starting to read like a real safety guarantee. It wasn't
+one -- it was a run of good luck across the seeds tested so far. This
+seed shows the honest truth: the strategy CAN fail the challenge on real
+market data, not often, but for real.
+
+**Combined across all three ~30-day seeds (120 total real-data attempts):**
+- Pass: 46/120 = **38.3%**
+- Fail: 2/120 = **1.7%**
+- Undecided: 72/120 = 60.0%
+
+This is the most trustworthy number produced this session -- three
+independent seeds, 120 total real-data-based attempts, current default
+settings (1.5% risk/trade, Clarity's actual 10%/4%/6% challenge rules).
+**Honest final estimate: ~38% pass, ~2% fail, ~60% would need longer than
+30 real trading days to resolve either way**, at the current settings.
+
+Explicitly correcting the record: earlier addendums in this session
+described "0% fail rate" as if it were an established safety property.
+It was not -- it was three-then-two data points that happened to be zero.
+This is exactly why running more than one seed mattered, and why a single
+Monte Carlo run (synthetic OR real) should never be reported as more
+certain than the sample size actually supports.
+
+139 tests passing (no code changes this addendum, research/measurement only).
