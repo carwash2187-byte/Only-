@@ -2227,3 +2227,37 @@ entry filter active (not just the core agent) on real data -- both flagged,
 neither started.
 
 136 tests passing (no code changes this addendum, research/measurement only).
+
+### Session 46 addendum 5: correlation cap silently covered nothing for 3 of 4 US indices and all 3 commodities
+
+One more real gap-hunting pass before stepping away. `correlation_group()`
+does exact string matching against `CORRELATION_GROUPS`, and the desk's
+OWN watchlist symbol names -- `US30`, `NAS100`, `US500`, `US2000`, `GOLD`,
+`SILVER`, `OIL`, used literally in every real launch command in this repo
+-- were not members of ANY group. The groups only listed Yahoo/futures
+aliases (`XAUUSD`, `ES=F`, etc.), not the desk's actual symbols. Net
+effect: `max_per_correlation_group` silently did nothing for these --
+the desk could hold all 4 US index CFDs open simultaneously (US30 + NAS100
++ US500 + US2000), which are extremely correlated (basically one "US
+equities risk-on/off" factor), with zero cap -- effectively one
+4x-concentrated bet the correlation guard exists specifically to prevent.
+Same story for GOLD+SILVER+OIL.
+
+This is exactly the failure mode the code's own comments already warned
+about once before (session 18: "watchlist grew... so this needed to grow
+with it or the cap would silently stop covering [most pairs]") -- it
+happened again for a different set of symbols added later without a
+matching CORRELATION_GROUPS update. Worth remembering as a standing risk:
+any time the watchlist grows, check this dict.
+
+Fix: added `US30`/`US500`/`US2000` to `us-broad` (matching Dow/S&P/
+Russell), `NAS100` to `us-tech` (matching NQ=F's existing placement --
+Nasdaq is tech-heavy, same reasoning as bundling it with big-tech names
+rather than broad market), `GOLD`/`SILVER` to `gold`, `OIL` to `oil`.
+
+Tests: `test_correlation_group_covers_the_desks_own_index_and_metal_names`,
+`test_correlation_guard_caps_us_index_cfd_exposure` (reproduces the exact
+scenario the gap allowed: 3 simultaneous US-index positions with a cap of
+2, confirms the third is now correctly skipped).
+
+138 tests passing.

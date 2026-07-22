@@ -844,6 +844,47 @@ def test_correlation_guard_caps_cluster_exposure(price_df, tmp_path, journal):
     assert len(buys) == 2 and len(skipped) == 1, report.describe()
 
 
+def test_correlation_group_covers_the_desks_own_index_and_metal_names():
+    """Session 46: correlation_group() does exact string matching, and the
+    desk's OWN watchlist names (US30/NAS100/US500/US2000, GOLD/SILVER/OIL --
+    used in every real launch command) were missing from CORRELATION_GROUPS
+    entirely, silently disabling the correlation cap for 3 of 4 US indices
+    and all 3 commodities on the actual funded/challenge watchlist."""
+    from bots.organization import correlation_group
+
+    assert correlation_group("US30") == "us-broad"
+    assert correlation_group("US500") == "us-broad"
+    assert correlation_group("US2000") == "us-broad"
+    assert correlation_group("NAS100") == "us-tech"
+    assert correlation_group("GOLD") == "gold"
+    assert correlation_group("SILVER") == "gold"
+    assert correlation_group("OIL") == "oil"
+    # and GOLD/SILVER really do share a cluster with each other (not just
+    # both independently mapping to "gold" by coincidence)
+    assert correlation_group("GOLD") == correlation_group("SILVER")
+
+
+def test_correlation_guard_caps_us_index_cfd_exposure(price_df, tmp_path, journal):
+    """The exact real-world scenario the gap allowed: 4 simultaneous US
+    index CFD positions (effectively one 4x-concentrated bet on US equities)
+    going completely uncapped because the desk's own symbol names weren't
+    in any correlation group."""
+    broker = PaperBroker(
+        starting_cash=100_000,
+        state_path=str(tmp_path / "acct.json"),
+        price_overrides={"US30": 100.0, "NAS100": 100.0, "US500": 100.0, "US2000": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          max_positions=99, max_per_correlation_group=2),
+    )
+    report = desk.run_once(symbols=["US30", "US500", "US2000"])  # us-broad cluster
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    skipped = [a for a in report.actions if "correlation guard" in a.reason]
+    assert len(buys) == 2 and len(skipped) == 1, report.describe()
+
+
 def test_forex_session_score_overlap_is_highest():
     from datetime import datetime
     from zoneinfo import ZoneInfo

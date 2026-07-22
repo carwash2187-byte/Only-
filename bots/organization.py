@@ -238,13 +238,28 @@ def clarity_one_step_challenge_config(funded: bool = False, **overrides) -> "Des
 # bet at N-times size ("hidden leverage"), because these names move together
 # intraday. The desk caps entries per cluster.
 CORRELATION_GROUPS = {
+    # NAS100 grouped with tech (not "us-broad") to match NQ=F's existing
+    # placement -- Nasdaq is heavily tech-weighted, same reasoning as
+    # treating it as an extension of the big-tech cluster rather than a
+    # separate broad-market bet.
     "us-tech": {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "GOOG", "META",
-                "TSLA", "AVGO", "AMD", "QQQ", "NQ=F"},
-    "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F", "RTY=F"},
+                "TSLA", "AVGO", "AMD", "QQQ", "NQ=F", "NAS100"},
+    # US30/US500/US2000 are this desk's OWN watchlist names (used in every
+    # launch command) for Dow/S&P/Russell -- found missing here (session 46):
+    # correlation_group() does exact string matching, so without these the
+    # cap silently did nothing for 3 of the 4 US index CFDs this desk
+    # actually trades, letting 4 simultaneous index positions (effectively
+    # one 4x-concentrated "US market direction" bet) go completely uncapped.
+    "us-broad": {"SPY", "DIA", "IWM", "ES=F", "YM=F", "RTY=F",
+                 "US30", "US500", "US2000"},
     # silver rides gold's macro drivers (~0.8 daily correlation) -- two
-    # metals positions are one doubled metals bet, so they share a cluster
-    "gold": {"GC=F", "GLD", "IAU", "XAUUSD", "SI=F", "SLV", "XAGUSD"},
-    "oil": {"CL=F", "USO", "XLE"},
+    # metals positions are one doubled metals bet, so they share a cluster.
+    # GOLD/SILVER are this desk's own watchlist names (same session-46 gap
+    # as the indices above -- XAUUSD/XAGUSD are TradeLocker's broker-side
+    # aliases, not what the desk's own symbol list actually uses).
+    "gold": {"GC=F", "GLD", "IAU", "XAUUSD", "SI=F", "SLV", "XAGUSD",
+             "GOLD", "SILVER"},
+    "oil": {"CL=F", "USO", "XLE", "OIL"},
     # Any pair with USD as one leg moves together on a broad USD swing,
     # even with different signs -- that's still one concentrated bet on
     # "USD direction," the exact hidden-leverage pattern this cap exists
