@@ -19,3 +19,4 @@
 - 2026-07-22T11:52 **NQ=F** long -2.29 (-0.30%) setup=`copytrade:trend-up|rsi-neutral|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.3%)
 - 2026-07-22T11:53 **SI=F** long -2.81 (-0.37%) setup=`copytrade:trend-down|rsi-neutral|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.4%)
 - 2026-07-22T12:12 **YM=F** long -1.24 (-0.16%) setup=`copytrade:trend-down|rsi-neutral|vwap-above|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.2%)
+- 2026-07-22T12:49 **RTY=F** long -0.48 (-0.06%) setup=`copytrade:trend-down|rsi-neutral|vwap-above|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
