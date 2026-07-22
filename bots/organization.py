@@ -28,7 +28,7 @@ import pandas as pd
 from bots.brokers import Broker, PaperBroker
 from bots.journal import TradeJournal
 from bots.learning import QTraderAgent
-from bots.risk import DrawdownGuard, MaxDrawdownGuard
+from bots.risk import ChallengeTargetGuard, DrawdownGuard, MaxDrawdownGuard
 
 
 @dataclass
@@ -76,6 +76,7 @@ class DeskConfig:
     max_live_spread_multiple: float = 0.0  # 0 = off; e.g. 3.0: skip entries when the broker's LIVE bid/ask spread is this many times the symbol's normal spread (measured, not guessed)
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
+    challenge_target_pct: float = 0.0  # 0 = off; e.g. 0.10: once cumulative gain from the challenge's starting equity hits this, lock in the pass -- no new entries, ever (until the state file is cleared for a new challenge)
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -187,6 +188,38 @@ def funded_account_config(**overrides) -> "DeskConfig":
     )
     base.update(overrides)
     return DeskConfig(**base)
+
+
+def one_step_challenge_config(funded: bool = False, **overrides) -> "DeskConfig":
+    """Preset for the specific $5K One-Step TradeLocker challenge screenshotted
+    to the desk (session 46): 10% target / 4% daily loss / 6% max loss during
+    the challenge phase, 4% daily / 10% max once funded, no weekend trading,
+    1:30 leverage. Built on top of funded_account_config() so all the other
+    guards (ATR stops, news blackout, session-aware forex, etc.) still apply.
+
+    `funded=False` (default) is the evaluation phase: challenge_target_pct
+    locks in the pass at +10% and stops taking new risk. `funded=True` is
+    the live account after passing: no target lock (nothing to "pass"
+    anymore), but the daily/max drawdown numbers switch to the looser
+    live-account limits from the same screenshot.
+
+    NOTE: verify these numbers against the actual firm's current rules page
+    before connecting real money -- prop firms change terms, and this was
+    read off a single screenshot, not a live API.
+    """
+    base = dict(
+        max_daily_loss_pct=0.04,
+        max_total_drawdown_pct=0.10 if funded else 0.06,
+        challenge_target_pct=0.0 if funded else 0.10,
+        # this firm never allows weekend trading (unlike the generic funded
+        # preset's crypto weekend-fallback) -- don't pass --weekend-symbols
+        # when launching autopilot against this account.
+        friday_flatten=True,
+    )
+    cfg = funded_account_config(**base)
+    for key, value in overrides.items():
+        setattr(cfg, key, value)
+    return cfg
 
 
 # Correlated clusters: N positions inside one cluster are effectively ONE
@@ -619,6 +652,7 @@ class TradingDesk:
         manual_signals_path: Optional[str] = None,
         max_drawdown_guard: Optional[MaxDrawdownGuard] = None,
         htf_history_fn: Optional[Callable[[str, str], "object"]] = None,
+        challenge_target_guard: Optional[ChallengeTargetGuard] = None,
     ):
         self.broker = broker or PaperBroker()
         self.journal = journal or TradeJournal()
@@ -651,6 +685,14 @@ class TradingDesk:
                 state_path=data_path(f"max_drawdown_state_{self.broker.name}.json"),
             )
             if self.config.max_total_drawdown_pct > 0
+            else None
+        )
+        self.challenge_target_guard = challenge_target_guard or (
+            ChallengeTargetGuard(
+                target_pct=self.config.challenge_target_pct,
+                state_path=data_path(f"challenge_target_state_{self.broker.name}.json"),
+            )
+            if self.config.challenge_target_pct > 0
             else None
         )
         from bots.copytrader import manual as manual_mod
@@ -766,6 +808,16 @@ class TradingDesk:
             max_dd_halted, max_dd_msg = self.max_drawdown_guard.check(self.broker.equity())
             report.notes.append(f"[risk] {max_dd_msg}")
             if max_dd_halted:
+                return report
+
+        # 2a-ter. Challenge target lock: once the evaluation's cumulative
+        #    profit target is reached, stop taking new risk entirely -- a
+        #    banked pass is worth more than the marginal upside of one more
+        #    trade. Existing positions above were already managed/exited.
+        if self.challenge_target_guard is not None:
+            target_locked, target_msg = self.challenge_target_guard.check(self.broker.equity())
+            report.notes.append(f"[risk] {target_msg}")
+            if target_locked:
                 return report
 
         # 2a-bis. Daily profit target ("quit while ahead"): once today's gain

@@ -171,3 +171,53 @@ class MaxDrawdownGuard:
         if used < 0.75:
             return 0.5
         return 0.25
+
+
+class ChallengeTargetGuard:
+    """Lock in a prop-firm evaluation pass instead of trading past it.
+
+    A challenge has a one-way finish line: hit the cumulative profit target
+    and you pass, but nothing stops the desk from giving it back on the next
+    bad trade if it just keeps going. This tracks the challenge's starting
+    equity permanently (unlike DrawdownGuard's daily reset), and once
+    cumulative gain reaches `target_pct`, halts ALL new entries for good --
+    existing positions still get managed/exited normally, but no new risk
+    is taken once the pass is banked. Once tripped, stays tripped until the
+    state file is cleared (matches MaxDrawdownGuard's permanent-halt model)."""
+
+    def __init__(self, target_pct: float = 0.0, state_path: Optional[str] = None):
+        self.target_pct = target_pct
+        self.state_path = state_path or data_path("challenge_target_state.json")
+
+    def _load(self) -> dict:
+        if not os.path.exists(self.state_path):
+            return {}
+        with open(self.state_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def _save(self, state: dict) -> None:
+        os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)
+        with open(self.state_path, "w", encoding="utf-8") as fh:
+            json.dump(state, fh, indent=2)
+
+    def check(self, equity: float) -> Tuple[bool, str]:
+        if self.target_pct <= 0:
+            return False, "challenge target lock: off"
+        state = self._load()
+        start = float(state.get("start_equity") or equity)
+        if "start_equity" not in state:
+            self._save({"start_equity": start, "target_hit": False})
+        if state.get("target_hit"):
+            return True, (
+                f"CHALLENGE TARGET LOCKED: +{self.target_pct:.0%} was reached from "
+                f"starting equity {start:.2f} -- no new entries, the pass is banked"
+            )
+        gain = (equity - start) / start if start > 0 else 0.0
+        hit = gain >= self.target_pct
+        if hit:
+            self._save({"start_equity": start, "target_hit": True})
+            return True, (
+                f"CHALLENGE TARGET HIT: {gain:+.1%} from start -- locking in the pass, "
+                "no new entries (clear the state file once funded/reset for a new challenge)"
+            )
+        return False, f"challenge progress: {gain:+.1%} (target {self.target_pct:.0%})"

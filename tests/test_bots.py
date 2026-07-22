@@ -2702,3 +2702,67 @@ def test_paper_news_trades_through_when_feed_unverifiable(tmp_path, journal, pri
     desk._news_guard = _BlindGuard()
     report = desk.run_once(symbols=["EURUSD"])
     assert not any("fail-closed" in n for n in report.notes), report.notes
+
+
+# --- challenge target lock: bank a prop-firm pass instead of trading past it (session 46) --
+
+def test_challenge_target_guard_locks_once_target_hit(tmp_path):
+    from bots.risk import ChallengeTargetGuard
+
+    guard = ChallengeTargetGuard(target_pct=0.10, state_path=str(tmp_path / "ct.json"))
+    locked, msg = guard.check(5_000.0)  # baseline set here
+    assert locked is False and "challenge progress" in msg
+    locked, msg = guard.check(5_400.0)  # +8%, not there yet
+    assert locked is False
+    locked, msg = guard.check(5_500.0)  # +10% exactly -> hit
+    assert locked is True and "TARGET HIT" in msg
+    # stays locked even if equity dips back down afterward
+    locked, msg = guard.check(5_100.0)
+    assert locked is True and "LOCKED" in msg
+
+
+def test_challenge_target_guard_off_when_target_zero(tmp_path):
+    from bots.risk import ChallengeTargetGuard
+
+    guard = ChallengeTargetGuard(target_pct=0.0, state_path=str(tmp_path / "ct.json"))
+    locked, _ = guard.check(1_000_000.0)  # absurd gain, but target=0 never fires
+    assert locked is False
+
+
+def test_desk_stops_new_entries_once_challenge_target_hit(tmp_path, journal, price_df):
+    from bots.risk import ChallengeTargetGuard
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "a.json"),
+        price_overrides={"EURUSD": 1.10},
+    )
+    guard = ChallengeTargetGuard(target_pct=0.10, state_path=str(tmp_path / "ct.json"))
+    guard.check(10_000.0)  # set baseline
+    guard.check(11_500.0)  # +15% -> trips and locks
+    desk = TradingDesk(
+        broker=broker, journal=journal,
+        agent=QTraderAgent(model_path=str(tmp_path / "q.json")),
+        config=DeskConfig(news_blackout=False, min_copy_score=0, challenge_target_pct=0.10),
+        history_fn=lambda _s: price_df,
+        guard=DrawdownGuard(state_path=str(tmp_path / "day_state.json")),
+        manual_signals_path=str(tmp_path / "manual_signals.json"),
+        challenge_target_guard=guard,
+    )
+    report = desk.run_once(symbols=["EURUSD"])
+    assert any("LOCKED" in n or "TARGET HIT" in n for n in report.notes), report.notes
+    assert not report.actions  # no new entries taken
+
+
+def test_one_step_challenge_config_matches_screenshotted_rules():
+    from bots.organization import one_step_challenge_config
+
+    challenge = one_step_challenge_config(funded=False)
+    assert challenge.max_daily_loss_pct == 0.04
+    assert challenge.max_total_drawdown_pct == 0.06
+    assert challenge.challenge_target_pct == 0.10
+    assert challenge.friday_flatten is True
+
+    live = one_step_challenge_config(funded=True)
+    assert live.max_daily_loss_pct == 0.04
+    assert live.max_total_drawdown_pct == 0.10
+    assert live.challenge_target_pct == 0.0  # nothing to lock once funded
