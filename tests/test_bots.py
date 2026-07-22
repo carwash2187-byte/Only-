@@ -2568,3 +2568,69 @@ def test_per_symbol_news_blocks_only_affected_pairs(tmp_path, journal, price_df)
     # AUDUSD has neither EUR nor JPY -> the BOJ event doesn't touch it
     a = desk._consider_entry("AUDUSD", "test", equity=10_000)
     assert "news blackout" not in (a.reason or "")
+
+
+# --- synthetic practice / stress harness (session 44) ----------------------
+
+def test_generate_scenarios_is_deterministic_and_balanced():
+    from bots.learning.scenarios import REGIMES, generate_scenarios
+
+    a = generate_scenarios(n=39, bars=120, seed=7)
+    b = generate_scenarios(n=39, bars=120, seed=7)
+    assert len(a) == 39
+    # deterministic for a fixed seed
+    for (na, da), (nb, db) in zip(a, b):
+        assert na == nb
+        assert np.allclose(da["close"].values, db["close"].values)
+    # a different seed gives different tape
+    c = generate_scenarios(n=39, bars=120, seed=8)
+    assert not np.allclose(a[0][1]["close"].values, c[0][1]["close"].values)
+    # every regime in the catalog is exercised at least once across 39 = 3x13
+    assert set(n for n, _ in a) == set(REGIMES)
+
+
+def test_scenario_frames_are_valid_intraday_ohlc():
+    from bots.learning.agent import _is_intraday, extract_state
+    from bots.learning.scenarios import generate_scenarios
+
+    for _name, df in generate_scenarios(n=13, bars=150, seed=3):
+        assert list(df.columns) == ["open", "high", "low", "close", "volume"]
+        # high/low actually bound the bar
+        assert (df["high"] >= df[["open", "close"]].max(axis=1) - 1e-9).all()
+        assert (df["low"] <= df[["open", "close"]].min(axis=1) + 1e-9).all()
+        assert (df["close"] > 0).all()
+        # 1-minute spacing must trip the intraday feature path the desk uses live
+        assert _is_intraday(df)
+        state = extract_state(df, len(df) - 1, holding=False)
+        assert "vwap-" in state  # intraday state actually engaged
+
+
+def test_run_practice_reports_per_regime_without_touching_journal(tmp_path):
+    from bots.learning.scenarios import run_practice
+
+    journal_before = tmp_path / "journal.json"
+    r = run_practice(n_scenarios=26, bars=140, episodes_per=1, seed=5)
+    assert r["scenarios"] == 26
+    # a per-regime breakdown is the whole point
+    assert r["by_regime"]
+    assert r["worst_regime"] in r["by_regime"]
+    assert r["best_regime"] in r["by_regime"]
+    for stats in r["by_regime"].values():
+        assert stats["scenarios"] >= 1
+        assert 0.0 <= stats["win_rate"] <= 1.0
+    # practising must never have written a journal or account file
+    assert not journal_before.exists()
+
+
+def test_run_practice_hardens_a_supplied_agent_in_place():
+    from bots.learning.scenarios import run_practice
+    from bots.learning import QTraderAgent
+
+    agent = QTraderAgent(model_path="/dev/null")
+    assert agent.trained_episodes == 0
+    assert agent.q == {}
+    r = run_practice(n_scenarios=13, bars=140, episodes_per=2, agent=agent, seed=2)
+    # the agent actually learned: episodes counted up and Q-states were created
+    assert agent.trained_episodes > 0
+    assert len(agent.q) > 0
+    assert r["trained_episodes"] == agent.trained_episodes

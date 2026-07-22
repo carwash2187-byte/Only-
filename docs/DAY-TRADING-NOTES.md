@@ -1803,3 +1803,104 @@ Tests: `test_currencies_for_symbol`,
 `test_per_symbol_news_blocks_only_affected_pairs`.
 
 115 tests passing.
+
+## Session 44 (synthetic practice/stress harness; forex-vs-futures + news-chasing researched, one built, one rejected)
+
+Directive (paraphrased from a long message): add self-learning/self-healing,
+make the bot keep trading when Claude is unavailable, decide whether forex or
+futures is the better thing to trade on a funded account, have it "look at
+news and trade instantly like a human can't," and build "300 scenarios,
+good and bad markets" so the bot can practice on fake trades. Handled each
+on its own merits -- some built, some already true, one rejected with
+evidence.
+
+**Built: `bots/learning/scenarios.py` + `python -m bots practice`.** A
+synthetic market-regime generator (13 regimes: uptrend, downtrend,
+choppy_range, flash_crash, news_spike, low_vol_grind, high_vol_whipsaw,
+gap_up, gap_down, v_reversal, blowoff_top, breakout, trend_pullback) that
+manufactures hundreds of labelled 1-minute sessions on demand. `run_practice`
+walks the Q-agent through them (default 300) -- practice/data-augmentation on
+the rare regimes real history barely contains -- and reports per-regime
+win-rate and average return. Two honest uses: (1) harden the policy against
+tape it rarely sees; (2) a stress/regression test that shows WHERE the policy
+bleeds. Deliberate guardrails: it never writes the real journal or paper
+account (synthetic P&L is not a track record -- the standing honesty norm),
+and it only overwrites the live Q-table when called with `--save`, so
+made-up data can't silently mutate the learned policy. The 1-minute
+DatetimeIndex is intentional so agent.py engages the exact intraday
+VWAP/ORB/session-phase state it uses live.
+
+First run (fresh, lightly-trained agent) independently validated an existing
+defense: the agent's worst regime by far is `news_spike` -- it loses money on
+the exact bar the desk's news blackout is built to dodge. That is evidence
+FOR the session-3/43 news-blackout work, not a reason to trade news.
+
+**Rejected with evidence: "look at news and trade instantly."** Researched
+current sources (see below). Retail algos cannot win the news-reaction race:
+event-driven HFT reacts in microseconds, and liquidity providers pull quotes
+and widen spreads the instant a release prints -- so a retail "news chaser"
+enters into the widest spreads of the move, behind everyone faster. This is
+the same conclusion sessions 3 and 43 reached from the other direction. The
+evidence-backed move is to DODGE high-impact news (already built:
+per-currency news blackout), not chase it. No news-entry feature was added --
+building one would contradict the desk's own documented research.
+
+**Researched: forex vs futures on a funded account.** Findings:
+- Futures are exchange-traded on a central limit order book: transparent,
+  predictable fees, no market-maker taking the other side, generally less
+  slippage. ~70-80% of futures volume is already algorithmic.
+- Forex has deeper nominal turnover (~$9.6T/day, Apr 2025) and 24/5 hours,
+  but execution quality depends on the broker's model and spreads vary by
+  liquidity provider -- a market maker can be your counterparty.
+- Prop-firm landscape: Topstep is futures-only; FTMO is forex-first; the
+  CFD/MetaTrader firms (what this desk's TradeLocker connector targets) are
+  multi-asset (forex + index/commodity CFDs).
+- Correction of a standing assumption: MambaFX (the style studied in session
+  36) trades **forex** 1-minute scalps, not futures. The "FX" is literal.
+
+Honest recommendation recorded, not auto-applied (the funded-account
+instrument choice is the user's to make and depends on which firm they fund):
+for a *rules-transparent, execution-fair* funded account, **futures via a
+futures-native firm (e.g. Topstep) are the cleaner venue** -- central order
+book, no dealer conflict, defined costs. But this desk is currently wired for
+**forex + index/commodity CFDs through TradeLocker**, which is what the code,
+the 19-symbol watchlist, the spread modeling and the news guard are all built
+and tested around. Switching to a pure-futures firm would mean a new broker
+connector and a re-test pass, not a config flip. The desk's instruments today
+(forex majors/crosses + US indices + gold/silver/oil CFDs) already span the
+liquid, well-modeled markets; the watchlist breadth is the strength, not the
+specific wrapper.
+
+**Already true, clarified: "keeps trading when Claude runs out of tokens."**
+`python -m bots autopilot` is plain Python on a timer -- no LLM calls, no
+Claude/Anthropic tokens (verified: the only LLM path is the opt-in
+`--llm-committee`, which the live command never passes). The desk already
+trades with zero token cost. The real constraint is not tokens but the
+*ephemeral container*: when this remote container is reclaimed, the process
+dies. Durable always-on running means a machine that stays up (a $5 VPS, a
+Raspberry Pi, an always-on laptop) -- exactly what bots/README.md already
+documents. `scripts/keepalive.sh` + the hourly keep-alive Routine already
+provide process-revival and git-sync self-healing within a container's life.
+
+**Self-learning / self-healing status (what exists vs. what's new).** Already
+present: the journal blocks losing setups; anti-martingale sizing + drawdown
+taper shrink risk on losing streaks; keepalive revives dead processes and
+syncs state. New this session: the practice harness gives a deliberate
+channel to keep improving the Q-policy against hard regimes off-line and to
+measure regime-level weakness before it costs real money.
+
+Tests: `test_generate_scenarios_is_deterministic_and_balanced`,
+`test_scenario_frames_are_valid_intraday_ohlc`,
+`test_run_practice_reports_per_regime_without_touching_journal`,
+`test_run_practice_hardens_a_supplied_agent_in_place`.
+
+119 tests passing.
+
+Sources:
+- Vantage Markets, "Forex Trading vs. Futures: Which is Better?"
+- NinjaTrader, "Trading Futures vs. Forex & CFDs"
+- Optimus Futures, "Forex vs Futures: Which Should You Trade?"
+- QuantVPS, "List of Top Prop Firms Compared (2026)"; Blue Guardian,
+  "Best Platforms for Prop Firm Traders (Forex and Futures 2026)"
+- LuxAlgo, "High-Frequency Trading vs. Retail Algorithmic Trading";
+  uTrade Algos, "High Frequency Algorithmic Trading in 2025"

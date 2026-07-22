@@ -126,6 +126,44 @@ def cmd_backtest(args) -> None:
     )
 
 
+def cmd_practice(args) -> None:
+    from bots.learning import QTraderAgent
+    from bots.learning.scenarios import run_practice
+
+    agent = None
+    if args.save:
+        # harden the LIVE Q-table in place, then persist it. Opt-in only:
+        # synthetic training must never silently overwrite the learned policy.
+        agent = QTraderAgent()
+        agent.load()
+    r = run_practice(
+        n_scenarios=args.scenarios,
+        episodes_per=args.episodes,
+        agent=agent,
+        seed=args.seed,
+    )
+    print(
+        f"Practised across {r['scenarios']} synthetic sessions "
+        f"({r['total_trades']} trades, overall win rate {r['overall_win_rate']:.0%}, "
+        f"avg {r['avg_return_pct']:+.2f}%/session)."
+    )
+    print("Synthetic returns are NOT a track record -- this hardens the policy "
+          "and shows where it bleeds. Grade real money from the journal.\n")
+    print(f"{'regime':<18}{'sessions':>9}{'trades':>8}{'win%':>7}{'avg ret%':>10}")
+    for name, s in sorted(
+        r["by_regime"].items(), key=lambda kv: kv[1]["avg_return_pct"]
+    ):
+        print(
+            f"{name:<18}{s['scenarios']:>9}{s['trades']:>8}"
+            f"{s['win_rate'] * 100:>6.0f}%{s['avg_return_pct']:>+10.2f}"
+        )
+    if r["worst_regime"]:
+        print(f"\nweakest tape: {r['worst_regime']}   strongest tape: {r['best_regime']}")
+    if args.save and agent is not None:
+        agent.save()
+        print(f"\nlive Q-table hardened and saved ({agent.trained_episodes} total episodes).")
+
+
 def cmd_journal(_args) -> None:
     from bots.journal import TradeJournal
 
@@ -358,6 +396,21 @@ def main() -> None:
     p_bt.add_argument("--interval", default="1d")
     p_bt.add_argument("--episodes", type=int, default=40)
 
+    p_prac = sub.add_parser(
+        "practice",
+        help="drill the agent across synthetic market regimes (trends, chop, "
+             "flash crashes, news spikes, gaps) and report where it bleeds",
+    )
+    p_prac.add_argument("--scenarios", type=int, default=300,
+                        help="how many synthetic sessions to run (default 300)")
+    p_prac.add_argument("--episodes", type=int, default=2,
+                        help="learning passes per scenario")
+    p_prac.add_argument("--seed", type=int, default=0,
+                        help="reproducibility seed for the synthetic tape")
+    p_prac.add_argument("--save", action="store_true",
+                        help="harden the LIVE Q-table in place and save it "
+                             "(default: fresh agent, report only)")
+
     p_auto = sub.add_parser("autopilot", help="run desk cycles on a loop, hands-free")
     p_auto.add_argument("--broker", default="paper",
                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda", "tradelocker", "mt5"])
@@ -417,6 +470,7 @@ def main() -> None:
         "journal": cmd_journal,
         "payout": cmd_payout,
         "backtest": cmd_backtest,
+        "practice": cmd_practice,
         "autopilot": cmd_autopilot,
         "watch": cmd_watch,
         "mirror": cmd_mirror,

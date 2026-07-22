@@ -73,6 +73,14 @@ contains a ready-to-run config + strategy for
 whose ML model **retrains itself every few hours** on fresh market data.
 Install with `bash scripts/install_trading_stack.sh`.
 
+**Practice on synthetic regimes** — `python -m bots practice --scenarios 300`
+drills the agent across hundreds of manufactured market regimes it rarely
+sees in the thin real history (flash crashes, news whipsaws, gap opens,
+blow-off tops, grinding chop) and prints a per-regime win-rate/return
+breakdown so you can see *where the policy bleeds*. Report-only by default;
+`--save` hardens the live Q-table in place. Synthetic P&L is not a track
+record — it's practice and a stress test, not a profit claim.
+
 ### 3. `bots/copytrader/` — copy people with a public track record
 - **SEC 13F filings** (official, free): pulls the latest reported holdings of
   Warren Buffett (Berkshire), Michael Burry (Scion), Bill Ackman (Pershing
