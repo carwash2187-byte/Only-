@@ -36,7 +36,7 @@ while true; do
     if (( now - last >= 86400 )); then
         touch "$STAMP"
         echo "[$(date -u +%FT%TZ)] nightly self-train starting"
-        if BOT_DATA_DIR=paper_state timeout 3600 python scripts/stress_test.py --practice \
+        if BOT_DATA_DIR=paper_state PYTHONPATH=. timeout 3600 python scripts/stress_test.py --practice \
                 >> /tmp/selftrain.log 2>&1; then
             pkill -f "autopilot --broker paper" || true
             sleep 2
