@@ -2468,3 +2468,34 @@ challenge, session 46) is 1:30. Sources:
   "undecided at 30 days" bucket to shrink sharply. Until that re-run
   exists, the honest answer to "what's the pass probability now?" is
   "unmeasured".
+
+### Session 47 addendum: always-on law + what "$100 a trade" honestly means here
+
+User directives, codified (per "everything I say, make it in the code"):
+
+1. **Always-on, token-free (now law in CLAUDE.md):** the live loop uses no
+   Claude/LLM calls at all (`--llm-committee` off; Q-table + indicators
+   only), and `scripts/watchdog.sh` (new) self-heals every bot and
+   git-syncs all state every 5 minutes as a plain bash loop — it keeps
+   working even if Claude usage runs out, for as long as the container
+   lives. The hourly Routine's only remaining job is keeping the container
+   itself alive; if usage runs out the container eventually dies with the
+   bots, but every trade/journal/guard state is already pushed to git, so
+   nothing is lost and the desk resumes from committed state. Full 24/7
+   independence = run this repo on a user-owned machine/VPS.
+
+2. **"$100 on each trade":** at the session-47 corrected sizing this is
+   already the design, not a new loosening: risk per trade is $75 (1.5% of
+   $5k), a full 2R winner pays ~$150, breakeven-at-1R scratches pay ~$0,
+   and the daily profit-target lock banks +$150 (3%) days. What is NOT on
+   the table is raising risk_per_trade_pct toward "guaranteed $100+": at
+   2%+ per trade, two losses breach the 3% daily limit that terminates
+   funded accounts — the exact failure mode (79% of funded failures)
+   session 31 documented. The honest scaling path to hundreds-per-trade is
+   a bigger account (pass the challenge → $25k-$100k funded at the SAME
+   percentages = $375-$1,500 risk/trade), not fatter risk on $5k.
+
+Known open item carried forward: realized avg win/loss ratio is 1.34 vs
+the designed 2.0 (time stops + breakeven exits truncate winners). Re-run
+the challenge pass-rate estimate under the new sizing before quoting any
+pass probability.

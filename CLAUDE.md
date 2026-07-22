@@ -6,6 +6,31 @@ TauricResearch/TradingAgents. See `bots/README.md` for the module tour and
 "Session N" entries — read the most recent few before assuming something
 hasn't been tried).
 
+## Always-on law (user directive, session 47)
+
+The bots must keep trading with **zero Claude/LLM involvement in the loop**
+and survive Claude usage running out, for as long as the container lives:
+
+- The trading loop is token-free by construction: `--llm-committee` is off
+  in every real launch command and must stay off for the live desk —
+  signals come from the on-disk Q-table + indicator filters only. Never
+  wire an LLM call into the live trading path.
+- `scripts/watchdog.sh` must be running at all times (`nohup bash
+  scripts/watchdog.sh >> /tmp/watchdog.log 2>&1 &` — idempotent, refuses
+  to double-start via `/tmp/bots_watchdog.pid`). It self-heals every bot
+  and git-syncs all state dirs every 5 minutes via `scripts/keepalive.sh`,
+  using no Claude usage at all. **Any session touching `bots/` must verify
+  it is alive** (`kill -0 $(cat /tmp/bots_watchdog.pid)`) and relaunch it
+  if not.
+- The hourly keep-alive Routine's only irreplaceable job is keeping the
+  remote container itself alive; everything else is the watchdog's job.
+  If Claude usage runs out, the Routine suspends and the container will
+  eventually be reclaimed — the watchdog's git-sync means no trading
+  record is lost, and the whole desk resumes from committed state on the
+  next session. True 24/7 independence requires running this repo on the
+  user's own machine/VPS (`scripts/install_trading_stack.sh` +
+  `scripts/watchdog.sh` under systemd/cron).
+
 ## State and data directory
 
 - `BOT_DATA_DIR=paper_state` is the convention for this project's live
