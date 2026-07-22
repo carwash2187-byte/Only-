@@ -1528,12 +1528,14 @@
       "entry_price": 85.14276675300599,
       "entry_time": "2026-07-22T06:08:09.923925+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
-      "tags": [],
+      "exit_price": 86.30705169487,
+      "exit_time": "2026-07-22T07:00:14.483294+00:00",
+      "pnl": 10.272951756042914,
+      "pnl_pct": 1.3674502089432217,
+      "notes": "user watchlist | take profit hit (+1.4%)",
+      "tags": [
+        "breakeven-armed"
+      ],
       "stop_pct": 0.003
     }
   ]
