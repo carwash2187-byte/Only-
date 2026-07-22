@@ -32,7 +32,15 @@ import pandas as pd
 from bots.learning.agent import QTraderAgent
 from bots.learning.challenge_sim import AttemptResult, simulate_attempt
 
-DEFAULT_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCHF"]
+# Session 47: matches the live desk's ACTUAL --funded launch watchlist
+# (see CLAUDE.md), not just a handful of majors -- the estimate should
+# reflect what the bot actually trades, including the JPY/other crosses
+# and the indices/gold/oil legs, not just 5 pairs.
+DEFAULT_PAIRS = [
+    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
+    "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
+    "US30", "NAS100", "US500", "US2000", "GOLD", "SILVER", "OIL",
+]
 
 
 def fetch_real_pools(
@@ -43,11 +51,12 @@ def fetch_real_pools(
     from bots import marketdata
 
     pools: Dict[str, pd.DataFrame] = {}
-    for sym in symbols or DEFAULT_PAIRS:
+    for raw_sym in symbols or DEFAULT_PAIRS:
+        sym = marketdata.resolve_symbol(raw_sym)
         try:
             df = marketdata.get_history(sym, period=period, interval=interval)
             if len(df) > 200:
-                pools[sym] = df
+                pools[raw_sym] = df
         except Exception:
             continue
     return pools
@@ -98,6 +107,7 @@ def run_real_data_monte_carlo(
     block_size: int = 120,
     agent: Optional[QTraderAgent] = None,
     pools: Optional[Dict[str, pd.DataFrame]] = None,
+    symbols: Optional[List[str]] = None,
     seed: int = 0,
     **rule_kwargs,
 ) -> Dict[str, object]:
@@ -105,7 +115,7 @@ def run_real_data_monte_carlo(
         agent = QTraderAgent()
         agent.load()
     if pools is None:
-        pools = fetch_real_pools()
+        pools = fetch_real_pools(symbols)
     if not pools:
         raise RuntimeError("no real market data available -- check network/marketdata access")
 

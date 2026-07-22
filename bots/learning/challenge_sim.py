@@ -66,11 +66,20 @@ def simulate_attempt(
     daily_loss_pct: float = 0.04,
     max_drawdown_pct: float = 0.06,
     warmup: int = 30,
+    atr_stops: bool = False,
+    atr_window: int = 14,
 ) -> AttemptResult:
     """Walk one synthetic price history bar-by-bar under the challenge's
     actual rules. Position P&L is scaled by risk_per_trade_pct/stop_loss_pct
     so a full stop-out costs exactly risk_per_trade_pct of equity, matching
-    how the real desk sizes positions (see risk.py / organization.py)."""
+    how the real desk sizes positions (see risk.py / organization.py).
+
+    atr_stops (session 47): the funded live desk runs with atr_stops=True --
+    stop distance is 1.5x ATR(14), clamped [0.3%, 5%], not a fixed
+    stop_loss_pct. Previously this simulation always used the fixed value,
+    a disclosed simplification; when atr_stops is set, each entry's
+    risk_scale is computed from the REAL rolling ATR of the bootstrapped
+    real price data at entry time, same clamp as organization.py."""
     risk_scale = risk_per_trade_pct / stop_loss_pct if stop_loss_pct > 0 else 1.0
     equity = start_equity
     peak_equity = start_equity
@@ -79,6 +88,7 @@ def simulate_attempt(
     current_day = None
     holding = False
     entry_price = 0.0
+    trade_risk_scale = risk_scale
 
     idx = df.index
     for i in range(warmup, len(df) - 1):
@@ -108,14 +118,22 @@ def simulate_attempt(
         if action == "buy" and not holding:
             holding = True
             entry_price = price
+            if atr_stops:
+                from bots.organization import atr_pct
+
+                entry_stop_pct = atr_pct(df.iloc[: i + 1].tail(atr_window + 1), period=atr_window)
+                entry_stop_pct = min(max(1.5 * entry_stop_pct, 0.003), 0.05) if entry_stop_pct else stop_loss_pct
+                trade_risk_scale = risk_per_trade_pct / entry_stop_pct
+            else:
+                trade_risk_scale = risk_scale
         elif action == "sell" and holding:
             trade_return = (price - entry_price) / entry_price
-            equity *= 1.0 + trade_return * risk_scale
+            equity *= 1.0 + trade_return * trade_risk_scale
             holding = False
         elif holding:
             # mark-to-market on the open position each bar
             step_return = (next_price - price) / price
-            equity *= 1.0 + step_return * risk_scale
+            equity *= 1.0 + step_return * trade_risk_scale
 
     return AttemptResult("undecided", len(df) - warmup, (equity - start_equity) / start_equity)
 

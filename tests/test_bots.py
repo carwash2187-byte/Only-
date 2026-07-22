@@ -3037,6 +3037,41 @@ def test_simulate_attempt_fails_on_a_manufactured_losing_streak():
     assert result.outcome == "fail"
 
 
+def test_simulate_attempt_atr_stops_uses_real_volatility_not_fixed_pct():
+    # Session 47: with atr_stops=True, risk sizing at entry should come from
+    # the tape's own rolling ATR(14), not the fixed stop_loss_pct -- so an
+    # AGGRESSIVE fixed stop_loss_pct (say 5%) should size DIFFERENTLY than a
+    # tape whose real ATR is much tighter (a few tenths of a percent).
+    from bots.learning.agent import QTraderAgent
+    from bots.learning.challenge_sim import simulate_attempt
+    from bots.learning.scenarios import _ohlc_from_close
+    import numpy as np
+
+    class AlwaysBuySell(QTraderAgent):
+        def choose_action(self, state, explore=False):
+            return "buy" if "pos-out" in state else "sell"
+
+    rng = np.random.default_rng(4)
+    # very low-volatility tape: real ATR should clamp to the 0.3% floor,
+    # far tighter than the 5% fixed stop passed in
+    close = 100.0 * np.cumprod(1.0 + rng.normal(0.0, 0.0005, 2000))
+    df = _ohlc_from_close(close, rng, len(close))
+    agent = AlwaysBuySell(model_path="/dev/null")
+
+    fixed = simulate_attempt(agent, df.copy(), start_equity=5_000.0, target_pct=0.10,
+                             daily_loss_pct=0.04, max_drawdown_pct=0.06,
+                             risk_per_trade_pct=0.015, stop_loss_pct=0.05,
+                             atr_stops=False)
+    atr = simulate_attempt(agent, df.copy(), start_equity=5_000.0, target_pct=0.10,
+                           daily_loss_pct=0.04, max_drawdown_pct=0.06,
+                           risk_per_trade_pct=0.015, stop_loss_pct=0.05,
+                           atr_stops=True)
+    # same tape, same trade actions -> different risk scaling means
+    # different final gains (ATR-tight sizing amplifies the same % moves
+    # far more than a loose fixed 5% stop would)
+    assert fixed.final_gain_pct != pytest.approx(atr.final_gain_pct, abs=1e-9)
+
+
 def test_run_challenge_monte_carlo_reports_consistent_rates():
     from bots.learning.agent import QTraderAgent
     from bots.learning.challenge_sim import run_challenge_monte_carlo
@@ -3112,3 +3147,16 @@ def test_run_real_data_monte_carlo_raises_without_any_pool():
         assert False, "expected RuntimeError for empty pools"
     except RuntimeError:
         pass
+
+
+def test_default_pairs_matches_live_funded_watchlist():
+    # Session 47: the challenge-odds estimate should cover the SAME symbols
+    # the live --funded desk actually trades, not just 5 FX majors.
+    from bots.learning.challenge_sim_real import DEFAULT_PAIRS
+
+    live_watchlist = {
+        "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
+        "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
+        "US30", "NAS100", "US500", "US2000", "GOLD", "SILVER", "OIL",
+    }
+    assert set(DEFAULT_PAIRS) == live_watchlist

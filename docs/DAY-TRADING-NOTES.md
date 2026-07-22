@@ -2555,3 +2555,45 @@ Difference vs the carousel, stated plainly: their equity curve and
 "58.7% win rate / PASSED" numbers are marketing renders; every number on
 this dashboard is a real reading from a real (paper) account, including
 the ugly ones.
+
+### Session 47 addendum 4: challenge-odds re-run + real ATR stops (correcting my own earlier claim)
+
+User asked for the challenge pass-rate, requested a big re-run, and asked
+to improve the simulation further -- all token-free.
+
+**Correction to addendum 2 of this session:** I claimed the session-46
+38% pass-rate estimate was "stale" because it ran through the sizing bug.
+That claim was wrong -- checked the code before re-running rather than
+assuming. `challenge_sim.py`'s `simulate_attempt()` never calls the live
+desk's broker/position-sizing pipeline (`organization.py` /
+`PaperBroker`) at all; it scales trade P&L directly by
+`risk_per_trade_pct / stop_loss_pct`, i.e. it already assumed the
+configured risk fully applied on every trade -- exactly what the
+leverage fix made true for the first time in LIVE trading, but the
+simulator was never bugged this way. The 38% figure was not invalidated
+by yesterday's fix. Correcting the record instead of letting a wrong
+claim stand.
+
+**Real improvement made instead:** the simulator's other disclosed gap
+was real -- it always used a fixed `stop_loss_pct` even though the live
+funded desk runs `atr_stops=True` (1.5x real ATR(14), clamped 0.3%-5%).
+Added `atr_stops`/`atr_window` params to `simulate_attempt()`: when set,
+each entry's risk-scaling now uses `bots.organization.atr_pct()` computed
+from the REAL rolling volatility of the bootstrapped tape at that exact
+bar, same clamp as the live desk. Test:
+`test_simulate_attempt_atr_stops_uses_real_volatility_not_fixed_pct`.
+
+**Also widened the real-data symbol pool** (`challenge_sim_real.py`) from
+5 FX majors to the full 19-symbol live `--funded` watchlist (all the FX
+crosses plus US30/NAS100/US500/US2000/GOLD/SILVER/OIL via
+`marketdata.resolve_symbol`), and wired `--atr-stops`/`--symbols` through
+`python -m bots challenge-odds --real`. Test:
+`test_default_pairs_matches_live_funded_watchlist`. 147 tests passing
+(was 145).
+
+**Re-run launched:** `scripts/run_challenge_odds.py`, 5 independent
+seeds x 100 attempts x 45,000 bars (~30 real trading days each, matching
+the session-46 horizon) = 500 total attempts, ATR stops on, current
+LIVE Q-table (post last night's self-train), Clarity's real 10%/4%/6%
+rules. ~8.6s/attempt measured in a timing probe -> ~70-90 min total, pure
+python, no Claude tokens. Result to be appended once it finishes.
