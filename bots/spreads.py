@@ -33,17 +33,23 @@ def spread_pct(symbol: str, now=None) -> float:
         return 0.0002
     if compact in _FOREX_CROSS:
         return 0.00015
-    if compact == "NQ=F":
+    # NAS100/US30/US500/US2000/GOLD/SILVER/OIL are the desk's OWN watchlist
+    # names (used in every real launch command) for these same instruments --
+    # found missing here (session 46, same bug class as the correlation-group
+    # gap): without these, all 7 fell through to the tight stocks default
+    # below, undercosting commodities 2-6x and quietly inflating the paper
+    # account's real historical P&L on 7 of 19 watchlist symbols.
+    if compact in ("NQ=F", "NAS100"):
         return 0.00002
-    if compact in ("ES=F", "YM=F"):
+    if compact in ("ES=F", "YM=F", "US500", "US30"):
         return 0.00004
-    if compact == "GC=F":
+    if compact in ("GC=F", "GOLD"):
         return 0.0001
-    if compact == "SI=F":
+    if compact in ("SI=F", "SILVER"):
         return 0.0003  # silver: wider than gold relative to price
-    if compact == "RTY=F":
+    if compact in ("RTY=F", "US2000"):
         return 0.0001  # Russell: liquid but a step below ES/NQ/YM
-    if compact == "CL=F":
+    if compact in ("CL=F", "OIL"):
         return 0.0003
     if compact.endswith(("-USD", "-USDT")):
         from bots.organization import is_weekend_forex_gap

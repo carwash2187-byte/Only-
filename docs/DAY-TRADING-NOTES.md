@@ -2261,3 +2261,43 @@ scenario the gap allowed: 3 simultaneous US-index positions with a cap of
 2, confirms the third is now correctly skipped).
 
 138 tests passing.
+
+### Session 46 addendum 6: same bug class found again in spread cost modeling
+
+Audit continued: found the same bug pattern that hit CORRELATION_GROUPS
+(addendum 5) also hit `bots/spreads.py`. `spread_pct()` special-cases
+futures/alias ticker names (`GC=F`, `CL=F`, `NQ=F`, `ES=F`, `YM=F`,
+`RTY=F`, `SI=F`) but not the desk's OWN watchlist names (`GOLD`, `SILVER`,
+`OIL`, `US30`, `NAS100`, `US500`, `US2000`) -- so all 7 fell through to
+the tight stocks default (0.00005), undercosting them 2-6x relative to
+their real documented spread category.
+
+This isn't cosmetic: `PaperBroker(model_spread=True)` -- what the live
+autopilot actually runs with -- calls `spread_pct()` for every fill's
+transaction cost. That means the real, committed paper-trading journal
+(the 91-trade, 33%-win-rate, +$1,129.35 track record referenced throughout
+this session) has been undercosting trades on 7 of its 19 watchlist
+symbols this whole time. Not a fabricated number, but a real one computed
+with the wrong cost model on more than a third of the watchlist.
+
+Checked whether the same bug existed anywhere else: grepped every alias
+name (`XAUUSD`, `GC=F`, `CL=F`, `NQ=F`, `ES=F`, `YM=F`, `RTY=F`, `SI=F`,
+`XAGUSD`) across bots/*.py. Only `bots/marketdata.py` also special-cases
+these, and it already correctly maps both directions (desk name -> alias
+for data fetching) -- confirmed no other instance of this bug class.
+
+Fix: added the desk's own symbol names to spread_pct(), same category as
+their alias equivalent (GOLD=GC=F, SILVER=SI=F, OIL=CL=F, NAS100=NQ=F,
+US30/US500=YM=F/ES=F, US2000=RTY=F).
+
+Test: `test_spread_pct_covers_the_desks_own_index_and_commodity_names`.
+
+139 tests passing.
+
+Lesson for future watchlist changes: this is now the SECOND time a symbol
+added to the funded watchlist wasn't propagated to a special-case lookup
+table elsewhere in the codebase (session 18 for correlation groups
+originally, addendum 5 for the same thing recurring, addendum 6 for
+spreads.py). Any time a symbol is added to the funded/challenge watchlist,
+grep for CORRELATION_GROUPS and spreads.py specifically, not just
+marketdata.py's alias table.

@@ -1330,6 +1330,25 @@ def test_paper_broker_model_spread_charges_realistic_cost(tmp_path):
     assert broker.cash() < 10_000
 
 
+def test_spread_pct_covers_the_desks_own_index_and_commodity_names():
+    """Session 46: spread_pct() only recognized futures-style aliases
+    (GC=F, CL=F, NQ=F...) -- the desk's OWN watchlist names (GOLD/SILVER/
+    OIL/US30/NAS100/US500/US2000, used in every real launch command) fell
+    through to the tight stocks default (0.00005), undercosting these 7 of
+    19 watchlist symbols and inflating the paper account's real P&L on
+    them."""
+    from bots.spreads import spread_pct
+
+    stocks_default = 0.00005
+    assert spread_pct("GOLD") == spread_pct("GC=F") != stocks_default
+    assert spread_pct("SILVER") == spread_pct("SI=F") != stocks_default
+    assert spread_pct("OIL") == spread_pct("CL=F") != stocks_default
+    assert spread_pct("NAS100") == spread_pct("NQ=F") != stocks_default
+    assert spread_pct("US30") == spread_pct("YM=F") != stocks_default
+    assert spread_pct("US500") == spread_pct("ES=F") != stocks_default
+    assert spread_pct("US2000") == spread_pct("RTY=F") != stocks_default
+
+
 def test_spread_pct_widens_crypto_on_weekends(monkeypatch):
     import bots.organization as org_mod
     from bots.spreads import spread_pct
