@@ -37,7 +37,7 @@
     },
     "trend-down|rsi-oversold|pos-out": {
       "hold": 0.03197285831283387,
-      "buy": 0.05853320562635977,
+      "buy": 0.05268672088156955,
       "sell": 0.033195423252945874
     },
     "trend-down|rsi-neutral|pos-in": {
