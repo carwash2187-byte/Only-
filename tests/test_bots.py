@@ -296,6 +296,90 @@ def test_risk_per_trade_sizing(price_df, tmp_path, journal):
     assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
 
 
+def test_paper_broker_margin_buying_power(tmp_path):
+    # cash account (leverage 1): unchanged, can't spend beyond cash
+    cash_acct = PaperBroker(
+        starting_cash=1_000, state_path=str(tmp_path / "cash.json"),
+        price_overrides={"XYZ": 10.0},
+    )
+    assert not cash_acct.buy("XYZ", 150).ok
+
+    # margin account (5x): the same $1,500 order fills, cash goes negative,
+    # equity is unchanged by the fill itself
+    margin = PaperBroker(
+        starting_cash=1_000, state_path=str(tmp_path / "margin.json"),
+        price_overrides={"XYZ": 10.0}, leverage=5.0,
+    )
+    assert margin.buy("XYZ", 150).ok
+    assert margin.cash() == pytest.approx(-500.0)
+    assert margin.equity() == pytest.approx(1_000.0)
+    # total notional still capped at leverage * equity: this order would
+    # take exposure to $5,500 on $1,000 equity
+    assert not margin.buy("XYZ", 400).ok
+    assert margin.sell("XYZ", 150).ok
+    assert margin.cash() == pytest.approx(1_000.0)
+
+
+def test_leverage_lets_configured_risk_actually_apply(price_df, tmp_path, journal):
+    # Session 47 bug: with a tight scalp stop, a no-leverage account
+    # physically cannot risk risk_per_trade_pct -- notional was capped at
+    # max_position_pct (15%) of equity and settled cash, so a "1.5% risk"
+    # trade with a 0.5% stop risked ~$4 on $5k instead of $75.
+    broker = PaperBroker(
+        starting_cash=5_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0}, leverage=5.0,
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(
+            news_blackout=False, min_copy_score=0,
+            risk_per_trade_pct=0.015, stop_loss_pct=0.005,
+            max_leverage=5.0, max_position_pct=3.0,
+        ),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    notional = buys[0].quantity * 100.0
+    # notional = equity * 1.5% / 0.5% stop = 3x equity...
+    assert notional == pytest.approx(15_000.0, rel=0.01)
+    # ...so the dollar risk at the stop is the CONFIGURED 1.5% of equity
+    assert notional * 0.005 == pytest.approx(5_000 * 0.015, rel=0.01)
+
+
+def test_leverage_exposure_cap_counts_open_positions(price_df, tmp_path, journal):
+    broker = PaperBroker(
+        starting_cash=5_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0, "HELD": 50.0}, leverage=5.0,
+    )
+    # existing position eats most of the 5x exposure cap
+    assert broker.buy("HELD", 400).ok  # $20,000 notional on $5,000 equity
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(
+            news_blackout=False, min_copy_score=0,
+            risk_per_trade_pct=0.015, stop_loss_pct=0.005,
+            max_leverage=5.0, max_position_pct=3.0,
+        ),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    # only $5,000 of headroom left (5x * $5,000 equity - $20,000 held)
+    assert buys[0].quantity * 100.0 == pytest.approx(5_000.0, rel=0.01)
+
+
+def test_funded_config_carries_leverage_for_tight_stops():
+    from bots.organization import funded_account_config
+
+    cfg = funded_account_config()
+    assert cfg.max_leverage == 5.0
+    assert cfg.max_position_pct == 3.0
+    # sanity: at a typical 0.5% ATR stop, the per-position notional cap
+    # (3x equity) is exactly what risking 1.5% of equity requires
+    assert cfg.risk_per_trade_pct / 0.005 == pytest.approx(cfg.max_position_pct)
+
+
 def test_desk_skips_entry_with_pending_order(price_df, tmp_path, journal):
     class FakePendingBroker(PaperBroker):
         def has_pending_order(self, symbol):

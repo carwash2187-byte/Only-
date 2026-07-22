@@ -177,16 +177,19 @@ def stress_test(starting_cash: float = 5_000.0) -> None:
 
     tmp = tempfile.mkdtemp(prefix="stress_test_")
     try:
-        broker = PaperBroker(starting_cash=starting_cash, state_path=f"{tmp}/acct.json")
-        journal = TradeJournal(path=f"{tmp}/journal.json")
-        guard = DrawdownGuard(state_path=f"{tmp}/day.json")
-        dd_guard = MaxDrawdownGuard(state_path=f"{tmp}/dd.json")
         # wall-clock-based guards off in a replay: the news calendar is live
         # network data, and the rollover/Friday-close windows key off REAL
         # time, not the historical bar being replayed
         config = funded_account_config(
             news_blackout=False, rollover_blackout=False, friday_flatten=False
         )
+        broker = PaperBroker(
+            starting_cash=starting_cash, state_path=f"{tmp}/acct.json",
+            leverage=config.max_leverage,
+        )
+        journal = TradeJournal(path=f"{tmp}/journal.json")
+        guard = DrawdownGuard(state_path=f"{tmp}/day.json")
+        dd_guard = MaxDrawdownGuard(state_path=f"{tmp}/dd.json")
         agent = QTraderAgent(model_path=f"{tmp}/q.json")
 
         state = {"ts": master_index[0]}

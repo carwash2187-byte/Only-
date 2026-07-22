@@ -78,6 +78,7 @@ class DeskConfig:
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
     challenge_target_pct: float = 0.0  # 0 = off; e.g. 0.10: once cumulative gain from the challenge's starting equity hits this, lock in the pass -- no new entries, ever (until the state file is cleared for a new challenge)
     weekend_trading_allowed: bool = True  # False for firms that ban ALL weekend trading outright: makes autopilot's weekend-crypto-fallback a no-op for this account even if --weekend-symbols is passed (by default or by habit), so a forgotten CLI flag can't violate the firm's rule
+    max_leverage: float = 1.0  # total notional exposure cap as a multiple of equity; 1.0 = cash account (no leverage). Funded preset uses 5x -- see session 47: without leverage a 1m-scalp ATR stop (~0.5%) physically cannot risk more than ~0.1% of equity, no matter what risk_per_trade_pct says
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -186,6 +187,19 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # bid/ask at entry time, not inferred from the clock.
         adr_exhaustion_pct=1.0,
         max_live_spread_multiple=3.0,
+        # Session 47: without leverage the whole risk model was fiction --
+        # a 1m-scalp ATR stop (~0.5%) needs ~3x equity in notional to risk
+        # 1.5%, but notional was capped at 15% of equity and broker cash,
+        # so realized risk per trade was ~$1-5 on a $5k account instead of
+        # the configured $75 (live journal: avg loss $1.17 over 63 trades).
+        # Real prop firms fund at 1:100 (FTMO standard) / 1:30 (swing,
+        # Clarity); the desk uses a deliberately conservative 5x total
+        # exposure cap and 3x per position -- just enough for the intended
+        # risk to apply at the tightest ATR stops. Dollar risk per trade is
+        # STILL bounded by risk_per_trade_pct + the loss-budget headroom
+        # cap; leverage changes notional, not the stop-based risk math.
+        max_leverage=5.0,
+        max_position_pct=3.0,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -1583,7 +1597,23 @@ class TradingDesk:
                     risk_pct = headroom
 
         risk_budget = equity * risk_pct / max(stop_pct, 1e-6)
-        budget = min(risk_budget, equity * cfg.max_position_pct, self.broker.cash())
+        if cfg.max_leverage > 1.0:
+            # Margin account: buying power is what's left of the total
+            # exposure cap (max_leverage x equity), not settled cash. The
+            # dollar risk of the trade is unchanged -- it's still
+            # risk_pct * equity if the stop fills -- leverage only lets the
+            # notional get large enough for that risk to actually apply
+            # when the stop is tight (session 47).
+            exposure = 0.0
+            for held_symbol, held_qty in self.broker.positions().items():
+                try:
+                    exposure += abs(held_qty) * self.broker.price(held_symbol)
+                except Exception:
+                    pass
+            buying_power = max(equity * cfg.max_leverage - exposure, 0.0)
+        else:
+            buying_power = self.broker.cash()
+        budget = min(risk_budget, equity * cfg.max_position_pct, buying_power)
         quantity = round(budget / price, 4) if price > 0 else 0.0
         if quantity <= 0:
             return DeskAction("skip", symbol, "risk desk: no budget available")

@@ -2370,3 +2370,101 @@ Monte Carlo run (synthetic OR real) should never be reported as more
 certain than the sample size actually supports.
 
 139 tests passing (no code changes this addendum, research/measurement only).
+
+## Session 47 (the $11 week: found and fixed the desk-wide under-sizing bug -- leverage support so the configured risk % actually applies)
+
+User complaint (verbatim spirit): the desk made ~$11 on a $5,000 account
+in its first week live, while human day traders make hundreds on the same
+size account. "You're doing something wrong -- fix it."
+
+The user was right. Checked the real journal before touching anything
+(project rule): 63 non-admin closed trades since 2026-07-14, win rate
+39.7%, avg win $1.56, avg loss **$1.17**, net +$2.80. The config says
+`risk_per_trade_pct=0.015` -- $75 on a $5k account. Realized risk per
+trade was ~$1-5. The desk was trading at roughly **1/40th of its own
+configured size**, and every downstream number (weekly P&L, days-to-
+target, challenge progress) was shrunk by the same factor.
+
+### Root cause
+
+`organization.py` sizing:
+
+```
+risk_budget = equity * risk_pct / stop_pct        # notional needed
+budget = min(risk_budget, equity * max_position_pct, broker.cash())
+```
+
+With ATR stops on a 1m scalp, stop_pct is typically ~0.5% (clamp floor
+0.3%). Risking 1.5% with a 0.5% stop needs **3x equity in notional**
+($15,000). But `max_position_pct` was 0.15 ($750 cap) and `PaperBroker`
+rejected any buy beyond settled cash (no leverage at all). So the "1.5%
+risk" config was arithmetic fiction: $750 x 0.5% stop = **$3.75 actual
+risk**, further halved by anti-martingale/probation multipliers -- which
+is exactly the avg loss of $1.17 the journal shows. No amount of signal
+quality could out-earn a sizing pipeline that caps every trade at ~0.1%
+risk.
+
+This is the same bug class as sessions 44/46 (a hidden default silently
+overriding the documented intent), but bigger: it invalidated the risk
+model itself, not one symbol's costs.
+
+### Research
+
+Prop firms fund scalpers at real leverage precisely because tight-stop
+strategies need notional above equity: FTMO standard accounts are 1:100
+(1:30 on swing), indices ~1:100, and Clarity's One-Step (our target
+challenge, session 46) is 1:30. Sources:
+- https://www.fxempire.com/prop-firms/ftmo (FTMO 1:100 standard / 1:30 swing)
+- https://blog.tradersyard.com/blog-posts/prop-firm-leverage-comparison-table-2026-7f231
+- https://propfirmapp.com/prop-firms/ftmo
+
+### Implemented
+
+- `DeskConfig.max_leverage` (default 1.0 = old cash-account behavior
+  everywhere; nothing changes for non-funded configs).
+- `funded_account_config()`: `max_leverage=5.0`, `max_position_pct=3.0`.
+  5x total / 3x per position is deliberately far below the 30-100x the
+  firms actually offer -- 3x is *exactly* the notional that risking 1.5%
+  at a typical 0.5% ATR stop requires, no more. At the tightest ATR clamp
+  (0.3%) the position cap still binds and the trade risks 0.9% instead of
+  1.5% -- under-risking at the extreme, never over.
+- Desk sizing: when `max_leverage > 1`, buying power = `max_leverage x
+  equity - current open notional` (computed from live positions), instead
+  of settled cash. Dollar risk per trade is UNCHANGED by leverage -- it is
+  still `risk_pct x equity` at the stop; leverage only lets the notional
+  reach the size that risk number always claimed.
+- `PaperBroker(leverage=...)`: margin accounting -- cash may go negative
+  after a leveraged buy as long as total notional stays within
+  `leverage x equity` (long-only: cost <= cash + (leverage-1) x equity,
+  which reduces to the old check at 1.0). Wired through `cmd_autopilot`
+  (paper broker now inherits the config's leverage) and
+  `scripts/stress_test.py`.
+- Tests: margin buying power (fills past cash, rejects past the exposure
+  cap, equity unchanged by the fill), desk sizing actually risking the
+  configured 1.5% at a 0.5% stop, exposure cap counting already-open
+  positions, funded preset invariant (`risk_pct / 0.005 == max_position_pct`).
+  143 passing (was 139).
+
+### What this does and does not change (honesty section)
+
+- Every risk guard still applies at its configured level: 3% daily loss,
+  5%/6% max drawdown, 80% loss-budget headroom cap, anti-martingale,
+  probation, drawdown taper, daily 3% profit-target lock. Those were
+  always sized in equity %, so they were never affected by the bug --
+  they were just guarding trades 40x smaller than intended.
+- Both tails scale together. The same 39.7%-win-rate, 1.34-ratio edge now
+  produces wins AND losses at design size. Expectancy over the 63 live
+  trades was +$0.04/trade -- barely positive. At proper size that's
+  ~$1-2/trade expected, with real variance around it. This fix makes the
+  desk capable of hundreds-per-week outcomes the user asked about; it
+  equally makes -3% ($150) days possible, which the daily circuit breaker
+  will then stop. There is no configuration in which only the wins get
+  bigger.
+- **Session 46's challenge estimate (38% pass / 1.7% fail) is now stale.**
+  Those 120 real-data attempts ran through this same under-sized pipeline,
+  so they describe an account risking ~0.1%/trade, not the current one.
+  The estimate must be re-run under 5x leverage before being quoted again;
+  expect BOTH the pass rate and the fail rate to rise, and the 60%
+  "undecided at 30 days" bucket to shrink sharply. Until that re-run
+  exists, the honest answer to "what's the pass probability now?" is
+  "unmeasured".

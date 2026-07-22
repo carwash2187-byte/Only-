@@ -259,16 +259,6 @@ def cmd_autopilot(args) -> None:
     from bots.brokers import get_broker
     from bots.organization import DeskConfig, TradingDesk
 
-    # Realistic spread cost on the paper broker (session 27): the desk's
-    # numbers had been computed on frictionless fills, which no real
-    # account gets. Real brokers charge a real spread on every trade.
-    broker_kwargs = {"model_spread": True} if args.broker == "paper" else {}
-    broker = get_broker(args.broker, **broker_kwargs)
-    if not broker.is_paper and not args.live_i_understand_the_risk:
-        raise SystemExit(
-            f"Broker '{args.broker}' trades REAL money. "
-            "Re-run with --live-i-understand-the-risk to proceed."
-        )
     # Law: funded accounts trade 1-minute candles, matching MambaFX's own
     # documented timeframe -- not just when --timeframe 1m happens to be
     # passed, but as the actual fallback if it's ever omitted.
@@ -297,6 +287,21 @@ def cmd_autopilot(args) -> None:
         config = DeskConfig(
             use_llm_committee=args.llm_committee,
             timeframe=timeframe,
+        )
+    # Realistic spread cost on the paper broker (session 27): the desk's
+    # numbers had been computed on frictionless fills, which no real
+    # account gets. Real brokers charge a real spread on every trade.
+    # Leverage mirrors the config's exposure cap (session 47) so the paper
+    # account rehearses with the same margin a funded account would have.
+    broker_kwargs = (
+        {"model_spread": True, "leverage": config.max_leverage}
+        if args.broker == "paper" else {}
+    )
+    broker = get_broker(args.broker, **broker_kwargs)
+    if not broker.is_paper and not args.live_i_understand_the_risk:
+        raise SystemExit(
+            f"Broker '{args.broker}' trades REAL money. "
+            "Re-run with --live-i-understand-the-risk to proceed."
         )
     desk = TradingDesk(broker=broker, config=config)
     # Re-enabled by explicit user request (session 27) after session 19

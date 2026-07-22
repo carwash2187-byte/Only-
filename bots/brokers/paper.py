@@ -25,11 +25,17 @@ class PaperBroker(Broker):
         state_path: Optional[str] = None,
         price_overrides: Optional[Dict[str, float]] = None,
         model_spread: bool = False,
+        leverage: float = 1.0,
     ):
         self.state_path = state_path or data_path("paper_account.json")
         self.price_overrides = price_overrides or {}
         self._cash = starting_cash
         self._positions: Dict[str, float] = {}
+        # Margin, like the funded accounts this paper account rehearses for
+        # (prop firms fund at 1:30-1:100): with leverage > 1 a buy may push
+        # cash negative, as long as total notional stays within
+        # leverage * equity. 1.0 keeps the old cash-account behavior.
+        self.leverage = max(leverage, 1.0)
         # Off by default so every existing offline test's exact expected
         # fill prices stay unchanged; the live desk turns this on (session
         # 27) so its numbers reflect real transaction cost instead of
@@ -88,10 +94,21 @@ class PaperBroker(Broker):
         except Exception as exc:
             return OrderResult(False, symbol, "buy", quantity, error=str(exc))
         cost = fill * quantity
-        if cost > self._cash:
+        # Exposure after the buy must stay within leverage * equity. In this
+        # long-only cash-accounting model exposure == equity - cash, so the
+        # bound reduces to: cost <= cash + (leverage - 1) * equity. At
+        # leverage 1.0 that is exactly the old cash-account check.
+        buying_power = self._cash
+        if self.leverage > 1.0:
+            buying_power += (self.leverage - 1.0) * max(self.equity(), 0.0)
+        if cost > buying_power:
             return OrderResult(
                 False, symbol, "buy", quantity,
-                error=f"insufficient cash: need {cost:.2f}, have {self._cash:.2f}",
+                error=(
+                    f"insufficient buying power: need {cost:.2f}, have "
+                    f"{buying_power:.2f} (cash {self._cash:.2f}, "
+                    f"leverage {self.leverage:.0f}x)"
+                ),
             )
         self._cash -= cost
         self._positions[symbol] = self._positions.get(symbol, 0.0) + quantity
