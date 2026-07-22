@@ -70,6 +70,41 @@ def minutes_to_stock_close(now: Optional[datetime] = None) -> Optional[int]:
     return 16 * 60 - minutes
 
 
+def select_active_market(
+    market: str,
+    symbols: Optional[list],
+    weekend_symbols: Optional[list],
+    stock_symbols: Optional[list],
+    weekend_trading_allowed: bool,
+    now: Optional[datetime] = None,
+) -> tuple:
+    """Pick which market/watchlist this cycle actually trades: the weekend
+    crypto fallback, the stock session added on top of forex, or just the
+    base watchlist. Pulled out of run_autopilot() as a pure function so it's
+    directly testable without running the sleep/max_cycles loop -- a mocked
+    "market never opens" scenario in that loop spins forever, since cycles
+    only increments when a market is actually open.
+
+    Returns (active_market, active_symbols, stock_active).
+    """
+    active_market, active_symbols = market, symbols
+    stock_active = False
+    if (
+        market == "forex" and weekend_symbols and weekend_trading_allowed
+        and not market_is_open("forex", now) and market_is_open("crypto", now)
+    ):
+        return "crypto", weekend_symbols, False
+    if stock_symbols and market_is_open("stocks", now):
+        # Add the 9:30-16:00 ET stock session on top of the always-on
+        # forex/index watchlist -- same process, same desk, same risk
+        # rules, one single writer to the shared journal/account files
+        # (running a second autopilot process against the same state
+        # directory would race on those JSON writes).
+        stock_active = True
+        active_symbols = list(dict.fromkeys((symbols or []) + stock_symbols))
+    return active_market, active_symbols, stock_active
+
+
 def run_autopilot(
     broker_name: str = "paper",
     interval_minutes: int = 30,
@@ -117,19 +152,12 @@ def run_autopilot(
         # Sun 5pm ET. Rather than sitting idle for two days (no shot at the
         # daily target at all on those days), fall back to crypto -- the
         # one market that's actually open then -- when the caller has
-        # opted in with a crypto watchlist for it.
-        active_market, active_symbols = market, symbols
-        stock_active = False
-        if market == "forex" and weekend_symbols and not market_is_open("forex", now) and market_is_open("crypto", now):
-            active_market, active_symbols = "crypto", weekend_symbols
-        elif stock_symbols and market_is_open("stocks", now):
-            # Add the 9:30-16:00 ET stock session on top of the always-on
-            # forex/index watchlist -- same process, same desk, same risk
-            # rules, one single writer to the shared journal/account files
-            # (running a second autopilot process against the same state
-            # directory would race on those JSON writes).
-            stock_active = True
-            active_symbols = list(dict.fromkeys((symbols or []) + stock_symbols))
+        # opted in with a crypto watchlist for it AND this account's rules
+        # actually allow weekend trading (some funded firms ban it outright).
+        weekend_ok = getattr(desk.config, "weekend_trading_allowed", True)
+        active_market, active_symbols, stock_active = select_active_market(
+            market, symbols, weekend_symbols, stock_symbols, weekend_ok, now
+        )
         if market_is_open(active_market, now):
             mins_left = minutes_to_stock_close(now) if active_market == "stocks" else None
             stock_mins_left = minutes_to_stock_close(now) if stock_active else None

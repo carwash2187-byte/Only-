@@ -77,6 +77,7 @@ class DeskConfig:
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
     challenge_target_pct: float = 0.0  # 0 = off; e.g. 0.10: once cumulative gain from the challenge's starting equity hits this, lock in the pass -- no new entries, ever (until the state file is cleared for a new challenge)
+    weekend_trading_allowed: bool = True  # False for firms that ban ALL weekend trading outright: makes autopilot's weekend-crypto-fallback a no-op for this account even if --weekend-symbols is passed (by default or by habit), so a forgotten CLI flag can't violate the firm's rule
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -190,12 +191,20 @@ def funded_account_config(**overrides) -> "DeskConfig":
     return DeskConfig(**base)
 
 
-def one_step_challenge_config(funded: bool = False, **overrides) -> "DeskConfig":
-    """Preset for the specific $5K One-Step TradeLocker challenge screenshotted
-    to the desk (session 46): 10% target / 4% daily loss / 6% max loss during
-    the challenge phase, 4% daily / 10% max once funded, no weekend trading,
-    1:30 leverage. Built on top of funded_account_config() so all the other
-    guards (ATR stops, news blackout, session-aware forex, etc.) still apply.
+def clarity_one_step_challenge_config(funded: bool = False, **overrides) -> "DeskConfig":
+    """Preset for Clarity Traders' $5K One-Step TradeLocker challenge
+    (confirmed session 46 -- same firm as the "Instant" tier researched in
+    session 31, different tier/numbers): 10% target / 4% daily loss / 6%
+    max loss during the challenge phase, 4% daily / 10% max once funded, no
+    weekend trading, 1:30 leverage. Built on top of funded_account_config()
+    so all the other guards (ATR stops, news blackout, session-aware forex,
+    etc.) still apply.
+
+    Session 31's fetched Clarity FAQ still governs the parts this tier's
+    screenshot didn't show: EA's Allowed add-on is mandatory for the bot to
+    be compliant at all (purchase it), and news trading is PERMITTED at
+    this firm (not required to avoid it) -- the news_blackout guard here is
+    risk discipline, not a compliance requirement.
 
     `funded=False` (default) is the evaluation phase: challenge_target_pct
     locks in the pass at +10% and stops taking new risk. `funded=True` is
@@ -211,10 +220,13 @@ def one_step_challenge_config(funded: bool = False, **overrides) -> "DeskConfig"
         max_daily_loss_pct=0.04,
         max_total_drawdown_pct=0.10 if funded else 0.06,
         challenge_target_pct=0.0 if funded else 0.10,
-        # this firm never allows weekend trading (unlike the generic funded
-        # preset's crypto weekend-fallback) -- don't pass --weekend-symbols
-        # when launching autopilot against this account.
+        # this firm never allows weekend trading at all (not just no
+        # holding -- no NEW entries either, on anything, crypto included).
+        # weekend_trading_allowed=False makes that code-enforced: autopilot
+        # won't use the crypto weekend-fallback for this account even if
+        # --weekend-symbols is passed by default or by habit.
         friday_flatten=True,
+        weekend_trading_allowed=False,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():

@@ -2026,3 +2026,44 @@ Tests: `test_challenge_target_guard_locks_once_target_hit`,
 `test_run_challenge_monte_carlo_reports_consistent_rates`.
 
 133 tests passing.
+
+### Session 46 addendum: confirmed the account is Clarity Traders + closed a real weekend-trading loophole
+
+User confirmed the $5K One-Step challenge screenshotted this session is
+from **Clarity Traders** (MambaFX's firm) -- same firm researched in depth
+in session 31. Consolidated: `clarity_one_step_challenge_config()` (renamed
+from `one_step_challenge_config` for clarity) is now explicitly cross-
+referenced to session 31's fetched FAQ facts (EA's Allowed add-on
+mandatory, weekend banned without add-on, news trading permitted). Clarity
+evidently has (at least) two tiers with different numbers: "Instant" (3%
+daily / 5% overall -- the existing funded default) and this "One-Step" (4%
+daily / 6% max during the challenge, 4%/10% once funded). Both now coded
+as separate presets.
+
+**Found and fixed a real loophole while wiring this up.** `resolve_weekend_symbols()`
+in cli.py DEFAULTS to a crypto watchlist for ANY `--funded` launch unless
+the operator explicitly types `--weekend-symbols none` -- meaning the unsafe
+choice (trade crypto over the weekend) was the silent default, and the safe
+choice required active memory. For an account whose firm bans ALL weekend
+trading outright, one copy-pasted launch command missing that exact flag
+would violate the rule. Added `DeskConfig.weekend_trading_allowed` (default
+True, so no existing behavior changes) and set it False in
+`clarity_one_step_challenge_config()`; `bots/autopilot.py`'s weekend-fallback
+check now also requires this flag, so the crypto fallback is a structural
+no-op for this account even if `--weekend-symbols` is passed by habit or
+mistake -- enforced in code, not in operator memory.
+
+Refactored the market/symbol selection out of `run_autopilot()`'s loop into
+a new pure function, `select_active_market()`, specifically so this could be
+unit-tested directly. First attempt at testing the loophole fix through the
+full `run_autopilot()` loop with mocked-closed markets hung forever: cycles
+only increments when a market is actually open, so a scenario that's
+"closed" every iteration (by design, since the fix disables the only path
+that would open it) never reaches `max_cycles` -- a pre-existing property of
+the loop, not a bug in the fix, but a real trap for testing it. The
+extracted function sidesteps the loop entirely.
+
+Tests: `test_select_active_market_respects_weekend_trading_allowed`,
+`test_clarity_one_step_challenge_config_bans_weekend_trading`.
+
+132 tests passing.

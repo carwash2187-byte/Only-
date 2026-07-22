@@ -636,6 +636,39 @@ def test_autopilot_weekend_crypto_fallback(price_df, tmp_path, monkeypatch):
     assert seen_symbols == [["BTC-USD"]]
 
 
+def test_select_active_market_respects_weekend_trading_allowed(monkeypatch):
+    """A firm that bans ALL weekend trading (clarity_one_step_challenge_config)
+    must not get the crypto weekend-fallback even if --weekend-symbols was
+    passed -- e.g. by a copy-pasted launch command from another account.
+    weekend_trading_allowed=False is what makes this code-enforced instead
+    of relying on remembering a CLI flag. Tests the pure selection function
+    directly (see its docstring for why NOT going through run_autopilot's
+    loop here) rather than running the full autopilot loop."""
+    import bots.autopilot as ap
+
+    monkeypatch.setattr(ap, "market_is_open", lambda m, now=None: m == "crypto")
+
+    # allowed (default): forex closed, crypto open -> falls back to crypto
+    market, syms, stock_active = ap.select_active_market(
+        "forex", ["EURUSD"], ["BTC-USD"], None, True, None
+    )
+    assert (market, syms) == ("crypto", ["BTC-USD"])
+
+    # banned: same conditions, but weekend_trading_allowed=False -> stays on
+    # forex (which the mock reports closed) instead of touching crypto
+    market, syms, stock_active = ap.select_active_market(
+        "forex", ["EURUSD"], ["BTC-USD"], None, False, None
+    )
+    assert (market, syms) == ("forex", ["EURUSD"])
+
+
+def test_clarity_one_step_challenge_config_bans_weekend_trading():
+    from bots.organization import clarity_one_step_challenge_config
+
+    assert clarity_one_step_challenge_config(funded=False).weekend_trading_allowed is False
+    assert clarity_one_step_challenge_config(funded=True).weekend_trading_allowed is False
+
+
 def test_autopilot_adds_stocks_during_nyse_hours(price_df, tmp_path, monkeypatch):
     import bots.autopilot as ap
 
@@ -2753,16 +2786,16 @@ def test_desk_stops_new_entries_once_challenge_target_hit(tmp_path, journal, pri
     assert not report.actions  # no new entries taken
 
 
-def test_one_step_challenge_config_matches_screenshotted_rules():
-    from bots.organization import one_step_challenge_config
+def test_clarity_one_step_challenge_config_matches_screenshotted_rules():
+    from bots.organization import clarity_one_step_challenge_config
 
-    challenge = one_step_challenge_config(funded=False)
+    challenge = clarity_one_step_challenge_config(funded=False)
     assert challenge.max_daily_loss_pct == 0.04
     assert challenge.max_total_drawdown_pct == 0.06
     assert challenge.challenge_target_pct == 0.10
     assert challenge.friday_flatten is True
 
-    live = one_step_challenge_config(funded=True)
+    live = clarity_one_step_challenge_config(funded=True)
     assert live.max_daily_loss_pct == 0.04
     assert live.max_total_drawdown_pct == 0.10
     assert live.challenge_target_pct == 0.0  # nothing to lock once funded
