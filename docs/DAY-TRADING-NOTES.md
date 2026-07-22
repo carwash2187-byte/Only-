@@ -2067,3 +2067,59 @@ Tests: `test_select_active_market_respects_weekend_trading_allowed`,
 `test_clarity_one_step_challenge_config_bans_weekend_trading`.
 
 132 tests passing.
+
+### Session 46 addendum 2: independent real-data check undercuts the synthetic pass-rate estimate
+
+Directive: keep improving, keep practicing, look for holes. Did both --
+and the second one (independent validation) matters more than the first.
+
+**Practiced more**: `bots practice --scenarios 300 --save` hardened the
+live Q-table (11,792 -> 12,692 episodes). Re-measured the synthetic
+challenge-odds estimate afterward: 42.2% -> 70.1% (tight, ±0.8% across 4
+seeds). Reported honestly with the caveat that mattered: practice and
+evaluation both draw from the SAME synthetic regime-generator family
+(bots/learning/scenarios.py), so part of that jump could be the agent
+learning quirks of the synthetic data rather than something that
+generalizes.
+
+**Built the actual follow-up instead of leaving that caveat unresolved.**
+`bots/learning/challenge_sim_real.py` (`python -m bots challenge-odds --real`):
+fetches REAL 1-minute forex history (EURUSD/GBPUSD/USDJPY/AUDUSD/USDCHF,
+~40k real bars via bots.marketdata / Yahoo) and builds attempt tapes via
+block bootstrap -- contiguous chunks of ACTUAL price history, stitched
+end to end with a continuity adjustment at each seam, preserving real
+short-term volatility/autocorrelation instead of a hand-written formula.
+
+**Result: undercuts the synthetic number, badly.** At 15,000 bars (~10 real
+trading days) across 100 attempts: 0% pass, 0% fail, **100% undecided**,
+average gain only +2.78%. The agent never got remotely close to +10% OR
+-6% in that window. Real EURUSD/GBPUSD 1-minute price action is far calmer
+than the hand-written synthetic regimes (flash_crash, news_spike,
+blowoff_top etc. are, by design, more dramatic than typical real tape) --
+which is exactly why training and evaluating on synthetic data inflated
+the estimate. The honest conclusion: the 70.1% synthetic figure does NOT
+reflect real market behavior, and should not be quoted as the estimate
+going forward.
+
+This doesn't mean the strategy is bad -- +2.78% over 10 days with zero
+drawdown-limit breaches is a genuinely fine risk-adjusted number, and
+Clarity's own rules say challenge duration is unlimited, so slow-and-
+real might still pass given enough real calendar time. It means the FAST
+synthetic estimate was measuring the wrong thing. A longer-horizon real-data
+run (40 attempts x 45,000 bars, ~30 real trading days) was kicked off to
+see whether pass_rate actually turns nonzero given more realistic time,
+rather than assuming either way.
+
+Lesson for future synthetic-data work in this repo: any evaluation number
+produced by scenarios.py should be labelled as what it is (a stress test /
+practice signal) and never quoted as a probability estimate without an
+independent real-data check like this one. challenge_sim.py's own
+docstring already disclosed this limitation; this addendum is the proof
+it was a real, not theoretical, source of inflation.
+
+Tests: `test_block_bootstrap_tape_is_continuous_and_right_length`,
+`test_block_bootstrap_deterministic_for_same_seed`,
+`test_run_real_data_monte_carlo_uses_supplied_pools_not_network`,
+`test_run_real_data_monte_carlo_raises_without_any_pool`.
+
+136 tests passing.
