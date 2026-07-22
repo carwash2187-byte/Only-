@@ -2123,3 +2123,60 @@ Tests: `test_block_bootstrap_tape_is_continuous_and_right_length`,
 `test_run_real_data_monte_carlo_raises_without_any_pool`.
 
 136 tests passing.
+
+### Session 46 addendum 3: real-data risk-per-trade sweep confirms the direction, not the magnitude
+
+Followed up the addendum-2 finding (synthetic pass-rate was inflated) with
+a real-data risk-per-trade sweep -- the earlier sweep (session 46 main
+entry) was ALSO synthetic-only and inherits the same inflation concern, so
+it needed the same independent check.
+
+Ran `run_real_data_monte_carlo` at three risk levels, 15 attempts each,
+~13 real trading days per attempt (20,000 bars), real EURUSD/GBPUSD/USDJPY/
+AUDUSD/USDCHF block-bootstrapped tape:
+
+| risk/trade | pass | fail | undecided | avg gain |
+|---|---|---|---|---|
+| 1.0% | 0% | 0% | 100% | +2.19% |
+| 1.5% (current default) | 0%\* | 0% | 100%\* | +2.78%\* |
+| 2.5% | **13.3%** | 0% | 86.7% | +4.81% |
+
+\*from addendum 2's 100-attempt/15,000-bar run at the same risk level.
+
+**Confirms the DIRECTION of the earlier synthetic finding** (higher risk
+per trade reaches a fixed target faster, which matters when the window is
+bounded) **on real data, not just synthetic** -- 2.5% risk genuinely started
+passing within ~13 real trading days where 1.0-1.5% never did in the same
+window. But the MAGNITUDE is nowhere near the synthetic sweep's 44%->52%
+range; real pass rates at this horizon are in the low double digits at
+best. Zero fails at any level tested -- the risk-per-trade increase hasn't
+shown any real added drawdown-breach risk yet, though 15 attempts per
+level is a small sample and this needs more attempts to trust the 0% fail
+rate specifically.
+
+**Not shipped as a live change**, same reasoning as the original sweep:
+still a small sample (15 attempts/level), still doesn't include desk entry
+filters, and this is a bigger, less-reversible-feeling change to make on
+real money from two rounds of Monte Carlo alone.
+
+**Also audited**: the journal's setup-blocking ("learn from mistakes")
+granularity. Setup strings combine trend+RSI+VWAP+ORB+session-phase into
+one fairly specific key, requiring 5+ trades in the EXACT same combination
+before a veto triggers -- looked for a gap where a real, generalizable
+losing pattern (e.g. "trend-up structurally loses here") could hide behind
+data fragmentation across near-duplicate setup strings, never reaching the
+5-trade threshold in any single bucket. Checked against the real paper
+journal: most of the actual trend-up variants seen ARE already individually
+blocked (5 of ~7 trend-up combinations in the real journal have enough
+trades and negative expectancy, and are already vetoed). No clear evidence
+of the hypothesized gap in the real data -- did not build a speculative
+fix for a problem the evidence doesn't currently show.
+
+A longer-horizon real-data run (40 attempts x 45,000 bars, ~30 real
+trading days, matching Clarity's own "Challenge Duration: Unlimited" rule)
+was still computing as of this entry -- results to follow in a later
+addendum once it completes; real-data simulation runs far slower than
+synthetic (minutes per attempt, not milliseconds) since it can't skip real
+market microstructure.
+
+136 tests passing (no code changes this addendum, research/measurement only).
