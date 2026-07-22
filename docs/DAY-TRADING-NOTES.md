@@ -2301,3 +2301,38 @@ originally, addendum 5 for the same thing recurring, addendum 6 for
 spreads.py). Any time a symbol is added to the funded/challenge watchlist,
 grep for CORRELATION_GROUPS and spreads.py specifically, not just
 marketdata.py's alias table.
+
+### Session 46 addendum 7: second seed reveals the 25% figure had much wider uncertainty than it looked
+
+Ran a second, independent-seed version of the ~30-real-trading-day
+validation (same settings as addendum 4: 40 attempts, 45,000 bars,
+current default 1.5% risk/trade, real block-bootstrapped EURUSD/GBPUSD/
+USDJPY/AUDUSD/USDCHF data) to check whether the 25% pass rate was a
+stable number or noise from a single sample.
+
+**Result: 47.5% pass, 0% fail, 52.5% undecided, avg gain +7.84%.** Nearly
+double the first seed's 25%. Combined across both seeds (80 total
+attempts): **29/80 = 36.2% pass rate.**
+
+Honest read: a single 40-attempt real-data run does NOT pin down a
+precise pass-rate number -- the seed-to-seed spread (25% to 47.5%) is
+large enough that reporting either individually as "the" answer would
+have been overconfident. The 40,000-real-bar pool being block-bootstrapped
+is finite, so different seeds draw meaningfully different combinations of
+real historical stretches, and 40 attempts per seed isn't enough to average
+that out. What IS robust across both seeds, strongly: **0% fail rate**,
+80/80 real-data-based attempts, zero account blowups. The safety property
+keeps holding up; the precise pass-rate number does not.
+
+**Updated honest estimate: roughly 30-45% pass rate at a ~30-real-trading-day
+horizon** (wide range reflecting genuine measured uncertainty, not false
+precision), **0% measured failure rate** across every real-data test run
+this session (120+ combined real-data attempts across all horizons/risk
+levels/seeds, zero fails in any of them).
+
+To actually narrow this further would need many more independent seeds
+(diminishing returns given ~60min/seed) or a genuinely larger real data
+pool (more symbols, longer real history) -- flagged as the honest next
+step, not done.
+
+139 tests passing (no code changes this addendum, research/measurement only).
