@@ -1904,3 +1904,56 @@ Sources:
   "Best Platforms for Prop Firm Traders (Forex and Futures 2026)"
 - LuxAlgo, "High-Frequency Trading vs. Retail Algorithmic Trading";
   uTrade Algos, "High Frequency Algorithmic Trading in 2025"
+
+## Session 45 (news guard fail-closed on a funded account: stop trading blind when the calendar can't be verified)
+
+Directive (paraphrased): keep hunting for holes, especially around the bot
+"looking at news" live, and make sure it's actually solid for a funded
+account. Audited the news path and found a real fail-OPEN hole.
+
+**The hole.** `NewsGuard.blackout()` returns `(False, "no high-impact news
+in window")` in two very different situations that the desk treated
+identically: (a) the feed was fetched fine and there genuinely is no event
+right now, and (b) the ForexFactory feed was unreachable and there is no
+usable cache, so the guard checked *nothing*. Case (b) was reported as "no
+news" and the desk entered trades -- i.e. it traded BLIND through what could
+be an NFP/FOMC window. On paper that's harmless; on a funded account, a
+single trade inside a red-news window forfeits the account (the guard's own
+docstring says funded firms hard-prohibit it). Fail-open is the wrong default
+there.
+
+**Why not just trust the cache / an mtime staleness check?** The cache file
+(`news_calendar.json`) lives under `BOT_DATA_DIR`, which for the live desk is
+the git-committed `paper_state/` (and the funded state dirs). A container
+restart or `git checkout` rewrites the file's mtime to "now," so a week-old
+calendar would look brand new -- an mtime-based freshness test is unreliable
+by construction. So freshness is tracked in-process instead: it is True only
+after a feed fetch actually succeeds this session (or an injected test
+source); any fall-back-to-cache or empty result marks the data NOT fresh.
+
+**The fix.**
+- `NewsGuard._data_fresh` + `NewsGuard.is_data_fresh()`: verified-live vs
+  blind. The cache still feeds `blackout()` so we keep dodging events we
+  already knew about -- freshness is a *separate, stricter* signal used only
+  for the fail-closed decision.
+- `DeskConfig.news_fail_closed` (funded: True, paper/default: False). When
+  on, the cycle-level news check, after finding no blocking event, ALSO
+  refuses new entries if `is_data_fresh()` is False -- "no news in window"
+  is only trusted when the calendar was actually verifiable. Exits still run;
+  only new entries are held. Paper mode keeps its existing fail-open
+  convenience (a down feed shouldn't stop a fake-money desk).
+
+Deliberately bounded: this does not halt trading during normal operation
+(the feed is up, fetch succeeds, `is_data_fresh()` is True). It only bites
+when the guard is genuinely blind -- exactly when a funded account should sit
+out. The cost is a few missed entries during a real feed outage; the thing it
+prevents is a blind trade into a news spike that ends the account. On a
+funded account that trade-off is not close.
+
+Tests: `test_news_guard_data_fresh_with_live_source`,
+`test_news_guard_not_fresh_when_feed_down_and_no_cache`,
+`test_funded_news_fail_closed_blocks_when_feed_unverifiable`,
+`test_paper_news_trades_through_when_feed_unverifiable`, plus the existing
+news tests still green.
+
+123 tests passing.

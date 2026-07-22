@@ -48,6 +48,7 @@ class DeskConfig:
     max_trades_per_day: int = 0  # scalper discipline: cap entries per day (0 = no cap)
     news_blackout: bool = True  # no new entries +/-10min around high-impact USD news
     news_currencies: tuple = ("USD",)
+    news_fail_closed: bool = False  # funded safety: if the news feed can't be verified fresh, block new entries instead of trading blind (0 = trade normally when the feed is down)
     max_per_correlation_group: int = 2  # cap positions per correlated cluster
     breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
     max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
@@ -112,6 +113,12 @@ def funded_account_config(**overrides) -> "DeskConfig":
         atr_stops=True,
         max_per_correlation_group=2,
         news_blackout=True,
+        # A funded account forfeits on a single trade inside a red-news
+        # window (newsguard.py). If the ForexFactory feed is unreachable and
+        # we can't confirm the calendar is current, sitting out is cheap and
+        # a blind trade is not -- so funded mode fails CLOSED when the guard
+        # can't verify freshness, unlike paper mode which trades normally.
+        news_fail_closed=True,
         breakeven_at_1r=True,
         session_aware_forex=True,
         htf_confirm=True,
@@ -829,6 +836,16 @@ class TradingDesk:
             news_blocked, news_msg = self._news_guard.blackout()
             report.notes.append(f"[news] {news_msg}")
             if news_blocked:
+                return report
+            # Fail-closed (funded): "no news in window" is only trustworthy if
+            # the calendar was actually verifiable. If the feed is down and we
+            # can't confirm freshness, don't trade blind through a window that
+            # could forfeit the account -- exits above already ran.
+            if cfg.news_fail_closed and not self._news_guard.is_data_fresh():
+                report.notes.append(
+                    "[news] calendar unverifiable (feed unreachable) -- funded "
+                    "fail-closed: no new entries until it can be confirmed"
+                )
                 return report
 
         # 2c. Loss-streak rule: consecutive losses today mean something is

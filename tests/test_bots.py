@@ -2634,3 +2634,71 @@ def test_run_practice_hardens_a_supplied_agent_in_place():
     assert agent.trained_episodes > 0
     assert len(agent.q) > 0
     assert r["trained_episodes"] == agent.trained_episodes
+
+
+# --- news guard fail-closed on an unverifiable feed (session 45) -----------
+
+def test_news_guard_data_fresh_with_live_source():
+    from bots.newsguard import NewsGuard
+
+    guard = NewsGuard(currencies=("USD",), fetch_fn=lambda: [])
+    # an injected/live source counts as verified-fresh
+    assert guard.is_data_fresh() is True
+
+
+def test_news_guard_not_fresh_when_feed_down_and_no_cache(tmp_path, monkeypatch):
+    import bots.newsguard as ng
+
+    monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))  # empty dir -> no cache file
+
+    def boom(*a, **k):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(ng.requests, "get", boom)
+    guard = ng.NewsGuard(currencies=("USD",))
+    blocked, _ = guard.blackout()
+    # with nothing to check, the raw blackout can't block -- and freshness is False,
+    # which is exactly what the funded fail-closed gate keys off of
+    assert blocked is False
+    assert guard.is_data_fresh() is False
+
+
+class _BlindGuard:
+    """A news guard whose feed is unreachable: it reports 'no news' but admits
+    it can't verify that."""
+
+    def blackout(self, now=None, currencies=None):
+        return (False, "no high-impact news in window")
+
+    def is_data_fresh(self):
+        return False
+
+
+def test_funded_news_fail_closed_blocks_when_feed_unverifiable(tmp_path, journal, price_df):
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "a.json"),
+        price_overrides={"EURUSD": 1.10},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=True, news_fail_closed=True, min_copy_score=0),
+    )
+    desk._news_guard = _BlindGuard()
+    report = desk.run_once(symbols=["EURUSD"])
+    assert any("fail-closed" in n for n in report.notes), report.notes
+
+
+def test_paper_news_trades_through_when_feed_unverifiable(tmp_path, journal, price_df):
+    # non-funded default (news_fail_closed=False): a down feed must NOT halt the
+    # desk -- paper mode keeps its existing fail-open convenience.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "a.json"),
+        price_overrides={"EURUSD": 1.10},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=True, news_fail_closed=False, min_copy_score=0),
+    )
+    desk._news_guard = _BlindGuard()
+    report = desk.run_once(symbols=["EURUSD"])
+    assert not any("fail-closed" in n for n in report.notes), report.notes

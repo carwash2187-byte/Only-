@@ -49,9 +49,17 @@ class NewsGuard:
         self.fetch_fn = fetch_fn
         self._events: Optional[List[dict]] = None
         self._fetched_at = 0.0
+        # Whether the events currently loaded came from a *verified live*
+        # source (a successful feed fetch this session) rather than a stale
+        # cache fallback or nothing at all. A cached copy still lets us dodge
+        # events we already knew about, but it is NOT proof the calendar is
+        # current -- a funded account can choose to sit out when the guard
+        # can't confirm the schedule is fresh (see is_data_fresh).
+        self._data_fresh = False
 
     def _fetch(self) -> List[dict]:
         if self.fetch_fn is not None:
+            self._data_fresh = True  # injected source is treated as live
             return self.fetch_fn()
         cache_file = data_path("news_calendar.json")
         try:
@@ -61,9 +69,16 @@ class NewsGuard:
             os.makedirs(os.path.dirname(cache_file) or ".", exist_ok=True)
             with open(cache_file, "w", encoding="utf-8") as fh:
                 json.dump(events, fh)
+            self._data_fresh = True
             return events
         except Exception:
-            # network down: fall back to the last cached copy if one exists
+            # network down: fall back to the last cached copy if one exists.
+            # The cache still protects against events we already knew about,
+            # but it is not a verified-current calendar, so mark data as NOT
+            # fresh -- an mtime check is unreliable here (the cache can live in
+            # the git-committed state dir, so a checkout/restart resets its
+            # timestamp to "now" and a week-old file would look brand new).
+            self._data_fresh = False
             try:
                 with open(cache_file, "r", encoding="utf-8") as fh:
                     return json.load(fh)
@@ -75,6 +90,17 @@ class NewsGuard:
             self._events = self._fetch()
             self._fetched_at = time.time()
         return self._events
+
+    def is_data_fresh(self) -> bool:
+        """True only when the guard is running on a verified-live calendar
+        (a feed fetch succeeded within the in-memory cache window).
+
+        False means the feed is unreachable and we are either blind or leaning
+        on an unverifiable cache -- the moment a funded desk should sit out
+        rather than trade as if it had confirmed 'no news right now'. Loads
+        events first so the freshness flag reflects the current window."""
+        self._get_events()
+        return self._data_fresh
 
     def blackout(
         self,
