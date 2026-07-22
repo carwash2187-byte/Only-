@@ -369,6 +369,33 @@ def test_leverage_exposure_cap_counts_open_positions(price_df, tmp_path, journal
     assert buys[0].quantity * 100.0 == pytest.approx(5_000.0, rel=0.01)
 
 
+def test_journal_records_mfe_and_mae(price_df, tmp_path, journal):
+    # Session 47: every managed cycle records the trade's max favorable /
+    # adverse excursion into its tags, so exit-rule tuning (is the 2R
+    # target reachable?) can be answered from evidence after the fact.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0, "UNRELATED": 50.0},
+    )
+    assert broker.buy("DEMO", 10).ok
+    journal.open_trade("DEMO", "long", 10, 100.0, setup="test")
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=99,
+                          risk_per_trade_pct=0.0),
+    )
+    broker.price_overrides["DEMO"] = 102.0  # +2% peak
+    desk.run_once(symbols=["UNRELATED"])
+    broker.price_overrides["DEMO"] = 94.0  # -6% -> beyond the 5% stop
+    desk.run_once(symbols=["UNRELATED"])
+    closed = [t for t in journal.trades.values() if not t.is_open]
+    assert closed
+    tags = {t.split(":")[0]: float(t.split(":", 1)[1])
+            for t in closed[0].tags if ":" in t}
+    assert tags["mfe"] == pytest.approx(0.02, abs=1e-6)
+    assert tags["mae"] == pytest.approx(-0.06, abs=1e-6)
+
+
 def test_funded_config_carries_leverage_for_tight_stops():
     from bots.organization import funded_account_config
 

@@ -1169,6 +1169,29 @@ class TradingDesk:
             reason = force_exit_reason
         elif record:
             change = price / record.entry_price - 1.0
+            # Max favorable/adverse excursion (session 47): record how far
+            # every trade actually ran for/against us, cycle by cycle. 26 of
+            # the first 63 live trades died at the time stop below +1R and
+            # only 2 ever reached the 2R target -- whether the target is
+            # simply too far can only be answered from MFE data, not vibes.
+            # Stored as tags so it survives into the closed-trade record.
+            mfe, mae = change, change
+            excursion_changed = True
+            for tag in list(record.tags):
+                if tag.startswith("mfe:"):
+                    prior = float(tag.split(":", 1)[1])
+                    excursion_changed = change > prior
+                    mfe = max(mfe, prior)
+                    record.tags.remove(tag)
+                elif tag.startswith("mae:"):
+                    prior = float(tag.split(":", 1)[1])
+                    excursion_changed = excursion_changed or change < prior
+                    mae = min(mae, prior)
+                    record.tags.remove(tag)
+            record.tags.append(f"mfe:{mfe:.6f}")
+            record.tags.append(f"mae:{mae:.6f}")
+            if excursion_changed:
+                self.journal.save()
             # ATR-sized trades carry their own stop distance; 1:2 R:R shape
             # is preserved by scaling the target with it.
             stop_pct = record.stop_pct or cfg.stop_loss_pct

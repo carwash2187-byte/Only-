@@ -23,5 +23,28 @@ echo "watchdog started $(date -u +%FT%TZ) (pid $$)"
 while true; do
     out=$(bash scripts/keepalive.sh 2>&1)
     [[ -n "$out" ]] && echo "[$(date -u +%FT%TZ)] $out"
+
+    # Self-improvement law (session 47): once a day, retrain the live
+    # Q-table on recent rough market windows -- plain python, no Claude
+    # usage -- then bounce the paper bot so it trades on what it just
+    # learned. The journal-driven parts (probation, cooldowns, mistakes
+    # log, MFE/MAE) update themselves on every close already; this covers
+    # the model itself.
+    STAMP=/tmp/last_selftrain
+    now=$(date +%s)
+    last=$([[ -f "$STAMP" ]] && stat -c %Y "$STAMP" || echo 0)
+    if (( now - last >= 86400 )); then
+        touch "$STAMP"
+        echo "[$(date -u +%FT%TZ)] nightly self-train starting"
+        if BOT_DATA_DIR=paper_state timeout 3600 python scripts/stress_test.py --practice \
+                >> /tmp/selftrain.log 2>&1; then
+            pkill -f "autopilot --broker paper" || true
+            sleep 2
+            bash scripts/keepalive.sh
+            echo "[$(date -u +%FT%TZ)] self-train done, paper bot restarted on the updated Q-table"
+        else
+            echo "[$(date -u +%FT%TZ)] PROBLEM: nightly self-train failed (see /tmp/selftrain.log)"
+        fi
+    fi
     sleep 300
 done

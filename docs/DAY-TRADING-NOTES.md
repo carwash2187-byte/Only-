@@ -2499,3 +2499,30 @@ Known open item carried forward: realized avg win/loss ratio is 1.34 vs
 the designed 2.0 (time stops + breakeven exits truncate winners). Re-run
 the challenge pass-rate estimate under the new sizing before quoting any
 pass probability.
+
+### Session 47 addendum 2: self-improvement + market-watch laws, MFE/MAE evidence recorder
+
+More user directives codified ("everything a law in the bot itself, no
+Claude usage, its own person"):
+
+- **MFE/MAE tracking (new, in `_manage_position`):** every managed cycle
+  now records each open trade's max favorable and max adverse excursion
+  as `mfe:`/`mae:` tags that survive into the closed-trade record. Reason
+  (real journal evidence): 26 of the first 63 live trades died at the
+  120-min time stop below +1R and only 2 ever reached the 2R target.
+  Whether the target is simply too far -- and where it *should* be -- can
+  only be answered from how far trades actually ran, which the journal
+  never recorded until now. The evidence law (CLAUDE.md) requires any
+  future exit/target retune to cite this data, not intuition. Test:
+  `test_journal_records_mfe_and_mae`. 144 passing.
+- **Nightly self-train (watchdog):** once a day the watchdog runs
+  `scripts/stress_test.py --practice` (trains the LIVE Q-table on the
+  roughest + strongest-trend real windows, plain python, zero Claude
+  usage) and bounces the paper bot onto the updated model. Combined with
+  journal-driven probation/cooldowns/mistakes-log, the bot now improves
+  itself daily without any Claude turn involved.
+- **News-chasing (user asked to "trade the moment news hits"):** already
+  researched and REJECTED in session 44 -- release-time spread blowouts
+  are a documented funded-account killer; the calendar stays a blackout
+  guard. Codified as part of the market-watch law so this doesn't get
+  re-litigated without new evidence.

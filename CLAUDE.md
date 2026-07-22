@@ -31,6 +31,29 @@ and survive Claude usage running out, for as long as the container lives:
   user's own machine/VPS (`scripts/install_trading_stack.sh` +
   `scripts/watchdog.sh` under systemd/cron).
 
+## Self-improvement + market-watch laws (user directive, session 47)
+
+All autonomous, all token-free — "its own person" is the design goal:
+
+- **Self-improvement law:** the desk must keep learning from its own
+  trading with no Claude in the loop: journal-driven symbol probation and
+  loss cooldowns update on every close; the mistakes log records every
+  loser; every managed cycle records each open trade's max favorable /
+  adverse excursion (`mfe:`/`mae:` tags) so exit rules are tuned from
+  evidence later; and the watchdog runs a nightly Q-table retrain on the
+  roughest + strongest real market windows (`scripts/stress_test.py
+  --practice`) then bounces the paper bot onto the updated model.
+- **Market-watch law:** the desk scans the full 19-symbol watchlist every
+  minute around the clock (forex calendar), plus the weekend crypto
+  fallback, plus the ForexFactory news calendar — which is used as a
+  news-safety BLACKOUT, not a news-chasing trigger: session 44 researched
+  news-chasing and rejected it on evidence (spread blowouts at release
+  time are how funded accounts die). Don't re-add news-chasing without new
+  evidence that clears that bar.
+- **Evidence law:** any exit/target retune must cite the journal's MFE/MAE
+  data (or equivalent measured evidence), not intuition — same standard as
+  the risk-change rules above.
+
 ## State and data directory
 
 - `BOT_DATA_DIR=paper_state` is the convention for this project's live
