@@ -2526,3 +2526,32 @@ Claude usage, its own person"):
   are a documented funded-account killer; the calendar stays a blackout
   guard. Codified as part of the market-watch law so this doesn't get
   re-litigated without new evidence.
+
+### Session 47 addendum 3: the command center, real ("this but better")
+
+User shared an Instagram carousel of a mocked-up "AI trading command
+center" (scanner radar, agent role map, trade-plan card, backtest engine,
+risk engine, one-clear-decision card) and asked for "this but better".
+The honest response: the desk already DOES every stage in that carousel
+for real (scan/filter/score, role-separated guards, ATR trade plans,
+replay/bootstrap backtests, risk engine, per-symbol decisions with
+reasons) -- what it lacked was the presentation. Built the real version
+into the dashboard, fed entirely from the desk's own state:
+
+- `bots/autopilot.py` now publishes `last_cycle.json` (gitignored,
+  display-only) every cycle: symbol, action, and the desk's actual reason
+  string -- the real "one clear decision per symbol" feed. Test:
+  `test_autopilot_writes_last_cycle_feed`. 145 passing.
+- Dashboard gains four sections, all computed from state files: **Risk
+  engine** (live daily-P/L vs the 3% breaker and +3% lock, drawdown vs
+  the 5% ceiling, notional exposure vs the 5x cap, current $ risk/trade),
+  **Decision feed** (last cycle verbatim), **Active trade plans**
+  (entry/stop/target/risk-$/R:R/MFE-MAE per open position), and
+  **Self-improvement** (Q-table size, last model update, live probation
+  list). Footer/breaker chip corrected from the stale 1%/5% wording to
+  the funded reality (1.5% risk, 3% daily, 5% max DD).
+
+Difference vs the carousel, stated plainly: their equity curve and
+"58.7% win rate / PASSED" numbers are marketing renders; every number on
+this dashboard is a real reading from a real (paper) account, including
+the ugly ones.

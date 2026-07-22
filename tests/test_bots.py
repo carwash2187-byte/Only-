@@ -1,5 +1,6 @@
 """Tests for the bots/ stack: journal, RL agent, paper broker, trading desk."""
 
+import json
 import os
 
 import numpy as np
@@ -394,6 +395,32 @@ def test_journal_records_mfe_and_mae(price_df, tmp_path, journal):
             for t in closed[0].tags if ":" in t}
     assert tags["mfe"] == pytest.approx(0.02, abs=1e-6)
     assert tags["mae"] == pytest.approx(-0.06, abs=1e-6)
+
+
+def test_autopilot_writes_last_cycle_feed(price_df, tmp_path, journal, monkeypatch):
+    # Session 47 command center: every cycle publishes its per-symbol
+    # decisions (with real reason strings) to BOT_DATA_DIR/last_cycle.json
+    # for the dashboard's decision feed.
+    from bots.autopilot import write_last_cycle
+
+    monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          risk_per_trade_pct=0.005, stop_loss_pct=0.05),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    write_last_cycle(desk, report, "test-stamp")
+    with open(tmp_path / "last_cycle.json") as fh:
+        payload = json.load(fh)
+    assert payload["stamp"] == "test-stamp"
+    assert payload["equity"] == pytest.approx(10_000, rel=0.01)
+    assert payload["actions"] and payload["actions"][0]["symbol"] == "DEMO"
+    assert "reason" in payload["actions"][0]
 
 
 def test_funded_config_carries_leverage_for_tight_stops():

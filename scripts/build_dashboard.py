@@ -313,6 +313,133 @@ def build() -> str:
         except OSError:
             continue
 
+    # --- Command center panels (session 47): the real versions of the
+    # "AI trading command center" cards -- every number below comes from
+    # the desk's own state files and journal, not a mockup. ------------
+
+    # Risk engine: the guards' live readings.
+    from bots.organization import funded_account_config
+
+    cfg = funded_account_config()
+    try:
+        dd_state = load("max_drawdown_state_paper.json")
+    except (FileNotFoundError, json.JSONDecodeError):
+        dd_state = {}
+    peak = max(float(dd_state.get("peak_equity") or equity), equity)
+    total_dd = max(1.0 - equity / peak, 0.0) if peak > 0 else 0.0
+    day_pct = change_pct / 100.0
+    lev_used = positions_value / equity if equity > 0 else 0.0
+
+    def risk_card(label, value, used_frac, note):
+        used = max(0.0, min(used_frac, 1.0)) * 100.0
+        cls = "loss" if used >= 75 else ("flat" if used >= 40 else "gain")
+        return (
+            f'<div class="stat"><div class="stat-label">{label}</div>'
+            f'<div class="stat-value {cls}">{value}</div>'
+            f'<div class="progress-track" style="margin-top:.4rem">'
+            f'<div class="progress-fill" style="width:{used:.0f}%"></div></div>'
+            f'<div class="sub">{note}</div></div>'
+        )
+
+    risk_engine_html = "\n".join([
+        risk_card(
+            "Daily P/L vs limits", fmt_pct(change_pct),
+            abs(min(day_pct, 0.0)) / cfg.max_daily_loss_pct,
+            f"breaker at -{cfg.max_daily_loss_pct:.0%} · target lock at +{cfg.daily_profit_target_pct:.0%}",
+        ),
+        risk_card(
+            "Drawdown from peak", f"{total_dd:.1%}",
+            total_dd / cfg.max_total_drawdown_pct if cfg.max_total_drawdown_pct else 0.0,
+            f"hard ceiling {cfg.max_total_drawdown_pct:.0%} (peak {fmt_money(peak)})",
+        ),
+        risk_card(
+            "Exposure / leverage", f"{lev_used:.1f}x",
+            lev_used / cfg.max_leverage if cfg.max_leverage else 0.0,
+            f"{fmt_money(positions_value)} notional · cap {cfg.max_leverage:.0f}x equity",
+        ),
+        risk_card(
+            "Risk per trade", fmt_money(equity * cfg.risk_per_trade_pct),
+            cfg.risk_per_trade_pct / 0.03,
+            f"{cfg.risk_per_trade_pct:.1%} of equity at the stop · ATR-sized",
+        ),
+    ])
+
+    # Decision feed: the desk's last cycle, one clear decision per symbol.
+    try:
+        cycle = load("last_cycle.json")
+        cards = []
+        for a in cycle.get("actions", [])[:24]:
+            act = a.get("action", "")
+            if act == "buy" and a.get("ok"):
+                tag, cls = "APPROVED", "gain"
+            elif act == "sell":
+                tag, cls = "EXIT", "flat"
+            elif act == "hold":
+                tag, cls = "HOLDING", "flat"
+            else:
+                tag, cls = "SKIPPED", "loss"
+            reason = _html.escape((a.get("reason") or "")[:220])
+            cards.append(
+                f'<li class="entry"><div class="entry-head">'
+                f'<span class="entry-sym">{_html.escape(a.get("symbol",""))}</span>'
+                f'<span class="entry-tag {cls}">{tag}</span>'
+                f'<span class="entry-date">{_html.escape(cycle.get("stamp",""))}</span>'
+                f'</div><p class="entry-note">{reason}</p></li>'
+            )
+        decision_feed_html = "\n".join(cards) or '<li class="empty">cycle produced no actions</li>'
+    except (FileNotFoundError, json.JSONDecodeError):
+        decision_feed_html = (
+            '<li class="empty">No decision feed yet — the bot writes '
+            "last_cycle.json every cycle once it's running on session-47 code.</li>"
+        )
+
+    # Trade plan per open position: entry / stop / target / risk$ / MFE-MAE.
+    plan_rows = []
+    for sym, t in open_trades.items():
+        entry = t.get("entry_price") or 0.0
+        sp = t.get("stop_pct") or cfg.stop_loss_pct
+        qty = t.get("quantity") or 0.0
+        tags = {p.split(":", 1)[0]: p.split(":", 1)[1] for p in t.get("tags", []) if ":" in p}
+        mfe = f'+{float(tags["mfe"]):.2%}' if "mfe" in tags else "—"
+        mae = f'{float(tags["mae"]):.2%}' if "mae" in tags else "—"
+        plan_rows.append(
+            f'<tr><td class="sym">{sym}</td>'
+            f'<td class="num">${entry:,.4f}</td>'
+            f'<td class="num">${entry * (1 - sp):,.4f}</td>'
+            f'<td class="num">${entry * (1 + 2 * sp):,.4f}</td>'
+            f'<td class="num">{fmt_money(qty * entry * sp)}</td>'
+            f'<td class="num">1 : 2</td>'
+            f'<td class="num">{mfe} / {mae}</td></tr>'
+        )
+    trade_plan_html = "\n".join(plan_rows) or (
+        '<tr><td colspan="7" class="empty">No open positions — no active trade plans.</td></tr>'
+    )
+
+    # Learning status: model size + journal-driven self-corrections.
+    try:
+        qtable = load("qtable.json")
+        q_states = len(qtable.get("q", qtable)) if isinstance(qtable, dict) else 0
+        q_mtime = datetime.fromtimestamp(
+            os.path.getmtime(data_path("qtable.json")), tz=timezone.utc
+        ).strftime("%b %d %H:%M UTC")
+    except (FileNotFoundError, json.JSONDecodeError):
+        q_states, q_mtime = 0, "—"
+    sym_stats: dict = {}
+    for t in closed_trades:
+        s = sym_stats.setdefault(t["symbol"], {"trades": 0, "pnl": 0.0})
+        s["trades"] += 1
+        s["pnl"] += t["pnl"] or 0.0
+    probation = sorted(
+        sym for sym, s in sym_stats.items()
+        if s["trades"] >= cfg.symbol_probation_min_trades and s["pnl"] < 0
+    )
+    probation_s = ", ".join(probation) if probation else "none — no symbol has a qualifying losing record"
+    learning_html = (
+        f'<span class="chip">Q-table: {q_states:,} learned states</span> '
+        f'<span class="chip">last model update: {q_mtime}</span> '
+        f'<span class="chip">half-size probation: {probation_s}</span>'
+    )
+
     return TEMPLATE.format(
         generated=generated,
         broker_label=broker_label,
@@ -335,6 +462,10 @@ def build() -> str:
         chart_svg=chart_svg,
         payout_html=payout_html,
         live_log=live_log,
+        risk_engine_html=risk_engine_html,
+        decision_feed_html=decision_feed_html,
+        trade_plan_html=trade_plan_html,
+        learning_html=learning_html,
     )
 
 
@@ -700,9 +831,36 @@ footer strong {{ color: var(--ink); }}
     </div>
     <div class="stat">
       <div class="stat-label">Circuit breaker</div>
-      <div class="stat-value"><span class="chip">ARMED · 5% max daily loss</span></div>
+      <div class="stat-value"><span class="chip">ARMED · 3% daily · 5% max DD</span></div>
     </div>
   </div>
+
+  <section>
+    <h2>Risk engine (live guard readings — no trade runs without limits)</h2>
+    <div class="stat-grid">{risk_engine_html}</div>
+  </section>
+
+  <section>
+    <h2>Decision feed (last cycle — one clear decision per symbol, with the real reason)</h2>
+    <ul class="journal">{decision_feed_html}</ul>
+  </section>
+
+  <section>
+    <h2>Active trade plans (entry · stop · target · risk — set before entry, not after)</h2>
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead>
+          <tr><th>Symbol</th><th>Entry</th><th>Stop</th><th>Target</th><th>Risk $</th><th>R:R</th><th>MFE / MAE</th></tr>
+        </thead>
+        <tbody>{trade_plan_html}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Self-improvement (the bot retrains itself nightly, no human, no tokens)</h2>
+    <p class="progress-note">{learning_html}</p>
+  </section>
 
   <section>
     <h2>Performance metrics (matter more than win rate alone)</h2>
@@ -754,8 +912,9 @@ footer strong {{ color: var(--ink); }}
 
   <footer>
     <p><strong>This is fake money.</strong> The desk trades a simulated paper account
-    automatically on weekdays, sized so no single trade risks more than 1% of the
-    account and the whole account stops trading for the day after a 5% loss.</p>
+    around the forex clock, sized so no single trade risks more than 1.5% of the
+    account at its stop; the account stops trading for the day at -3%, locks in
+    green days at +3%, and halts entirely at 5% drawdown from peak.</p>
     <p>Nothing here is investment advice or a profit guarantee. Real money only
     follows if this record earns it.</p>
   </footer>

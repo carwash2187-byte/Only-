@@ -37,6 +37,39 @@ BROKER_MARKET = {
 }
 
 
+def write_last_cycle(desk, report, stamp: str) -> None:
+    """Publish this cycle's decisions to BOT_DATA_DIR/last_cycle.json -- the
+    command-center dashboard's per-symbol decision feed (session 47). Real
+    desk output with the actual reason strings, not a mockup. Never allowed
+    to break the trading loop."""
+    import json
+    from datetime import timezone
+
+    from bots.paths import data_path
+
+    try:
+        payload = {
+            "stamp": stamp,
+            "written_utc": datetime.now(timezone.utc).isoformat(),
+            "equity": round(desk.broker.equity(), 2),
+            "actions": [
+                {
+                    "symbol": a.symbol,
+                    "action": a.action,
+                    "reason": a.reason,
+                    "quantity": a.quantity,
+                    "ok": a.ok,
+                }
+                for a in report.actions
+            ],
+            "notes": list(report.notes),
+        }
+        with open(data_path("last_cycle.json"), "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+    except Exception:
+        pass
+
+
 def market_is_open(market: str, now: Optional[datetime] = None) -> bool:
     now = (now or datetime.now(tz=NY)).astimezone(NY)
     if market == "crypto":
@@ -193,6 +226,7 @@ def run_autopilot(
                     report = desk.run_once(symbols=active_symbols)
                     print(f"\n[{stamp}] cycle {cycles + 1}{label}:")
                     print(report.describe())
+                write_last_cycle(desk, report, stamp)
             except Exception as exc:
                 print(f"\n[{stamp}] cycle failed (will retry next interval): {exc}")
             cycles += 1
