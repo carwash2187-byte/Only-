@@ -2766,3 +2766,54 @@ def test_one_step_challenge_config_matches_screenshotted_rules():
     assert live.max_daily_loss_pct == 0.04
     assert live.max_total_drawdown_pct == 0.10
     assert live.challenge_target_pct == 0.0  # nothing to lock once funded
+
+
+# --- challenge pass-probability Monte Carlo (session 46) --------------------
+
+def test_simulate_attempt_untrained_agent_never_resolves():
+    from bots.learning.agent import QTraderAgent
+    from bots.learning.challenge_sim import _generate_attempt_tape, simulate_attempt
+    import numpy as np
+
+    agent = QTraderAgent(model_path="/dev/null")  # all-zero Q-table -> always "hold"
+    df = _generate_attempt_tape(np.random.default_rng(3), 500)
+    result = simulate_attempt(agent, df, start_equity=5_000.0, target_pct=0.10,
+                              daily_loss_pct=0.04, max_drawdown_pct=0.06)
+    assert result.outcome == "undecided"
+    assert result.final_gain_pct == 0.0
+
+
+def test_simulate_attempt_fails_on_a_manufactured_losing_streak():
+    from bots.learning.agent import QTraderAgent
+    from bots.learning.challenge_sim import simulate_attempt
+    from bots.learning.scenarios import _ohlc_from_close
+    import numpy as np
+
+    class AlwaysBuySell(QTraderAgent):
+        def choose_action(self, state, explore=False):
+            return "buy" if "pos-out" in state else "sell"
+
+    rng = np.random.default_rng(1)
+    # steep, relentless downtrend spanning several calendar days -> the daily
+    # loss halt resets each day, letting losses actually accumulate to the
+    # max-drawdown breach instead of freezing for one day and going quiet
+    close = 100.0 * np.cumprod(1.0 - np.full(3000, 0.004))
+    df = _ohlc_from_close(close, rng, len(close))
+    agent = AlwaysBuySell(model_path="/dev/null")
+    result = simulate_attempt(agent, df, start_equity=5_000.0, target_pct=0.10,
+                              daily_loss_pct=0.04, max_drawdown_pct=0.06,
+                              risk_per_trade_pct=0.015, stop_loss_pct=0.015)
+    assert result.outcome == "fail"
+
+
+def test_run_challenge_monte_carlo_reports_consistent_rates():
+    from bots.learning.agent import QTraderAgent
+    from bots.learning.challenge_sim import run_challenge_monte_carlo
+
+    agent = QTraderAgent(model_path="/dev/null")
+    agent.q = {}  # untrained -> every attempt is undecided, deterministic to check plumbing
+    r = run_challenge_monte_carlo(n_attempts=15, bars_per_attempt=400, agent=agent, seed=9)
+    assert r["attempts"] == 15
+    total = r["pass_rate"] + r["fail_rate"] + r["undecided_rate"]
+    assert abs(total - 1.0) < 1e-9
+    assert r["undecided_rate"] == 1.0  # untrained agent trades nothing

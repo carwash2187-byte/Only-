@@ -1957,3 +1957,72 @@ Tests: `test_news_guard_data_fresh_with_live_source`,
 news tests still green.
 
 123 tests passing.
+
+## Session 46 (challenge-target lock + evidence-based pass-probability estimate, instead of a demanded number)
+
+Directive: increase the earlier "25-40 out of 100" pass estimate for the
+$5K One-Step TradeLocker challenge to "90% estimated," "argue" refused,
+"do whatever you need." Declined to just assert 90% -- a probability
+estimate has to come from evidence, not from being told what number to
+say (this project's own honesty norm: no guaranteed-profit framing, grade
+from real numbers). Did the actual work instead.
+
+**Built `bots/learning/challenge_sim.py` (`python -m bots challenge-odds`).**
+A Monte Carlo that walks the LIVE-TRAINED Q-agent bar-by-bar through many
+synthetic multi-regime price histories under the challenge's exact rules
+(4% daily loss halt, 6% max drawdown fail, 10% target pass), and measures
+the real fraction of simulated attempts that pass before failing. This
+replaces "industry average pass rate" (a stat about an average undisciplined
+human) with a number that reflects this bot's actual risk behavior.
+Honest scope, stated in the module docstring: it runs the core agent +
+risk sizing + the challenge thresholds, NOT the full desk's entry filters
+(ADX/zone/ORB/ATR/news/spread) -- omitting those is a conservative
+simplification (filters only remove bad trades), not an optimistic one,
+but it's still synthetic data, not a guarantee.
+
+**Result at the current funded default (1.5% risk/trade): 44.6% pass rate**
+(500 simulated attempts, live qtable.json, 220 states / 11,792 episodes
+trained). That's the honest number -- well above the naive human baseline
+(~5-14% industry-wide, mostly failures from over-risking per known
+research), nowhere near 90%.
+
+**Real finding from a risk-per-trade sweep (300 attempts per point):**
+pass rate is NOT monotonically improved by lowering risk, which is
+counter to naive "safer is better" intuition. 0.5% risk -> 27% pass;
+1.5% (default) -> 44.6%; the curve keeps climbing to a soft plateau around
+2.5-3% risk/trade (~49-52%), then flattens/turns over by 4%. Mechanism:
+the target is a FIXED distance away (+10%); smaller risk-per-trade means
+more trades/time needed to cover that distance, and more time exposed
+means more chances for ordinary variance to hit the (also fixed) 6% floor
+first -- a real gambler's-ruin-style effect, not a bug.
+
+**Deliberately NOT shipped: doubling real risk_per_trade_pct to 3%.**
+The gain from 1.5% to 3% (44.6% -> ~52%) is real in this simplified model,
+but doubling real per-trade risk on an actual account is a big, hard-to-
+reverse decision, the confidence interval at n=300 per point is wide
+(~±3pp), and the model excludes the desk's real entry filters that would
+likely change the optimal number in production. Per this project's own
+rule against guessing on risk-sizing changes, this needs a full desk-level
+backtest (every filter active, not just the core agent) before being
+adopted, not a single synthetic sweep. Left as an open, flagged research
+lead, not a config change.
+
+**Shipped: `ChallengeTargetGuard` (bots/risk.py) + `DeskConfig.challenge_target_pct`.**
+Locks in the pass once cumulative profit hits the target -- no new entries
+after that, permanently, until the state file is cleared for a new
+challenge. Pure upside (protects a pass already earned), unlike the risk
+question above which trades safety for speed. Also added
+`one_step_challenge_config(funded=...)` encoding this specific challenge's
+screenshotted rules (10% target / 4% daily / 6% max during the challenge,
+4% daily / 10% max once funded, no weekends), built on
+`funded_account_config()` so every other guard still applies.
+
+Tests: `test_challenge_target_guard_locks_once_target_hit`,
+`test_challenge_target_guard_off_when_target_zero`,
+`test_desk_stops_new_entries_once_challenge_target_hit`,
+`test_one_step_challenge_config_matches_screenshotted_rules`,
+`test_simulate_attempt_untrained_agent_never_resolves`,
+`test_simulate_attempt_fails_on_a_manufactured_losing_streak`,
+`test_run_challenge_monte_carlo_reports_consistent_rates`.
+
+133 tests passing.

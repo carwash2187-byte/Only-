@@ -164,6 +164,38 @@ def cmd_practice(args) -> None:
         print(f"\nlive Q-table hardened and saved ({agent.trained_episodes} total episodes).")
 
 
+def cmd_challenge_odds(args) -> None:
+    from bots.learning import QTraderAgent
+    from bots.learning.challenge_sim import run_challenge_monte_carlo
+
+    agent = QTraderAgent()
+    agent.load()
+    r = run_challenge_monte_carlo(
+        n_attempts=args.attempts,
+        bars_per_attempt=args.bars,
+        agent=agent,
+        seed=args.seed,
+        target_pct=args.target,
+        daily_loss_pct=args.daily_loss,
+        max_drawdown_pct=args.max_drawdown,
+        risk_per_trade_pct=args.risk_per_trade,
+    )
+    print(
+        f"{r['attempts']} simulated attempts (target {args.target:.0%}, "
+        f"daily loss {args.daily_loss:.0%}, max drawdown {args.max_drawdown:.0%}, "
+        f"risk/trade {args.risk_per_trade:.2%}):"
+    )
+    print(f"  PASS:      {r['pass_rate']:.1%}")
+    print(f"  FAIL:      {r['fail_rate']:.1%}")
+    print(f"  undecided: {r['undecided_rate']:.1%}")
+    print(f"  avg final gain: {r['avg_final_gain_pct']:+.2f}%")
+    if r["avg_bars_to_pass"]:
+        print(f"  avg bars to pass (winners only): {r['avg_bars_to_pass']:.0f}")
+    print("\nSimulated on synthetic multi-regime tape with the live-trained "
+          "policy -- not a guarantee, and doesn't include every desk filter "
+          "(ADX/zone/ORB/etc). See docs/DAY-TRADING-NOTES.md session 46.")
+
+
 def cmd_journal(_args) -> None:
     from bots.journal import TradeJournal
 
@@ -411,6 +443,24 @@ def main() -> None:
                         help="harden the LIVE Q-table in place and save it "
                              "(default: fresh agent, report only)")
 
+    p_odds = sub.add_parser(
+        "challenge-odds",
+        help="Monte Carlo estimate of the odds of passing a specific "
+             "prop-firm challenge, using the live-trained policy",
+    )
+    p_odds.add_argument("--attempts", type=int, default=300)
+    p_odds.add_argument("--bars", type=int, default=3000,
+                        help="synthetic bars per simulated attempt")
+    p_odds.add_argument("--seed", type=int, default=0)
+    p_odds.add_argument("--target", type=float, default=0.10,
+                        help="challenge profit target, e.g. 0.10 = 10%%")
+    p_odds.add_argument("--daily-loss", type=float, default=0.04,
+                        help="daily loss limit, e.g. 0.04 = 4%%")
+    p_odds.add_argument("--max-drawdown", type=float, default=0.06,
+                        help="max total drawdown limit, e.g. 0.06 = 6%%")
+    p_odds.add_argument("--risk-per-trade", type=float, default=0.015,
+                        help="fraction of equity risked per trade, e.g. 0.015 = 1.5%%")
+
     p_auto = sub.add_parser("autopilot", help="run desk cycles on a loop, hands-free")
     p_auto.add_argument("--broker", default="paper",
                         choices=["paper", "alpaca", "robinhood", "crypto", "oanda", "tradelocker", "mt5"])
@@ -471,6 +521,7 @@ def main() -> None:
         "payout": cmd_payout,
         "backtest": cmd_backtest,
         "practice": cmd_practice,
+        "challenge-odds": cmd_challenge_odds,
         "autopilot": cmd_autopilot,
         "watch": cmd_watch,
         "mirror": cmd_mirror,
