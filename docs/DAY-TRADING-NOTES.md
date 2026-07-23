@@ -3157,3 +3157,32 @@ holds across MANY symbols out-of-sample, not one -- and be validated on
 more than a single week of 1m data (a real limitation: yfinance only
 serves ~8 days of 1m history, so longer-horizon validation needs 5m bars
 or a stored tape).
+
+### Session 48 addendum: trend-strength entry filter also fails to make the edge broad -- honest ceiling reached
+
+Tested the second major evidence-based lever after the anti-churn exit fix:
+an ADX (trend-strength) entry filter, hypothesis being the 7 losing symbols
+lose in chop. scripts/trend_filter_experiment.py, unseen days, min-hold-30:
+
+  no filter : +1.61% total, 2/9 green (AUDUSD, OIL)
+  ADX>=20   : +0.33% total, 2/9 green
+  ADX>=25   : -0.68% total, 2/9 green
+  ADX>=30   : +3.68% total, 2/9 green  (still ALL OIL: +6.24%)
+
+Result: NEGATIVE. No ADX threshold flips ANY of the 7 losing symbols green.
+The trend filter reduces trade count but does not create directional skill
+where there is none. Combined with the min-hold result, both major levers
+(exit discipline AND entry selectivity) are now ruled out as sources of a
+broad edge.
+
+HONEST ENGINEERING VERDICT (session 48): the tabular Q-agent's directional
+calls are not predictive on 7/9 tested symbols; OIL's profit is most likely
+one-week luck, not skill. min_hold_minutes=30 stays (it kills the churn
+bleed -- a real defensive win) but there is NO broad, proven profit edge,
+and two serious evidence-based attempts to create one tonight both failed.
+A real edge would require a fundamentally different approach (model
+architecture, features, or data), i.e. weeks of research with no guarantee
+of success -- not a tuning tweak. Do not represent the desk as profitable;
+it is "protected, not profitable." Capital-preservation guards + demo mode
+remain the correct posture until an edge is demonstrated OUT-OF-SAMPLE and
+BROAD, not on one symbol / one week.
