@@ -39,7 +39,7 @@ Funded-account safety properties of this connector:
 from __future__ import annotations
 
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 from bots.brokers.base import Broker, OrderResult
 
@@ -188,6 +188,36 @@ class TradeLockerBroker(Broker):
                 qty = -qty
             result[symbol] = result.get(symbol, 0.0) + qty
         return result
+
+    def position_entry_price(self, symbol: str) -> Optional[float]:
+        """Broker-reported average entry price for an open position, or None.
+
+        Session 48 (user's own words): "even if I click on a trade myself,
+        make it protect it." The desk's own stop-loss/breakeven/trailing
+        logic needs an entry price to work from -- for a position the desk
+        opened itself that comes from the journal, but for a position
+        opened by hand directly in the TradeLocker app the desk has no
+        record of it. This reads TradeLocker's own reported average price
+        for that position so the desk can adopt it into the journal (see
+        TradingDesk._adopt_untracked_positions) and give it the SAME real
+        protection as any bot-opened trade, not just a best-effort fallback.
+        """
+        try:
+            iid = self._instrument_id(symbol)
+        except Exception:
+            return None
+        df = self.api.get_all_positions()
+        if df is None or len(df) == 0:
+            return None
+        matches = df[df["tradableInstrumentId"] == iid]
+        if len(matches) == 0:
+            return None
+        for col in ("avgPrice", "openPrice", "avgPricePerUnit"):
+            if col in matches.columns:
+                val = matches.iloc[0][col]
+                if val is not None:
+                    return float(val)
+        return None
 
     def price(self, symbol: str) -> float:
         return float(self.api.get_latest_asking_price(self._instrument_id(symbol)))

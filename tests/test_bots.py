@@ -2262,6 +2262,15 @@ def test_tradelocker_positions_map_back_to_desk_names_after_restart(tl_broker):
     assert tl_broker.positions() == {"GOLD": 0.5}
 
 
+def test_tradelocker_position_entry_price_reads_brokers_avg_price(tl_broker):
+    # Session 48: needed so the desk can adopt a manually-opened position
+    # (see _adopt_untracked_positions) and give it real stop-loss/breakeven
+    # protection instead of no protection at all.
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2390.0]]
+    assert tl_broker.position_entry_price("GOLD") == pytest.approx(2390.0)
+    assert tl_broker.position_entry_price("EURUSD") is None  # no position open
+
+
 def test_tradelocker_bracket_attaches_stops_and_never_enters_unprotected(tl_broker):
     result = tl_broker.buy_bracket("EURUSD", 100_000, 0.005, 0.01)
     assert result.ok
@@ -2314,6 +2323,45 @@ def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):
     fresh.api.INSTRUMENTS = dict(fresh.api.INSTRUMENTS, BTCUSD=303)
     fresh.api.positions_rows = [[11, 303, "buy", 0.02, 60000.0]]
     assert fresh.positions() == {"BTC-USD": 0.02}
+
+
+def test_desk_adopts_a_manually_opened_position_for_real_protection(tl_broker, tmp_path, journal, price_df):
+    # Session 48 (user's own words): "even if I click on a trade myself,
+    # make it protect it." Before this, a position opened by hand directly
+    # in the broker app (no journal record) only got a weak best-effort
+    # RL-signal check -- no guaranteed stop-loss at all. Now the desk
+    # should adopt it on sight, using the broker's own reported entry
+    # price, so it gets the SAME real stop-loss/breakeven protection as a
+    # trade the desk opened itself.
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2390.0]]  # GOLD, entry 2390
+    assert journal.open_position_for("GOLD") is None  # confirm: desk never opened this
+
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.05, take_profit_pct=0.15))
+    report = desk.run_once(symbols=[])
+
+    record = journal.open_position_for("GOLD")
+    assert record is not None, "manually-opened position was not adopted"
+    assert record.entry_price == pytest.approx(2390.0)
+    assert record.side == "long"
+    assert any("adopted" in n for n in report.notes)
+
+
+def test_adopted_position_gets_a_real_stop_loss_not_just_rl_fallback(tl_broker, tmp_path, journal, price_df):
+    # Follow-up: once adopted, a real stop-loss must fire on it exactly
+    # like any bot-opened trade -- not depend on the RL model's opinion.
+    # Entry 2500, current GOLD price (fake API) is fixed at 2400.0 -- a -4%
+    # move, already past a 2% stop, so adoption + the stop firing happen in
+    # the SAME cycle (adoption runs before position management each cycle).
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2500.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.02, take_profit_pct=0.10))
+    report = desk.run_once(symbols=[])
+
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "stop loss" in sells[0].reason.lower(), report.describe()
 
 
 # ---------------------------------------------------------------------------

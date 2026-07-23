@@ -905,6 +905,13 @@ class TradingDesk:
         #    manual close in the broker app) get closed at the current price.
         self._reconcile_closed_positions(positions, report)
 
+        # 0.5 Adopt the mirror case: a position exists at the broker that the
+        #     desk never opened itself (a trade placed by hand directly in
+        #     the broker app). See _adopt_untracked_positions -- without
+        #     this, a manually-opened trade gets no real stop-loss/breakeven/
+        #     trailing protection, only a weak best-effort fallback.
+        self._adopt_untracked_positions(positions, report)
+
         # 1. Manage existing positions first (risk desk owns exits), honoring
         #    any manual mirror "sell" calls you recorded.
         manual_sells = self._manual_sell_symbols()
@@ -1209,6 +1216,47 @@ class TradingDesk:
                     f"bracket/manual exit reconciled | realized PnL {closed.pnl:+.2f}",
                     quantity=record.quantity,
                 )
+            )
+
+    def _adopt_untracked_positions(self, positions: Dict[str, float], report: DeskReport) -> None:
+        """Session 48 (user's own words): "even if I click on a trade myself,
+        make it protect it." A position opened by hand directly in the
+        broker app (not through the desk) has no journal record, so
+        _manage_position's real stop-loss/breakeven/trailing logic -- which
+        all read from the journal record's entry_price and stop_pct -- has
+        nothing to work from and falls back to a much weaker check (only
+        the RL model's discretionary opinion, no guaranteed stop).
+
+        This closes that gap by adopting any broker position the journal
+        doesn't already know about: look up the broker's own reported
+        average entry price (position_entry_price -- currently only
+        TradeLockerBroker implements this; brokers that don't are a no-op,
+        same as before) and open a journal record for it at the desk's
+        default risk settings, so every subsequent cycle manages it exactly
+        like a trade the desk opened itself. One-time adoption per position;
+        after this, _manage_position's normal `elif record:` path owns it.
+        """
+        get_entry_price = getattr(self.broker, "position_entry_price", None)
+        if get_entry_price is None:
+            return
+        for symbol, quantity in positions.items():
+            if self.journal.open_position_for(symbol):
+                continue  # already tracked, nothing to adopt
+            try:
+                entry_price = get_entry_price(symbol)
+            except Exception:
+                entry_price = None
+            if not entry_price:
+                continue  # broker can't tell us the entry price -- can't protect it yet
+            side = "long" if quantity > 0 else "short"
+            self.journal.open_trade(
+                symbol, side, abs(quantity), entry_price,
+                setup="adopted: opened outside the desk (manual trade)",
+                notes="auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+            )
+            report.notes.append(
+                f"[manage] {symbol}: adopted an untracked position (entry {entry_price:.5f}) "
+                "-- now under full desk protection"
             )
 
     def _manual_sell_symbols(self) -> set:
