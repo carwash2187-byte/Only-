@@ -285,12 +285,28 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
     leaves `weekend_trading_allowed` at the funded default (True) --
     that is an ASSUMPTION, not a confirmed fact. Verify directly before
     this account is ever live over a weekend.
+
+    risk_per_trade_pct=0.0025 (session 48, evidence-law change): the
+    funded default of 1.5%/trade means 4 consecutive full stop-outs
+    breach this account's 6% max drawdown -- and the live paper journal's
+    last 100 closed trades measured a 31% win rate (organic desk trading
+    was ~flat once a one-off July-14 leverage-test burst is excluded), a
+    rate at which 4+ losing streaks are routine. The risk-sweep Monte
+    Carlo on real bootstrapped data agreed from the other side: 95% of
+    simulated months busted at 0.5%/trade risk and 100% at 0.75% under
+    these exact 3%/6% rules. Survival at a weak edge is bought with
+    smaller per-trade risk, full stop: at 0.25% it takes 24 consecutive
+    full stop-outs (with the daily 3% halt tripping every 12) to lose the
+    account, which buys the nightly self-train weeks of runway to improve
+    the edge instead of days. Raising this back up requires new journal
+    evidence of a durable edge, per CLAUDE.md's evidence law.
     """
     base = dict(
         max_daily_loss_pct=0.03,
         max_total_drawdown_pct=0.06,
         challenge_target_pct=0.0,  # Instant: no challenge phase, no target to lock
         news_blackout=True,  # risk discipline, not required by this firm (news trading IS permitted)
+        risk_per_trade_pct=0.0025,  # see docstring: survival-first sizing, evidence-law change
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():

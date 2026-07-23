@@ -28,11 +28,16 @@ from bots.learning.challenge_sim_real import _block_bootstrap_tape, fetch_real_p
 
 import numpy as np
 
-RISK_LEVELS = [0.005, 0.0075, 0.010, 0.0125, 0.015]
+# Sweep direction reversed after the first run's evidence (session 48):
+# 0.50% busted 95% of months and 0.75% busted 100%, so levels ABOVE that
+# are pure wasted compute -- the open question is where (if anywhere)
+# BELOW 0.5% survival becomes acceptable. 0.25% is the level now codified
+# in aquafunded_instant_config(); its neighbors bracket it.
+RISK_LEVELS = [0.001, 0.0025, 0.004]
 N_SEEDS = 2
 ATTEMPTS_PER_SEED = 20
 BARS = 45_000  # ~30 real trading days of 1m bars
-OUT_PATH = "/tmp/instant_odds_result.json"
+OUT_PATH = "/tmp/instant_odds_small_result.json"
 
 # Instant-account rules (AquaFunded Instant / Clarity Instant shape):
 # 3% daily halt, 6% max drawdown, NO pass target -- so target_pct is set

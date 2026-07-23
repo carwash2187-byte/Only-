@@ -2985,3 +2985,48 @@ would do.
 Verified: loop timing logic tested directly (3 checks at exact 3s
 intervals within an 8s budget, mocked cycle function, no network
 dependency) -- confirmed correct. 151 tests passing.
+
+### Session 48 addendum: risk-sweep evidence, journal audit, survival-first AquaFunded sizing
+
+The instant-funded risk sweep (block-bootstrapped REAL market tapes,
+3%/6% AquaFunded rules, live Q-table, ATR stops) returned its first two
+levels and both were disqualifying: **0.50%/trade risk busted 95% of
+simulated months (5% survival), 0.75% busted 100%** (40 attempts each,
+identical tapes per level). The remaining levels (1.0%+) were killed as
+wasted compute -- the curve only gets worse upward -- and the sweep was
+relaunched downward at 0.10%/0.25%/0.40% instead.
+
+Journal audit (the project's own "grade it from the journal" norm),
+prompted by needing real evidence instead of sim-only: the last 100
+closed paper trades (Jul 14-23) show a headline +$1,105 total P&L that
+does NOT reconcile with the account (flat-to-flat equity $5,008 ->
+$4,994, peak $5,147). Root cause found: the entire profit is five
+$15k-notional stock trades all stamped 2026-07-14T19:03 -- the
+leverage-fix verification burst, not organic trading. Excluding it, the
+desk's organic 24/7 record is ~flat at a **31% win rate** with small
+wins/small losses. Honest read: the guards work (9 days of round-the-
+clock trading, drawdown limits never breached), but there is **no
+demonstrated profit edge yet**.
+
+Evidence-law change made from the two findings combined:
+`aquafunded_instant_config()` now sets `risk_per_trade_pct=0.0025`
+(0.25%), down from the funded default 1.5%. At 1.5%, four consecutive
+full stop-outs breach this account's 6% max drawdown, and a 31% win
+rate makes 4+ losing streaks routine; at 0.25% it takes 24 (with the
+3% daily halt tripping every 12), which converts "bust in days" into
+weeks of runway for the nightly self-train to improve the edge. The
+paper desk's own 1.5% is deliberately unchanged (different account,
+different purpose -- its backstops are the 3%/5% breakers). Test
+updated to pin both numbers.
+
+Also stated plainly to the user this session: no go-live endorsement
+yet. Key 2 stays the owner's call, but the evidence bar (a risk level
+whose measured survival isn't a coin flip, plus some sign of organic
+edge in the journal) has not been met. "Like MambaFX" continues to mean
+their operating style (1-minute cadence, always-on), not their actual
+algorithm, which is not public.
+
+Follow-ups queued: (1) small-risk sweep results; (2) re-run the sweep
+against the retrained Q-table once the big practice run finishes;
+(3) the journal's five-trade July-14 test burst should eventually be
+tagged or excluded so dashboard/stats reflect organic trading only.

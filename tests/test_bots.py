@@ -3084,6 +3084,14 @@ def test_aquafunded_instant_config_matches_checkout_screenshot_and_tos():
     # overrides still work, same pattern as the Clarity preset
     tighter = aquafunded_instant_config(max_daily_loss_pct=0.02)
     assert tighter.max_daily_loss_pct == 0.02
+    # survival-first sizing (session 48 evidence-law change): 0.25%/trade,
+    # NOT the funded default 1.5% -- at 1.5% only 4 consecutive stop-outs
+    # breach this account's 6% max drawdown, and the measured journal win
+    # rate (31%) makes 4+ losing streaks routine. 24 stop-outs to bust at
+    # 0.25% buys the nightly self-train runway instead. Evidence cited in
+    # the preset's docstring; raising it back needs new journal evidence.
+    assert cfg.risk_per_trade_pct == 0.0025
+    assert funded_account_config().risk_per_trade_pct == 0.015  # paper desk unchanged
 
 
 # --- challenge pass-probability Monte Carlo (session 46) --------------------
