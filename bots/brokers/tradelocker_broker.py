@@ -63,6 +63,13 @@ TRADELOCKER_ALIASES: Dict[str, list] = {
     "US30": ["US30", "DJ30", "DOW30"],
     "US500": ["US500", "SPX500", "SP500"],
     "US2000": ["US2000", "RUS2000", "RTY2000", "USSC2000"],
+    # Session 49 (user directive): DAX/UK100 for the ~2-3am ET pre-London
+    # session. Same safety pattern as every other alias here -- each
+    # candidate name is only USED if the broker's own
+    # get_instrument_id_from_symbol_name confirms it exists on this
+    # account; an unrecognized name is skipped, never silently traded.
+    "DAX": ["DE40", "GER40", "DAX40", "DAX30", "GRXEUR", "DAX"],
+    "UK100": ["UK100", "FTSE100", "UKXGBP", "FTSE"],
     # weekend fallback symbols keep their Yahoo-style desk names in the
     # journal, so positions must map back to them, dash included
     "BTC-USD": ["BTCUSD"],

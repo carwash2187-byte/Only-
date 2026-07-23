@@ -335,6 +335,16 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         # desk entering, never force one -- so it doesn't need the evidence
         # ceremony a risk-sizing INCREASE would.
         max_trades_per_day=4,
+        # Paired with the cap above (user directive, same message: "less
+        # trades... hold it longer if they go my direction"). Doubled from
+        # the funded default's 120 min to 240 -- a trade only gets cut this
+        # way if it STILL hasn't reached +1R progress after 4 hours, not a
+        # dollar-risk change (stop_loss_pct/take_profit_pct untouched), just
+        # more patience for fewer, more selected setups to work. The
+        # breakeven/stop-loss/take-profit exits above this branch in
+        # _manage_position are completely unaffected and fire exactly as
+        # before regardless of how long this window is.
+        max_hold_minutes=240,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -368,6 +378,11 @@ CORRELATION_GROUPS = {
     "gold": {"GC=F", "GLD", "IAU", "XAUUSD", "SI=F", "SLV", "XAGUSD",
              "GOLD", "SILVER"},
     "oil": {"CL=F", "USO", "XLE", "OIL"},
+    # DAX and UK100 both move on the same European macro drivers (ECB/BoE
+    # policy, EUR/GBP risk sentiment) and are highly correlated intraday --
+    # two positions here is one concentrated "Europe is up/down" bet
+    # (session 49).
+    "eu-indices": {"DAX", "UK100"},
     # Any pair with USD as one leg moves together on a broad USD swing,
     # even with different signs -- that's still one concentrated bet on
     # "USD direction," the exact hidden-leverage pattern this cap exists
@@ -761,6 +776,104 @@ def reversal_candle(df, position_side: str) -> Optional[str]:
         return None
 
 
+def liquidity_sweep_reversal(df, position_side: str, lookback: int = 20) -> Optional[str]:
+    """Detect a liquidity sweep that reversed against an open position:
+    price briefly pushes past a recent swing high/low (the classic
+    "stop hunt" -- resting stop-loss/breakout orders sit just beyond a
+    swing point, and a sweep is a wick through it) and then the SAME bar
+    closes back on the wrong side for this position -- a false breakout,
+    not a real one. This is structural (an actual prior swing level),
+    unlike reversal_candle which is pure candle shape; the two are
+    complementary and both only ever protect an already-green trade
+    (see DeskConfig.reversal_exit).
+
+    For a LONG: bearish case is a bar that makes a new high above the
+    prior `lookback`-bar swing high (sweeping liquidity resting above it)
+    but closes back BELOW that prior high -- a bull trap. For a SHORT,
+    the mirror: a new low below the prior swing low that closes back
+    ABOVE it -- a bear trap.
+
+    Deliberately NOT built (honesty note, session 49): the "continuation"
+    half the user also asked for -- treat a sweep that keeps running in
+    the position's favor as a stay-in/be-more-confident signal, or loosen
+    sizing on it -- is a risk-INCREASING behavior and needs real evidence
+    behind it first (CLAUDE.md's evidence law), not shipped same-day as a
+    live incident. This function only ever protects an existing profit,
+    same safety envelope as reversal_candle.
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("high", "low", "close")) or len(df) < lookback + 1:
+            return None
+        high, low, close = df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        prior_high = float(high.iloc[-(lookback + 1):-1].max())
+        prior_low = float(low.iloc[-(lookback + 1):-1].min())
+        last_high, last_low, last_close = float(high.iloc[-1]), float(low.iloc[-1]), float(close.iloc[-1])
+        side = position_side.lower()
+        if side == "long" and last_high > prior_high and last_close < prior_high:
+            return (f"liquidity sweep above {prior_high:.5g} reversed down "
+                    "(bull trap) -- taking the profit")
+        if side == "short" and last_low < prior_low and last_close > prior_low:
+            return (f"liquidity sweep below {prior_low:.5g} reversed up "
+                    "(bear trap) -- taking the profit")
+        return None
+    except Exception:
+        return None
+
+
+# Session 49 (user directive): watch specific instruments hardest around
+# the real-world windows a discretionary day trader would -- NY cash open
+# for the US indices (volatility picks up sharp at 9:30 ET), gold in the
+# evening London/Asia handoff, matching the user's own stated routine.
+# This is a RANKING bonus only (see timed_session_focus below) -- it can
+# make an already-eligible symbol get first claim on an open slot sooner,
+# it can never bypass a hard filter (ADX floor, HTF confirm, correlation
+# cap, news blackout...), so it doesn't carry the risk-sizing evidence bar.
+TIMED_SESSION_FOCUS = {
+    # NY cash equities/index open: 9:30-11:30am ET is the highest-volatility
+    # window for the US indices (opening-range breakout territory).
+    "newyork_open": {"symbols": {"NAS100", "US30", "US500", "US2000"},
+                      "start_hour": 9, "start_minute": 30, "end_hour": 11, "end_minute": 30},
+    # Evening gold session (user's own stated routine: "around 7pm chart
+    # XAUUSD") -- the Asia pre-open handoff, thinner books make a real move
+    # more decisive when one starts.
+    "evening_gold": {"symbols": {"GOLD", "SILVER"},
+                      "start_hour": 19, "start_minute": 0, "end_hour": 21, "end_minute": 0},
+    # Pre-London European indices (user's own stated routine: "2am DAX/
+    # UK100 because by 3 it's volatile") -- 2-4am ET covers the ramp into
+    # London's cash open.
+    "predawn_europe": {"symbols": {"DAX", "UK100"},
+                        "start_hour": 2, "start_minute": 0, "end_hour": 4, "end_minute": 0},
+}
+
+
+def timed_session_focus(symbol: str, now=None) -> float:
+    """Ranking bonus (0.0 or 1.5) if `symbol` is in one of
+    TIMED_SESSION_FOCUS's windows RIGHT NOW, by ET clock time. Purely
+    additive to tradeability_score -- see that function's docstring for why
+    a ranking-only change doesn't need the evidence-law process a risk
+    change would."""
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+            ZoneInfo("America/New_York")
+        )
+        compact = symbol.upper().replace("_", "").replace("/", "")
+        minute_of_day = now.hour * 60 + now.minute
+        for window in TIMED_SESSION_FOCUS.values():
+            if compact not in window["symbols"]:
+                continue
+            start = window["start_hour"] * 60 + window["start_minute"]
+            end = window["end_hour"] * 60 + window["end_minute"]
+            if start <= minute_of_day < end:
+                return 1.5
+        return 0.0
+    except Exception:
+        return 0.0
+
+
 def tradeability_score(symbol: str, df, now=None) -> float:
     """Composite 'how good is this instrument to trade RIGHT NOW' score,
     built from the three components professional day traders actually rank
@@ -772,6 +885,8 @@ def tradeability_score(symbol: str, df, now=None) -> float:
       (a market that isn't moving can't pay for its own spread)
     - session liquidity: the forex session score (0-2) for currency pairs;
       non-forex (futures) get a neutral 1.0 since they trade near-24h
+    - timed session focus: +1.5 if this symbol is inside one of
+      TIMED_SESSION_FOCUS's real-world windows right now (session 49)
 
     Score is only used to ORDER candidates -- every hard filter (ADX
     floor, HTF confirm, session skip, correlation cap...) still applies
@@ -788,7 +903,7 @@ def tradeability_score(symbol: str, df, now=None) -> float:
             session = float(forex_session_score(symbol, now))
         else:
             session = 1.0
-        return trend + movement + session
+        return trend + movement + session + timed_session_focus(symbol, now)
     except Exception:
         return 0.0
 
@@ -1453,7 +1568,13 @@ class TradingDesk:
                 # exit: gated on change > 0, so it can never realize a loss
                 # through this path (the stop-loss branch above owns losers).
                 try:
-                    rev = reversal_candle(self.history_fn(symbol), record.side)
+                    df_hist = self.history_fn(symbol)
+                    rev = reversal_candle(df_hist, record.side)
+                    if rev is None:
+                        # structural sweep-then-reversal (session 49):
+                        # complementary to the pure candle-shape check
+                        # above -- see liquidity_sweep_reversal's docstring
+                        rev = liquidity_sweep_reversal(df_hist, record.side)
                     if rev:
                         reason = f"{rev} ({change:+.1%})"
                 except Exception:

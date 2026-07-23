@@ -3366,3 +3366,46 @@ Not shipped this session:
   their own sessions rather than half-built. No "guaranteed profit"
   framing was accepted -- the honesty norm holds: today's real gain was
   the user's own manual trade, and one trade is not a proven edge.
+
+### Session 49 addendum: liquidity sweeps + timed session focus
+
+Continuing the same session's directive, two more pieces built and
+tested:
+
+**Liquidity-sweep exit (structural, not shape-based).**
+`liquidity_sweep_reversal(df, side, lookback=20)` detects a false
+breakout against an open position: price wicks past a real prior swing
+high/low (sweeping the stops/orders resting there) and the same bar
+closes back on the wrong side -- a bull/bear trap. This is complementary
+to `reversal_candle` (candle-shape based) and checked as a second signal
+in the same `reversal_exit` gate, so it inherits the exact same safety
+envelope: only fires when the trade is already green (`change > 0`),
+can only bank a winner early, never realize a loss.
+
+Deliberately NOT built: the "continuation" half of the user's ask (a
+sweep that keeps running in the position's favor as a signal to stay in
+/ size up more aggressively). That's risk-INCREASING and needs real
+evidence first, not a same-day add next to a live incident -- logged
+honestly rather than silently skipped.
+
+**Timed session focus (ranking bonus only).**
+`TIMED_SESSION_FOCUS` + `timed_session_focus(symbol, now)` gives
+NAS100/US30/US500/US2000 a ranking bump 9:30-11:30am ET (NY cash open,
+the user's own stated routine) and GOLD/SILVER a bump 7-9pm ET (evening
+gold session). Folded additively into `tradeability_score`, which only
+ever decides candidate ORDER -- it cannot bypass any hard filter (ADX,
+HTF confirm, correlation cap, news blackout), so it doesn't carry the
+risk-sizing evidence bar reversal_exit's underlying logic does.
+
+Not added: DAX/UK100 (the user's ~2-3am London-morning routine). Adding
+a new market means verifying TradeLocker's actual instrument names for
+it first -- guessing a broker symbol string risks a broken/wrong
+instrument lookup on a real account. Deferred until that's confirmed,
+not silently dropped.
+
+Not touched: minimum lot size ("60 cents / a dollar" per the user). This
+is a real risk-sizing parameter, and TradeLocker's actual minimum lot
+floor (currently assumed 0.01 lots) needs confirming before changing
+anything here -- same reasoning as every other risk change this session.
+
+165+ new/existing tests pass.

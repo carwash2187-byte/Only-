@@ -1031,6 +1031,18 @@ def test_correlation_group_covers_the_desks_own_index_and_metal_names():
     # and GOLD/SILVER really do share a cluster with each other (not just
     # both independently mapping to "gold" by coincidence)
     assert correlation_group("GOLD") == correlation_group("SILVER")
+    # Session 49: DAX/UK100 (European indices, user's own 2am routine)
+    assert correlation_group("DAX") == correlation_group("UK100") == "eu-indices"
+
+
+def test_tradelocker_resolves_dax_and_uk100_via_alias_fallback(tl_broker):
+    # Session 49: added for the user's 2-4am ET pre-London routine. Must
+    # resolve through the SAME verified-alias mechanism as every other
+    # symbol -- only a name the broker's own API confirms is ever used,
+    # never a blind guess.
+    tl_broker.api.INSTRUMENTS = dict(tl_broker.api.INSTRUMENTS, DE40=505, UK100=606)
+    assert tl_broker._instrument_id("DAX") == 505
+    assert tl_broker._instrument_id("UK100") == 606
 
 
 def test_correlation_guard_caps_us_index_cfd_exposure(price_df, tmp_path, journal):
@@ -2550,6 +2562,88 @@ def test_funded_presets_enable_the_reversal_profit_exit():
     assert DeskConfig().reversal_exit is False
 
 
+def test_liquidity_sweep_reversal_detects_bull_and_bear_traps():
+    from bots.organization import liquidity_sweep_reversal
+
+    # 20 calm bars capped at high=110/low=95, then a bar that sweeps ABOVE
+    # 110 (new high 112) but closes back below it -- bull trap, exit a LONG
+    n = 20
+    calm = pd.DataFrame({
+        "high": np.linspace(105, 110, n), "low": np.linspace(95, 100, n),
+        "close": np.linspace(100, 105, n),
+    })
+    sweep_down = pd.concat([calm, pd.DataFrame({"high": [112.0], "low": [108.0], "close": [109.0]})],
+                           ignore_index=True)
+    msg = liquidity_sweep_reversal(sweep_down, "long")
+    assert msg and "bull trap" in msg
+
+    # mirror: sweep BELOW the prior swing low then close back above it --
+    # bear trap, exit a SHORT
+    sweep_up = pd.concat([calm, pd.DataFrame({"high": [102.0], "low": [93.0], "close": [96.0]})],
+                         ignore_index=True)
+    msg2 = liquidity_sweep_reversal(sweep_up, "short")
+    assert msg2 and "bear trap" in msg2
+
+    # a genuine breakout that HOLDS (closes beyond the swing level, not
+    # back inside it) is not a sweep -- must not fire on either side
+    real_breakout = pd.concat([calm, pd.DataFrame({"high": [113.0], "low": [110.5], "close": [112.5]})],
+                              ignore_index=True)
+    assert liquidity_sweep_reversal(real_breakout, "long") is None
+
+    # the wrong side of an existing trend move is not a sweep against it
+    assert liquidity_sweep_reversal(sweep_down, "short") is None
+
+
+def test_liquidity_sweep_exit_wired_into_position_management(tl_broker, tmp_path, journal):
+    # End-to-end: a long GOLD trade that's green, whose price history's
+    # last bar sweeps above the recent swing high then closes back below
+    # it, must exit citing the sweep -- even when the bar's own shape
+    # doesn't qualify as a reversal_candle (small wick-to-body ratio, so
+    # that check alone would say "hold").
+    n = 20
+    calm = pd.DataFrame({
+        "open": np.linspace(2360, 2380, n), "close": np.linspace(2362, 2382, n),
+        "high": np.linspace(2365, 2385, n), "low": np.linspace(2358, 2378, n),
+    })
+    sweep_bar = pd.DataFrame({"open": [2390.0], "close": [2383.0],
+                              "high": [2392.0], "low": [2382.0]})
+    history = pd.concat([calm, sweep_bar], ignore_index=True)
+    from bots.organization import reversal_candle
+    assert reversal_candle(history, "long") is None  # sanity: shape check alone misses this
+
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2380.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, history,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.05, take_profit_pct=0.20,
+                                       breakeven_at_1r=False, reversal_exit=True))
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells, report.describe()
+    assert "sweep" in sells[0].reason.lower(), sells[0].reason
+
+
+def test_timed_session_focus_boosts_correct_symbols_in_their_window():
+    from bots.organization import timed_session_focus
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    ny_open = datetime(2026, 7, 23, 10, 0, tzinfo=ZoneInfo("America/New_York"))
+    assert timed_session_focus("NAS100", ny_open) == 1.5
+    assert timed_session_focus("US30", ny_open) == 1.5
+    # GOLD isn't in the NY-open window
+    assert timed_session_focus("GOLD", ny_open) == 0.0
+
+    evening = datetime(2026, 7, 23, 19, 30, tzinfo=ZoneInfo("America/New_York"))
+    assert timed_session_focus("GOLD", evening) == 1.5
+    # NAS100 isn't in the evening-gold window
+    assert timed_session_focus("NAS100", evening) == 0.0
+
+    # outside any window -- no bonus for anyone
+    quiet = datetime(2026, 7, 23, 2, 0, tzinfo=ZoneInfo("America/New_York"))
+    assert timed_session_focus("NAS100", quiet) == 0.0
+    assert timed_session_focus("GOLD", quiet) == 0.0
+
+
 # ---------------------------------------------------------------------------
 # Session 31: bad-market survival -- loss-budget headroom + rollover blackout
 # ---------------------------------------------------------------------------
@@ -3408,6 +3502,11 @@ def test_aquafunded_instant_config_matches_checkout_screenshot_and_tos():
     # evidence ceremony a sizing increase would.
     assert cfg.max_trades_per_day == 4
     assert funded_account_config().max_trades_per_day == 10  # paper desk unchanged
+    # Paired change, same directive: hold fewer trades longer -- doubled
+    # from the funded default's 120 min time-stop to 240. Doesn't touch
+    # stop_loss_pct/take_profit_pct (dollar risk per trade is unchanged).
+    assert cfg.max_hold_minutes == 240
+    assert funded_account_config().max_hold_minutes == 120  # paper desk unchanged
 
 
 # --- challenge pass-probability Monte Carlo (session 46) --------------------

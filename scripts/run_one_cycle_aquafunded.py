@@ -54,6 +54,12 @@ SYMBOLS = [
     "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCHF", "USDCAD",
     "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
     "US30", "NAS100", "US500", "US2000", "GOLD", "SILVER", "OIL",
+    # Session 49 (user directive): pre-London European indices, priority
+    # window 2-4am ET via TIMED_SESSION_FOCUS. Uses the broker's own
+    # verified-alias fallback (bots/brokers/tradelocker_broker.py) -- if
+    # this account's TradeLocker doesn't recognize any of the tried names,
+    # a clean error names the missing symbol instead of trading blind.
+    "DAX", "UK100",
 ]
 
 CHECK_INTERVAL_SECONDS = 60
