@@ -48,9 +48,18 @@ name: Trading desk cycle
 # cron timing at all. `schedule:` stays as a backup restart ONLY, in case
 # the chain ever breaks (e.g. a runner-level failure before the last
 # step) -- it is no longer the thing this depends on.
+#
+# RUNAWAY-LOOP FIX (session 48, fourth attempt): the AquaFunded copy of
+# this same pattern hit a real incident -- a bad secret caused an instant
+# startup failure, and if: always() re-fired the chain every ~25 seconds
+# instead of every ~4-5 minutes (~30 failed runs in 2 minutes). Changed
+# to if: success() here too, defensively, even though this paper workflow
+# has no external broker auth to fail on: any future instant-failure mode
+# (bad dependency, syntax error) now falls back to the */5 schedule cron
+# instead of hammering the API.
 on:
   schedule:
-    - cron: "*/5 * * * *"  # backup restart only -- see SELF-CHAINING FIX above
+    - cron: "*/5 * * * *"  # backup restart -- also the retry path if the chain ever stops on failure
   workflow_dispatch: {}  # manual "Run workflow" button, also used to seed the chain
 
 concurrency:
@@ -99,7 +108,7 @@ jobs:
           fi
 
       - name: Chain-trigger the next cycle
-        if: always()
+        if: success()
         run: |
           curl -sS -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
