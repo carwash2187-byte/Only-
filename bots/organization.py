@@ -60,6 +60,7 @@ class DeskConfig:
     htf_confirm: bool = False  # require a higher-timeframe trend filter to agree before entering
     reduce_size_after_loss: bool = False  # anti-martingale: halve risk_per_trade_pct right after a loss
     max_hold_minutes: int = 0  # time stop: exit a trade that hasn't reached +1R after this long (0 = off)
+    min_hold_minutes: int = 0  # anti-churn: the RL "cut it early" discretionary exit can't fire until a trade is this old (0 = off). Safety exits (stop-loss, breakeven, take-profit, time stop) ALWAYS fire regardless. Session 48: out-of-sample test showed the raw agent churned 100-160 trades/day at a loss; a 30-min floor turned unseen-day P&L from -15.8% to +1.6% (the profit-maximizing point; 60 min over-held back to breakeven).
     orb_retest_required: bool = False  # MambaFX-style: don't chase an extended breakout candle early in the session, wait for a retest
     high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
@@ -129,6 +130,12 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # long before 2 hours -- if the trade hasn't even reached +1R by
         # then, the setup didn't confirm; free the capital and risk budget.
         max_hold_minutes=120,
+        # Session 48 anti-churn floor (out-of-sample evidence): the RL
+        # discretionary loser-cut can't fire until a trade is 30 min old.
+        # Unseen-day P&L: churn (0 min) -15.8%, 15 min -3.6%, 30 min +1.6%
+        # (best), 60 min +0.0%. 30 is the profit-maximizing point -- see the
+        # min_hold_minutes field comment and scripts/minhold_pnl_check.py.
+        min_hold_minutes=30,
         # MambaFX's own strategy is explicitly a breakout style; his
         # documented risk practice is retest-based, not chase-based (session
         # 17). Real ORB backtests show 65.9% of raw breakouts hit their
@@ -1329,12 +1336,35 @@ class TradingDesk:
             # is left alone to reach its target, stop, or time stop.
             # (Session 26 already protects breakeven-armed winners; this
             # closes the same hole for the pre-1R stretch.)
-            try:
-                df = self.history_fn(symbol)
-                if self.agent.signal(df, holding=True) == "sell":
-                    reason = "quant desk: RL agent says exit (position red, cutting the loser early)"
-            except Exception:
-                pass
+            #
+            # Session 48 anti-churn floor: this discretionary "cut it early"
+            # exit is exactly what over-traded -- an out-of-sample test showed
+            # the raw agent flipping 100-160 trades/day and bleeding -15.8%,
+            # while blocking this exit until a trade is >= min_hold_minutes old
+            # turned unseen-day P&L to +1.6% at 30 min (the profit-max point).
+            # The block ONLY delays this discretionary loser-cut; every hard
+            # exit above (stop-loss, breakeven, take-profit, trailing, time
+            # stop) already fired earlier in this function and is unaffected,
+            # so risk is never widened -- a real stop still gets you out now.
+            too_new = False
+            if record is not None and cfg.min_hold_minutes > 0:
+                from datetime import datetime, timezone
+
+                try:
+                    entry_dt = datetime.fromisoformat(record.entry_time)
+                    if entry_dt.tzinfo is None:
+                        entry_dt = entry_dt.replace(tzinfo=timezone.utc)
+                    age_min = (datetime.now(timezone.utc) - entry_dt).total_seconds() / 60.0
+                    too_new = age_min < cfg.min_hold_minutes
+                except Exception:
+                    too_new = False
+            if not too_new:
+                try:
+                    df = self.history_fn(symbol)
+                    if self.agent.signal(df, holding=True) == "sell":
+                        reason = "quant desk: RL agent says exit (position red, cutting the loser early)"
+                except Exception:
+                    pass
         if reason is None:
             report.actions.append(DeskAction("hold", symbol, "within risk limits"))
             return

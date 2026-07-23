@@ -1472,6 +1472,67 @@ def test_rl_exit_still_works_before_breakeven_armed(price_df, tmp_path, journal)
     assert "cutting the loser" in sells[0].reason
 
 
+def test_min_hold_blocks_early_rl_cut_but_never_a_real_stop(price_df, tmp_path, journal):
+    # Session 48 anti-churn floor: min_hold_minutes delays ONLY the RL
+    # discretionary loser-cut (the exit that over-traded, per the
+    # out-of-sample minhold_pnl_check). A fresh red trade is left alone;
+    # an aged one may be cut; and a real STOP-LOSS still fires instantly on
+    # a fresh trade -- the floor must never widen risk.
+    from datetime import datetime, timezone, timedelta
+
+    def build(entry_minutes_ago, price):
+        broker = PaperBroker(
+            starting_cash=10_000, state_path=str(tmp_path / f"acct{entry_minutes_ago}.json"),
+            price_overrides={"DEMO": 100.0},
+        )
+        assert broker.buy("DEMO", 10).ok
+        rec = journal.open_trade("DEMO", "long", 10, 100.0, setup="daytrade",
+                                 stop_pct=0.015)
+        # backdate the entry so we control the trade's age
+        rec.entry_time = (datetime.now(timezone.utc)
+                          - timedelta(minutes=entry_minutes_ago)).isoformat()
+        journal.save()
+        config = DeskConfig(news_blackout=False, min_copy_score=99,
+                            risk_per_trade_pct=0.0, stop_loss_pct=0.015,
+                            take_profit_pct=0.03, min_hold_minutes=30)
+        agent = QTraderAgent(model_path=str(tmp_path / f"q{entry_minutes_ago}.json"))
+        agent.signal = lambda *a, **k: "sell"
+        broker.price_overrides["DEMO"] = price
+        desk = make_desk(tmp_path, broker, journal, price_df, config=config, agent=agent)
+        return desk
+
+    # Fresh (5 min old), red but ABOVE the stop: RL cut is blocked by the floor.
+    desk = build(5, 99.5)
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert not sells, "min-hold floor should block the early RL cut on a fresh trade"
+
+    journal.trades.clear(); journal.save()
+
+    # Aged (40 min old), same red price: past the floor, RL cut fires.
+    desk = build(40, 99.5)
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "RL agent says exit" in sells[0].reason, report.describe()
+
+    journal.trades.clear(); journal.save()
+
+    # Fresh (5 min old) but BELOW the stop: the hard stop-loss must still
+    # fire instantly -- the floor never delays a real risk exit.
+    desk = build(5, 98.0)  # -2%, below the 1.5% stop
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells and "stop loss" in sells[0].reason.lower(), report.describe()
+
+
+def test_funded_config_has_evidence_based_min_hold(price_df):
+    from bots.organization import funded_account_config, aquafunded_instant_config
+    # 30 min = the profit-maximizing point from the out-of-sample sweep
+    # (scripts/minhold_pnl_check.py). AquaFunded inherits it.
+    assert funded_account_config().min_hold_minutes == 30
+    assert aquafunded_instant_config().min_hold_minutes == 30
+
+
 def test_paper_broker_default_has_no_spread_cost(tmp_path):
     # Existing behavior must stay untouched by default -- 79+ other tests
     # assert exact fill prices and rely on this.

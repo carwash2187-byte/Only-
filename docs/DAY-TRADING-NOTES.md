@@ -3091,3 +3091,41 @@ final step runs); it is no longer the primary driver.
 To (re)start the chain after this change: one manual "Run workflow"
 dispatch per workflow is enough -- from then on each run relaunches the
 next one itself, indefinitely, requiring no further intervention.
+
+### Session 48 addendum: found the first real out-of-sample edge -- over-trading was the killer
+
+After the momentum feature was reverted (it silently broke live inference
+by changing the state format -> hold-flat; see prior entry), an honest
+out-of-sample check (scripts/holdout_eval.py, scripts/overtrading_experiment.py,
+scripts/minhold_pnl_check.py -- all read-only on the live Q-table, zero
+Claude tokens) surfaced the real problem and the first genuine fix.
+
+Finding: the raw agent churned 100-160 trades/DAY on unseen days at a ~5%
+win rate -- the classic over-trading signature (spread/cost eats every
+edge). Forcing a minimum hold before the RL discretionary "cut it early"
+exit can fire, measured on unseen days:
+
+  min-hold  0 (churn): 1417 trades, TOTAL -15.84%, expectancy -0.0112%/trade
+  min-hold 15        :  681 trades, TOTAL  -3.56%, expectancy -0.0052%/trade
+  min-hold 30        :  524 trades, TOTAL  +1.55%, expectancy +0.0030%/trade  <- best
+  min-hold 60        :  373 trades, TOTAL  +0.01%, expectancy +0.0000%/trade
+
+30 min is the profit-maximizing point: it flips unseen-day P&L from a -15.8%
+bleed to +1.6%. 60 min over-holds back to breakeven (higher win rate but
+misses too many exits -- exactly why P&L, not win rate, is the deciding
+metric). Implemented as DeskConfig.min_hold_minutes (default 0 = off;
+funded_account_config + aquafunded_instant_config = 30). The floor gates
+ONLY the discretionary loser-cut; every hard exit (stop-loss, breakeven,
+take-profit, trailing, time stop) fires instantly regardless -- risk is
+never widened. Test: test_min_hold_blocks_early_rl_cut_but_never_a_real_stop.
+
+Also reconciled a scare: an earlier holdout showed 5.3% win rate -- that
+was the freshly SELF-TRAINED table, which had DEGRADED the model; it was
+correctly NOT deployed (git-checked-out). The committed/live table is the
+better one. Lesson logged: always holdout-test a retrained table before
+deploying it; more training is not automatically better.
+
+HONESTY: +1.6% is over ONE week of unseen 1m data across 9 symbols -- a
+real, promising first edge, NOT proven-rich. Next brick
+(scripts/minhold_robustness.py): confirm it's broad across symbols, not
+one lucky one, before trusting it with real money.
