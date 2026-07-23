@@ -1610,14 +1610,15 @@
       "entry_price": 87.57313155822754,
       "entry_time": "2026-07-23T00:10:39.523186+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 88.11677775382996,
+      "exit_time": "2026-07-23T00:19:21.217842+00:00",
+      "pnl": 77.78141833114245,
+      "pnl_pct": 0.6207910873222033,
+      "notes": "user watchlist | take profit hit (+0.6%)",
       "tags": [
-        "mfe:-0.000150",
-        "mae:-0.000150"
+        "mfe:0.006359",
+        "mae:-0.000150",
+        "breakeven-armed"
       ],
       "stop_pct": 0.003
     }
