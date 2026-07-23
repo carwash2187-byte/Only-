@@ -1657,7 +1657,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.000320",
-        "mae:-0.000554"
+        "mae:-0.000655"
       ],
       "stop_pct": 0.003
     },
@@ -1676,7 +1676,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.001471",
-        "mae:-0.000447"
+        "mae:-0.000772"
       ],
       "stop_pct": 0.003
     },
