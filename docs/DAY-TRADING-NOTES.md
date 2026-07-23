@@ -2888,3 +2888,50 @@ funded account is not yet wired into the GitHub-Actions-based
 Claude-independent runner the paper account has -- if launched today it
 would only run inside this Claude session. That's the next real step
 before this account should touch live trading, not a detail to skip.
+
+### Session 48 addendum: AquaFunded wired into the Claude-independent runner
+
+Closing the gap flagged earlier: the AquaFunded account is now hooked
+into the same free/token-free GitHub Actions pattern as the paper
+account, using `aquafunded_instant_config()` (the confirmed real rules,
+via `--firm-preset`'s wiring fixed this session).
+
+`scripts/run_one_cycle_aquafunded.py` -- TradeLocker-specific one-cycle
+script, own isolated `funded_state_aquafunded/` state dir (git-committed,
+separate from paper_state/). `.github/workflows/trading-cycle-
+aquafunded.yml` -- same pattern as the paper account's, own concurrency
+group (different broker/state dir, no shared-file race), reads
+credentials ONLY from GitHub repository secrets
+(`AQUAFUNDED_TL_EMAIL/PASSWORD/SERVER`) -- never a committed file, never
+hardcoded.
+
+**Deliberate safety choice**: this workflow never references
+`TRADELOCKER_LIVE` at all -- it can only ever run against TradeLocker's
+demo environment as written. Going live requires a separate, later,
+explicit code change, not a secret toggle. This is on purpose: the
+"ready to trade tomorrow" ask is satisfied by demo running reliably and
+provably 24/7; flipping real money live is a distinct decision that
+shouldn't be one accidental secret away.
+
+**Rewrote `scripts/run_instant_odds.py`** (the risk-level survival
+sweep) after it silently ran for ~50 minutes with zero visible progress
+a second time even after the O(n^2) fix -- added a heartbeat print every
+5 attempts (with elapsed time and last-attempt duration) and
+incremental result-file writes after every risk level, so a kill never
+loses completed work and progress is never invisible again. Also
+reduced scope (3 seeds x 40 attempts -> 2 seeds x 20 attempts per risk
+level) to guarantee a real answer lands in a practical timeframe rather
+than continuing to guess at runtime.
+
+**Manual self-train practice run kicked off directly** (not waiting for
+the nightly schedule) in response to the direct ask for win-rate
+improvement via learning/simulation -- same `scripts/stress_test.py
+--practice` mechanism, now running on the widened session-48 scope (30
+real days, 60 episodes).
+
+**One remaining manual step, and only one**: the three GitHub secrets
+above must be added once via Settings -> Secrets and variables ->
+Actions -> New repository secret. No tool exists to do this
+programmatically (checked the available GitHub MCP tools -- none cover
+repo secrets), and that's appropriate: secret creation shouldn't be
+something automatable without the account owner's own action.

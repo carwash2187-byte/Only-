@@ -12,11 +12,14 @@ block-bootstrapped REAL tapes (identical seeds per level, so levels are
 compared on the SAME markets), with ATR stops on, using the live Q-table.
 Pure python -- no Claude usage.
 
+Prints a heartbeat every 10 attempts so progress is never invisible.
+
     BOT_DATA_DIR=paper_state PYTHONPATH=. python scripts/run_instant_odds.py
 """
 from __future__ import annotations
 
 import json
+import sys
 import time
 
 from bots.learning.agent import QTraderAgent
@@ -26,8 +29,8 @@ from bots.learning.challenge_sim_real import _block_bootstrap_tape, fetch_real_p
 import numpy as np
 
 RISK_LEVELS = [0.005, 0.0075, 0.010, 0.0125, 0.015]
-N_SEEDS = 3
-ATTEMPTS_PER_SEED = 40
+N_SEEDS = 2
+ATTEMPTS_PER_SEED = 20
 BARS = 45_000  # ~30 real trading days of 1m bars
 OUT_PATH = "/tmp/instant_odds_result.json"
 
@@ -42,12 +45,14 @@ def main() -> None:
     t0 = time.time()
     agent = QTraderAgent()
     loaded = agent.load()
-    print(f"live model: {'loaded' if loaded else 'FRESH'} ({len(agent.q)} states)")
+    print(f"live model: {'loaded' if loaded else 'FRESH'} ({len(agent.q)} states)", flush=True)
     pools = fetch_real_pools()
-    print(f"got {len(pools)} symbols: {sorted(pools)}")
+    print(f"got {len(pools)} symbols: {sorted(pools)}", flush=True)
     if not pools:
         raise SystemExit("no real market data -- aborting")
 
+    total_attempts = len(RISK_LEVELS) * N_SEEDS * ATTEMPTS_PER_SEED
+    done = 0
     results = {}
     for risk in RISK_LEVELS:
         survived = busted = 0
@@ -57,8 +62,14 @@ def main() -> None:
             for i in range(ATTEMPTS_PER_SEED):
                 rng = np.random.default_rng(seed * 7_919 + i)  # same tapes per level
                 df = _block_bootstrap_tape(pools, rng, BARS)
+                a0 = time.time()
                 r = simulate_attempt(agent, df, risk_per_trade_pct=risk,
                                      **INSTANT_RULES)
+                done += 1
+                if done % 5 == 0 or time.time() - a0 > 10:
+                    print(f"  [{done}/{total_attempts}] risk={risk:.2%} "
+                          f"last_attempt={time.time()-a0:.1f}s "
+                          f"elapsed={(time.time()-t0)/60:.1f}m", flush=True)
                 gains.append(r.final_gain_pct)
                 if r.outcome == "fail":
                     busted += 1
@@ -80,18 +91,23 @@ def main() -> None:
         print(f"[risk {risk:.2%}] survive {r_['survival_rate']:.1%}  "
               f"bust {r_['bust_rate']:.1%}  avg month {r_['avg_gain_all_pct']:+.2f}%  "
               f"(survivors {r_['avg_gain_surviving_pct']:+.2f}%)  "
-              f"elapsed {(time.time()-t0)/60:.0f}m")
+              f"elapsed {(time.time()-t0)/60:.0f}m", flush=True)
+        # write partial results after every level so a kill never loses data
+        out = {
+            "rules": {k: v for k, v in INSTANT_RULES.items()},
+            "n_seeds": N_SEEDS, "attempts_per_seed": ATTEMPTS_PER_SEED,
+            "bars_per_attempt": BARS, "symbols_used": sorted(pools),
+            "per_risk_level": results,
+            "elapsed_minutes": (time.time() - t0) / 60.0,
+            "complete": False,
+        }
+        with open(OUT_PATH, "w") as fh:
+            json.dump(out, fh, indent=2)
 
-    out = {
-        "rules": {k: v for k, v in INSTANT_RULES.items()},
-        "n_seeds": N_SEEDS, "attempts_per_seed": ATTEMPTS_PER_SEED,
-        "bars_per_attempt": BARS, "symbols_used": sorted(pools),
-        "per_risk_level": results,
-        "elapsed_minutes": (time.time() - t0) / 60.0,
-    }
+    out["complete"] = True
     with open(OUT_PATH, "w") as fh:
         json.dump(out, fh, indent=2)
-    print(f"\nDONE -- wrote {OUT_PATH}")
+    print(f"\nDONE -- wrote {OUT_PATH}", flush=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,1 @@
+State directory for the AquaFunded TradeLocker Instant Funded account (journal, Q-table, drawdown guards). Committed to git so limits survive restarts. No credentials are ever stored here -- those live only in GitHub Actions repository secrets (AQUAFUNDED_TL_EMAIL/PASSWORD/SERVER).
