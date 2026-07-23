@@ -11,64 +11,27 @@ name: Trading desk cycle
 # run. Keep both copies identical; this file is the source of truth.
 #
 # Free, zero-signup replacement for a persistent Claude-session process:
-# GitHub's own scheduler runs this repo's bots/ code every minute,
-# matching MambaFX's actual documented cadence, forever, on GitHub's
-# infrastructure -- no VPS, no server, no account to create, no Claude
-# usage. Session 48: this repo is now PUBLIC specifically to unlock
-# unlimited free Actions minutes (a private repo's 2,000 min/month budget
-# could not support this cadence -- confirmed by real timing on the first
-# live run, see git history for the 30-min interval that was used until
-# the repo went public).
+# GitHub's own scheduler runs this repo's bots/ code, matching MambaFX's
+# always-on style, on GitHub's infrastructure -- no VPS, no Claude usage.
 #
-# SCHEDULING FIX (session 48, second attempt): the 1-minute cron
-# (`* * * * *`) NEVER FIRED -- zero scheduled runs in 80+ minutes,
-# verified via the Actions run list, only manual dispatches ran. Root
-# cause: GitHub's own documentation states "The shortest interval you
-# can run scheduled workflows is once every 5 minutes" -- a sub-minimum
-# cron isn't clamped to 5 minutes, it's simply never scheduled. So the
-# honest fastest free cadence is */5, not * -- set accordingly. GitHub
-# additionally warns scheduled runs can be delayed or dropped under
-# load, so treat 5 minutes as a target, not a guarantee.
-#
-# Runs are queued, never parallel (concurrency group below), so this is
-# the ONLY process that may run desk.run_once() against paper_state/ --
-# do not also run `python -m bots autopilot` anywhere else at the same
-# time, or the same account gets double-traded.
-#
-# SELF-CHAINING FIX (session 48, third attempt): even the */5 cron never
-# fired -- ZERO scheduled runs in 5+ hours after the fix above, verified
-# via the Actions run list (only workflow_dispatch events ever appeared).
-# GitHub's own docs admit scheduled runs "can be delayed or dropped under
-# load," but 5 hours of complete silence on a plain */5 cron is beyond
-# any documented delay -- treat GitHub's scheduler as unreliable for this
-# repo, not just slow. Fix: stop depending on it as the primary driver.
-# The last step below re-dispatches THIS SAME workflow via the Actions
-# API the moment a cycle finishes, so each run chains directly into the
-# next one -- true continuous operation that doesn't wait on GitHub's
-# cron timing at all. `schedule:` stays as a backup restart ONLY, in case
-# the chain ever breaks (e.g. a runner-level failure before the last
-# step) -- it is no longer the thing this depends on.
-#
-# RUNAWAY-LOOP FIX (session 48, fourth attempt): the AquaFunded copy of
-# this same pattern hit a real incident -- a bad secret caused an instant
-# startup failure, and if: always() re-fired the chain every ~25 seconds
-# instead of every ~4-5 minutes (~30 failed runs in 2 minutes). Changed
-# to if: success() here too, defensively, even though this paper workflow
-# has no external broker auth to fail on: any future instant-failure mode
-# (bad dependency, syntax error) now falls back to the */5 schedule cron
-# instead of hammering the API.
+# SELF-CHAINING (session 48): GitHub's schedule cron proved unreliable
+# (zero scheduled runs in 5+ hours), so the last step re-dispatches this
+# same workflow via the Actions API on success, chaining runs continuously.
+# schedule: is a backup restart only. if: success() (not always()) so an
+# instant startup failure can't spin a fast re-trigger loop -- it falls
+# back to the 5-minute cron instead.
 on:
   schedule:
-    - cron: "*/5 * * * *"  # backup restart -- also the retry path if the chain ever stops on failure
-  workflow_dispatch: {}  # manual "Run workflow" button, also used to seed the chain
+    - cron: "*/5 * * * *"  # backup restart / retry path only
+  workflow_dispatch: {}  # manual button, also seeds the chain
 
 concurrency:
   group: paper-trading-cycle
-  cancel-in-progress: false  # queue, never kill a cycle mid-trade
+  cancel-in-progress: false
 
 permissions:
   contents: write
-  actions: write  # needed to re-dispatch this workflow from within itself
+  actions: write
 
 jobs:
   cycle:
@@ -78,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: claude/ai-trading-bot-research-yolqhm
-          fetch-depth: 1
+          fetch-depth: 0  # full history so the push-retry rebase below always has a common ancestor
 
       - uses: actions/setup-python@v5
         with:
@@ -102,10 +65,23 @@ jobs:
           git add paper_state/
           if git diff --cached --quiet; then
             echo "no state changes this cycle"
-          else
-            git commit -m "Autopilot cycle $(date -u +%FT%TZ)"
-            git push origin HEAD:claude/ai-trading-bot-research-yolqhm
+            exit 0
           fi
+          git commit -m "Autopilot cycle $(date -u +%FT%TZ)"
+          # Concurrent writers (the AquaFunded workflow, my code commits) move
+          # the branch tip while this job runs, so a plain push gets rejected
+          # (non-fast-forward). Rebase our state-only commit onto the latest
+          # tip and retry -- the bot only ever touches paper_state/, which no
+          # other writer touches, so the rebase is always clean.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:claude/ai-trading-bot-research-yolqhm; then
+              echo "pushed on attempt $attempt"; exit 0
+            fi
+            echo "push rejected (attempt $attempt) -- rebasing on latest tip, retrying"
+            git fetch origin claude/ai-trading-bot-research-yolqhm
+            git rebase FETCH_HEAD || { git rebase --abort; exit 1; }
+          done
+          echo "push still failing after 5 attempts"; exit 1
 
       - name: Chain-trigger the next cycle
         if: success()
