@@ -123,6 +123,26 @@ def main() -> None:
     except Exception as exc:
         print(f"FAIL: could not connect to TradeLocker: {exc}")
         sys.exit(1)
+
+    # Diagnostic (session 48): the tradelocker library's TLAPI picks
+    # WHATEVER ACCOUNT COMES BACK FIRST from this login when no
+    # account_id/acc_num is specified -- see TLAPI._set_account_id_and_acc_num.
+    # If this login has more than one account (e.g. a newly added account),
+    # the bot could silently be connected to a DIFFERENT one than what's
+    # showing in the app -- indistinguishable from "the bot can't see my
+    # position" without this printed. Always log exactly which account this
+    # run is on, and every account this login can see, so a mismatch is
+    # visible in the job log instead of a silent mystery.
+    try:
+        all_accounts = broker.api.get_all_accounts()
+        print(f"[account] connected to: {broker.api.account_name!r} "
+              f"(id={broker.api.account_id}, accNum={broker.api.acc_num})")
+        cols = [c for c in ("id", "accNum", "name", "accountBalance") if c in all_accounts.columns]
+        print(f"[account] all accounts visible on this login:\n"
+              f"{all_accounts[cols].to_string(index=False)}")
+    except Exception as exc:
+        print(f"[account] could not list accounts for diagnosis: {exc}")
+
     desk = TradingDesk(broker=broker, config=config)
 
     start = time.monotonic()
