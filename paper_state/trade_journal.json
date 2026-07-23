@@ -1636,8 +1636,9 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.001783",
-        "mae:-0.000036"
+        "mfe:0.003602",
+        "mae:-0.000036",
+        "breakeven-armed"
       ],
       "stop_pct": 0.003
     }
