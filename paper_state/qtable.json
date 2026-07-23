@@ -992,7 +992,7 @@
     },
     "trend-up|rsi-oversold|vwap-below|pos-out": {
       "hold": 0.0005733371597796496,
-      "buy": -0.0001793129228675353,
+      "buy": -0.00013100001852726177,
       "sell": 0.0003487491893467136
     },
     "trend-down|rsi-neutral|vwap-above|pos-out": {
