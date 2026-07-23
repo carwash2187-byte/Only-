@@ -3186,3 +3186,38 @@ of success -- not a tuning tweak. Do not represent the desk as profitable;
 it is "protected, not profitable." Capital-preservation guards + demo mode
 remain the correct posture until an edge is demonstrated OUT-OF-SAMPLE and
 BROAD, not on one symbol / one week.
+
+### Session 48 addendum: a SECOND, different brain (gradient-boosted trees) confirms the ceiling -- no broad edge exists
+
+Per the user's ask to pull other "brains" from GitHub: surveyed the top
+ML-trading repos (huseinzol05/Stock-Prediction-Models 9.5k stars, etc.).
+Honest read -- they are educational demos, not proven money-makers; the
+famous LSTM price-predictors are a known look-ahead illusion. Rather than
+bolt on unaudited code (security risk on a funded account) or anything
+LLM-driven (breaks the zero-token law), reimplemented the ONE legitimate
+technique -- a gradient-boosted decision-tree directional classifier (the
+mainstream quant workhorse) -- and tested it on the SAME strict holdout.
+
+scripts/gbm_brain_experiment.py, 30-min horizon, prob>0.55, unseen days:
+  7/9 symbols LOSE. Only GOLD +1.51% and OIL +3.95% green.
+  DIRECTIONAL ACCURACY 48-57% across all symbols == coin flip.
+  => 2/9 profitable. NOT broad. Honest negative.
+
+Decisive cross-check: the Q-agent's lucky symbols were AUDUSD+OIL; the GBM's
+are GOLD+OIL. Two independent brains, DIFFERENT lucky symbols -> the
+single-symbol wins are NOISE, not skill (a real edge would show up in BOTH
+brains on the SAME symbol). Both do marginally better on commodities than
+FX, which is economically sensible (commodities trend more) but still thin.
+
+CONCLUSIVE VERDICT (session 48): across two fundamentally different model
+architectures (tabular Q-learning + gradient boosting) AND two rule levers
+(anti-churn exit + trend-strength entry filter), every approach converges
+on ~coin-flip intraday directional accuracy and no broad out-of-sample
+edge. This is the known efficiency of short-horizon FX, not a fixable bug.
+Do NOT keep swapping models expecting a different answer -- the evidence is
+consistent. The desk's honest posture stays "protected, not profitable":
+capital-preservation guards + demo until/unless a broad edge is ever
+demonstrated out-of-sample (the only faint lead is commodities > FX, and
+that is unproven). scikit-learn was installed LOCALLY for this experiment
+only; it was deliberately NOT added to the live requirements -- the live
+trading path is unchanged, no new dependency, no new attack surface.
