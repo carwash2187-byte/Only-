@@ -1,42 +1,66 @@
 name: AquaFunded trading desk cycle
 
 # Same free/zero-signup/Claude-independent pattern as trading-cycle.yml
-# (the paper account), for the AquaFunded funded account. A copy of this
-# must also live on the repo's default branch for schedule: to register;
-# checkout/push are pinned to the real trading branch regardless.
+# (the paper account), for the AquaFunded funded account. See that file's
+# comments for why a copy of this must also live on the repo's default
+# branch (claude/smillin-repo-install-3jsep0) for `schedule:` to fire at
+# all -- checkout/push are pinned to the real trading branch regardless.
 #
-# TWO-KEY SAFETY MODEL (session 48, built at the user's explicit request):
-#   Key 1 -- the three credential secrets below. With ONLY these set, the
-#   bot trades TradeLocker's DEMO environment: real account, fake fills.
-#   Key 2 -- the AQUAFUNDED_GO_LIVE secret. Real money moves ONLY when
-#   this secret exists AND its value is exactly:
-#       LIVE-I-UNDERSTAND-THE-RISK
-#   Adding that secret is the account owner's own deliberate act -- that
-#   IS the go-live consent. Any other value (or absence) stays demo.
-#   To stand down from live at any time: delete the secret.
+# TWO-KEY MODEL: RETIRED (session 48, corrected). Built at the user's
+# explicit request on the assumption that a separate "live" TradeLocker
+# server existed for this account and AQUAFUNDED_GO_LIVE would unlock it.
+# That assumption was WRONG, confirmed against AquaFunded's own FAQ and
+# TradeLocker's account switcher: "AquaFunded's Funded Accounts should not
+# be considered live trading accounts... All accounts provided by
+# AquaFunded are demo accounts with virtual funds." There is no live
+# server for this product to ever connect to -- every account this firm
+# issues is a permanent simulated account by design. Real payouts happen
+# through AquaFunded's own "Request Payout" flow against THIS account
+# (14 days after first trade, no rule violations, positions flat), not a
+# different live connection. Live attempts under the old gate 401'd every
+# time and (correctly, per the runaway-loop fix below) stalled the whole
+# self-chain waiting on the unreliable backup cron -- caught and fixed
+# same session. scripts/run_one_cycle_aquafunded.py is now hardcoded to
+# the only account that has ever existed for this firm; the
+# AQUAFUNDED_GO_LIVE secret, if still present from before, is no longer
+# read anywhere and can be safely deleted.
 #
 # Required GitHub repository secrets (Settings -> Secrets and variables ->
 # Actions -> New repository secret):
-#   AQUAFUNDED_TL_EMAIL      (must be a valid email -- a malformed value
-#                             here fails auth with "email must be an email")
+#   AQUAFUNDED_TL_EMAIL
 #   AQUAFUNDED_TL_PASSWORD
 #   AQUAFUNDED_TL_SERVER      (value: AQUA)
-#   AQUAFUNDED_GO_LIVE        (OPTIONAL -- Key 2, see above. Do not add
-#                              until the risk-sweep evidence supports it.)
 #
-# SELF-CHAINING + RUNAWAY-LOOP FIX (session 48): schedule cron proved
-# unreliable, so the last step re-dispatches this workflow on success.
-# if: success() (not always()) so an instant startup failure (bad secret,
-# broker down) can't spin a fast re-trigger loop -- it falls back to the
-# 5-minute cron. (A real incident: a malformed email secret produced ~30
-# failed runs in 2 minutes under the old if: always().)
+# Cron is */5, not * -- GitHub's documented minimum for scheduled
+# workflows is 5 minutes; a sub-minimum cron never fires at all (verified
+# the hard way on trading-cycle.yml this same session).
 #
-# Own concurrency group, separate state dir (funded_state_aquafunded/) --
-# no shared-file race with paper_state/.
+# Runs are queued in their OWN concurrency group, separate from the paper
+# account's -- different broker, different state directory
+# (funded_state_aquafunded/), no shared-file race with paper_state/.
+#
+# SELF-CHAINING FIX (session 48, third attempt, same as trading-cycle.yml):
+# */5 never fired on its own either -- zero scheduled runs observed. The
+# last step below re-dispatches this same workflow via the Actions API
+# when a cycle finishes, so it chains continuously instead of depending
+# on GitHub's cron timing. `schedule:` is now a backup restart only.
+#
+# RUNAWAY-LOOP FIX (session 48, fourth attempt): chain-trigger was
+# if: always(), so when AQUAFUNDED_TL_EMAIL turned out to be malformed
+# (TradeLocker rejected it: "email must be an email"), the job failed in
+# ~2 seconds at the connection step, before the internal check loop ever
+# started -- and if: always() re-fired the chain instantly anyway,
+# producing a run every ~25 seconds instead of every ~4-5 minutes (~30
+# failed runs in 2 minutes before this was caught and fixed). Changed to
+# if: success(): the self-chain now only continues after a cycle that
+# actually ran its check loop. A startup-level failure (bad secret,
+# broker down, etc.) breaks the chain safely instead of hammering the
+# API -- the */5 schedule cron (kept as backup) will still retry every 5
+# minutes until whatever's wrong is fixed, at a sane cadence.
 on:
   schedule:
-    - cron: "*/5 * * * *"  # backup restart / retry path only
-  workflow_dispatch: {}  # also seeds the chain
+    - cron: "*/5 * * * *"  # backup restart -- also the retry path if the chain ever stops on failure
+  workflow_dispatch: {}  # also used to seed the chain
 
 concurrency:
   group: aquafunded-trading-cycle
@@ -44,7 +68,7 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
+  actions: write  # needed to re-dispatch this workflow from within itself
 
 jobs:
   cycle:
@@ -74,17 +98,7 @@ jobs:
           TRADELOCKER_EMAIL: ${{ secrets.AQUAFUNDED_TL_EMAIL }}
           TRADELOCKER_PASSWORD: ${{ secrets.AQUAFUNDED_TL_PASSWORD }}
           TRADELOCKER_SERVER: ${{ secrets.AQUAFUNDED_TL_SERVER }}
-          AQUAFUNDED_GO_LIVE: ${{ secrets.AQUAFUNDED_GO_LIVE }}
-        run: |
-          # Key 2 gate: TRADELOCKER_LIVE is derived here, in plain sight,
-          # never stored -- only the exact consent phrase unlocks live.
-          if [ "$AQUAFUNDED_GO_LIVE" = "LIVE-I-UNDERSTAND-THE-RISK" ]; then
-            echo "Key 2 present: running against LIVE TradeLocker (real money)"
-            export TRADELOCKER_LIVE=1
-          else
-            echo "Key 2 absent: demo environment (no real money)"
-          fi
-          python scripts/run_one_cycle_aquafunded.py
+        run: python scripts/run_one_cycle_aquafunded.py
 
       - name: Commit and push any state changes
         run: |
