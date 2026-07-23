@@ -3030,3 +3030,37 @@ Follow-ups queued: (1) small-risk sweep results; (2) re-run the sweep
 against the retrained Q-table once the big practice run finishes;
 (3) the journal's five-trade July-14 test burst should eventually be
 tagged or excluded so dashboard/stats reflect organic trading only.
+
+### Session 48 addendum: borrowed a feature from a proven open-source strategy (not its numbers)
+
+User's push-back was fair: every risk level tested so far busted, which
+points at the edge itself, not just position sizing, and asked to look at
+what other real trading bots do instead of just tuning risk %. Looked at
+GitHub's most-used open-source strategy repos for evidence
+(freqtrade/freqtrade-strategies, 5.3k stars; iterativv/NostalgiaForInfinity,
+3.3k stars, actively maintained). NFI's buy logic leans heavily on "EWO"
+(Elliott Wave Oscillator: normalized spread between a fast and slow EMA) as
+a momentum/trend-strength signal alongside RSI/CTI.
+
+Importing NFI's actual tuned thresholds (e.g. ewo_min=2.0) would be
+folklore, not evidence -- those numbers are fit to crypto pairs on 5m/15m
+Binance data, not this desk's forex/index instruments. What transfers
+honestly is the FEATURE, not the magic numbers: added a fast(5)/slow(34)
+EMA-spread sign as a new `mom-up`/`mom-down` state dimension in
+bots/learning/agent.py's intraday feature set, deliberately left as a
+plain sign bucket (no hand-picked threshold) so the Q-agent learns from
+real training data whether/when it's predictive on these instruments,
+same as every other feature here. Daily-candle states are untouched (kept
+gated to the intraday-only feature block, preserving the existing
+"daily Q-table stays valid" guarantee).
+
+Practical effect: this adds a new dimension to the state space, so
+intraday Q-table entries effectively restart learning for the momentum
+axis (229 states before this). That's expected and cheap to recover from
+at this stage -- the desk was already undertrained in most conditions per
+the practice run's own output (most symbols showing 0 eval trades per
+window), so a state-space change now costs little and might catch a real
+signal freqtrade's community has repeatedly found useful. Next nightly
+self-train run (and the manual practice run already in flight) will start
+building real experience on the new feature; report the win-rate delta
+once there's enough of it to mean something, not before.

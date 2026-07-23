@@ -511,7 +511,7 @@ def test_intraday_state_features(tmp_path):
         )
     intraday = pd.concat(frames)
     state = extract_state(intraday, 100, holding=False)
-    for part in ("trend-", "rsi-", "vwap-", "orb-", "tod-", "pos-out"):
+    for part in ("trend-", "rsi-", "vwap-", "mom-", "orb-", "tod-", "pos-out"):
         assert part in state, state
     # first bar of a session is inside the opening range and the open hour
     state_open = extract_state(intraday, 78, holding=False)
@@ -520,7 +520,27 @@ def test_intraday_state_features(tmp_path):
     daily = pd.DataFrame({"close": 100 + np.arange(60.0)})
     daily_state = extract_state(daily, 50, holding=True)
     assert "vwap-" not in daily_state  # daily states unchanged for old Q-tables
+    assert "mom-" not in daily_state
     assert daily_state.endswith("pos-in")
+
+
+def test_momentum_feature_tracks_fast_slow_ema_spread():
+    # session 48: fast(5)/slow(34) EMA spread, the feature family
+    # NostalgiaForInfinity (a widely-used Freqtrade strategy) calls "EWO" --
+    # borrowed as a feature, not its crypto-tuned thresholds (see agent.py).
+    from bots.learning.agent import extract_state
+
+    idx = pd.date_range("2026-07-08 09:30", periods=60, freq="5min")
+    # A strong, steady uptrend: fast EMA pulls above slow EMA.
+    up = np.linspace(100, 120, 60)
+    up_df = pd.DataFrame({"open": up, "high": up, "low": up, "close": up,
+                          "volume": 1000}, index=idx)
+    assert "mom-up" in extract_state(up_df, 40, holding=False)
+
+    down = np.linspace(120, 100, 60)
+    down_df = pd.DataFrame({"open": down, "high": down, "low": down, "close": down,
+                            "volume": 1000}, index=idx)
+    assert "mom-down" in extract_state(down_df, 40, holding=False)
 
 
 def test_daily_trade_cap(price_df, tmp_path, journal):
