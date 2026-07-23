@@ -130,20 +130,18 @@ def _feature_frame(df: pd.DataFrame) -> pd.DataFrame:
         )
         features["vwap"] = np.where(close.values >= anchor, "above", "below")
 
-        # Momentum (session 48, evidence-based addition): fast/slow EMA
-        # spread, the same family of signal ("EWO") that NostalgiaForInfinity
-        # -- one of the most-used open-source Freqtrade strategies, 3.3k
-        # GitHub stars -- leans on for entries. Its tuned numeric thresholds
-        # (e.g. ewo_min=2.0) are fit to crypto pairs and would be folklore,
-        # not evidence, if imported directly onto forex/indices. What
-        # transfers honestly is the FEATURE (fast-vs-slow EMA spread as a
-        # faster-reacting complement to the existing 10/30 SMA trend, not a
-        # replacement for it) -- left as a plain sign bucket so the Q-agent
-        # learns any predictive threshold itself from real training data,
-        # same as every other feature here.
-        ema_fast = close.ewm(span=5, adjust=False).mean()
-        ema_slow = close.ewm(span=34, adjust=False).mean()
-        features["mom"] = np.where(ema_fast.values >= ema_slow.values, "up", "down")
+        # NOTE (session 48): a fast/slow-EMA "momentum" feature was added here
+        # and then REVERTED. Two reasons, both evidence-based: (1) it changed
+        # the state-string format, which silently invalidated the live trained
+        # Q-table (229 states, none carrying the new dimension) -- live
+        # inference then saw every state as unseen and defaulted to "hold",
+        # i.e. it stopped trading entirely; (2) a fresh train/test experiment
+        # (scripts/improve_experiment.py) showed adding the dimension produced
+        # a hold-flat policy on unseen days -- MORE features made this tabular
+        # Q-agent worse, not better, because coverage of the exploding state
+        # space gets too sparse. Kept out on purpose. Any future feature must
+        # be added WITH a full retrain in the same change AND clear the
+        # holdout-win-rate bar first, not shipped ahead of the evidence.
 
         if not continuous_market:
             # Opening range: high/low of the first 30 minutes of each session.
@@ -180,7 +178,7 @@ def extract_state(df: pd.DataFrame, index: int, holding: bool) -> str:
     row = _feature_frame(df).iloc[index]
     state = f"trend-{row['trend']}|rsi-{row['rsi']}"
     if "vwap" in row.index:
-        state += f"|vwap-{row['vwap']}|mom-{row['mom']}"
+        state += f"|vwap-{row['vwap']}"
         if "orb" in row.index:
             state += f"|orb-{row['orb']}|tod-{row['tod']}"
     return state + f"|pos-{'in' if holding else 'out'}"

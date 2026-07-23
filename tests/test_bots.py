@@ -511,7 +511,7 @@ def test_intraday_state_features(tmp_path):
         )
     intraday = pd.concat(frames)
     state = extract_state(intraday, 100, holding=False)
-    for part in ("trend-", "rsi-", "vwap-", "mom-", "orb-", "tod-", "pos-out"):
+    for part in ("trend-", "rsi-", "vwap-", "orb-", "tod-", "pos-out"):
         assert part in state, state
     # first bar of a session is inside the opening range and the open hour
     state_open = extract_state(intraday, 78, holding=False)
@@ -520,27 +520,22 @@ def test_intraday_state_features(tmp_path):
     daily = pd.DataFrame({"close": 100 + np.arange(60.0)})
     daily_state = extract_state(daily, 50, holding=True)
     assert "vwap-" not in daily_state  # daily states unchanged for old Q-tables
-    assert "mom-" not in daily_state
     assert daily_state.endswith("pos-in")
 
 
-def test_momentum_feature_tracks_fast_slow_ema_spread():
-    # session 48: fast(5)/slow(34) EMA spread, the feature family
-    # NostalgiaForInfinity (a widely-used Freqtrade strategy) calls "EWO" --
-    # borrowed as a feature, not its crypto-tuned thresholds (see agent.py).
+def test_intraday_state_has_no_momentum_dimension():
+    # session 48: a fast/slow-EMA momentum dimension was added then REVERTED
+    # -- it silently invalidated the live 229-state Q-table (state-format
+    # change -> every state unseen -> hold-flat) and a holdout experiment
+    # showed adding it made the tabular agent worse. Guard against it being
+    # re-added ahead of a full retrain + holdout evidence (see agent.py note).
     from bots.learning.agent import extract_state
 
     idx = pd.date_range("2026-07-08 09:30", periods=60, freq="5min")
-    # A strong, steady uptrend: fast EMA pulls above slow EMA.
-    up = np.linspace(100, 120, 60)
-    up_df = pd.DataFrame({"open": up, "high": up, "low": up, "close": up,
-                          "volume": 1000}, index=idx)
-    assert "mom-up" in extract_state(up_df, 40, holding=False)
-
-    down = np.linspace(120, 100, 60)
-    down_df = pd.DataFrame({"open": down, "high": down, "low": down, "close": down,
-                            "volume": 1000}, index=idx)
-    assert "mom-down" in extract_state(down_df, 40, holding=False)
+    px = np.linspace(100, 120, 60)
+    df = pd.DataFrame({"open": px, "high": px, "low": px, "close": px,
+                       "volume": 1000}, index=idx)
+    assert "mom-" not in extract_state(df, 40, holding=False)
 
 
 def test_daily_trade_cap(price_df, tmp_path, journal):
