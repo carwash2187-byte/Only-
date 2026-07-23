@@ -4,6 +4,14 @@ name: Trading desk nightly self-train
 # day, practice the live Q-table on the real roughest and strongest-trend
 # recent market windows, then commit the updated qtable.json. Runs on
 # GitHub's infrastructure, no Claude usage, no server.
+#
+# Session 48: practice_on_rough_windows()'s defaults were raised
+# substantially (3->15 windows each of rough/trend days, 20->60 episodes)
+# per user request for real volume -- this typically produces several
+# thousand REAL measured closed practice trades in one run (the actual
+# total is printed at the end, not estimated), covering both bad and
+# good historical stretches. That means real wall-clock time: expect
+# tens of minutes, not seconds, hence the wider timeout below.
 on:
   schedule:
     - cron: "0 7 * * *"  # ~3am ET / 7am UTC, after the NY session closes
@@ -19,7 +27,7 @@ permissions:
 jobs:
   self-train:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
