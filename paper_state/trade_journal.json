@@ -1601,6 +1601,25 @@
       "notes": "user watchlist | stop loss hit (-0.3%)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "3c0e22d45d0b",
+      "symbol": "CL=F",
+      "side": "long",
+      "quantity": 143.0736,
+      "entry_price": 87.57313155822754,
+      "entry_time": "2026-07-23T00:10:39.523186+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000150",
+        "mae:-0.000150"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
