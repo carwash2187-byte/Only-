@@ -1,2 +1,4 @@
 - 2026-07-23T08:34 **GBPJPY** long -0.00 (-0.00%) setup=`copytrade:trend-down|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-23T08:34 **SILVER** long -0.00 (-0.00%) setup=`copytrade` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-07-23T19:30 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.1%) -- locking in the day
+- 2026-07-23T19:31 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.3%) -- locking in the day
