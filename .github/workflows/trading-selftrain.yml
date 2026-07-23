@@ -12,14 +12,26 @@ name: Trading desk nightly self-train
 # total is printed at the end, not estimated), covering both bad and
 # good historical stretches. That means real wall-clock time: expect
 # tens of minutes, not seconds, hence the wider timeout below.
+# CONCURRENCY BUG FOUND AND FIXED (session 48): this used to share the
+# `paper-trading-cycle` group with trading-cycle.yml, on the reasoning
+# "never run a cycle and a retrain at the same time." That made sense when
+# the cycle workflow ran once per 5-minute trigger -- but since the
+# self-chaining fix, trading-cycle.yml now runs continuously, back-to-back,
+# forever, with zero idle gaps. A job sharing its concurrency group can
+# never get a turn: this workflow's one scheduled firing queued behind the
+# cycle chain and was cancelled without ever running -- self-training was
+# silently dead the whole time. Given its own group now. The remaining
+# risk (both workflows can write paper_state/qtable.json at overlapping
+# times) is handled the same way as the cycle/aquafunded race: rebase +
+# retry on push rejection, not mutual exclusion.
 on:
   schedule:
     - cron: "0 7 * * *"  # ~3am ET / 7am UTC, after the NY session closes
   workflow_dispatch: {}
 
 concurrency:
-  group: paper-trading-cycle  # same group as trading-cycle.yml: never
-  cancel-in-progress: false   # run a cycle and a retrain at the same time
+  group: paper-selftrain  # own group -- see the bug writeup above
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -32,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: claude/ai-trading-bot-research-yolqhm
-          fetch-depth: 1
+          fetch-depth: 0  # full history so the push-retry rebase below always has a common ancestor
 
       - uses: actions/setup-python@v5
         with:
@@ -56,7 +68,19 @@ jobs:
           git add paper_state/
           if git diff --cached --quiet; then
             echo "no state changes from this training run"
-          else
-            git commit -m "Nightly self-train $(date -u +%FT%TZ)"
-            git push origin HEAD:claude/ai-trading-bot-research-yolqhm
+            exit 0
           fi
+          git commit -m "Nightly self-train $(date -u +%FT%TZ)"
+          # The live cycle chain (trading-cycle.yml) writes paper_state/
+          # continuously and can move the branch tip while this long-running
+          # training job is still going. Rebase our commit onto the latest
+          # tip and retry, same pattern proven on the cycle workflows.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:claude/ai-trading-bot-research-yolqhm; then
+              echo "pushed on attempt $attempt"; exit 0
+            fi
+            echo "push rejected (attempt $attempt) -- rebasing on latest tip, retrying"
+            git fetch origin claude/ai-trading-bot-research-yolqhm
+            git rebase FETCH_HEAD || { git rebase --abort; exit 1; }
+          done
+          echo "push still failing after 5 attempts"; exit 1
