@@ -2597,3 +2597,28 @@ the session-46 horizon) = 500 total attempts, ATR stops on, current
 LIVE Q-table (post last night's self-train), Clarity's real 10%/4%/6%
 rules. ~8.6s/attempt measured in a timing probe -> ~70-90 min total, pure
 python, no Claude tokens. Result to be appended once it finishes.
+
+### Session 47 addendum 5: challenge-odds re-run RESULT (500 real-data attempts, ATR stops, full watchlist)
+
+**Final: 38.6% pass / 61.4% fail / 0% undecided** across 500 total
+attempts (5 seeds x 100 attempts x 45,000 bars ≈ 30 real trading days
+each), current live Q-table, real ATR-based stops, the full 19-symbol
+live watchlist, Clarity's real One-Step rules (10% target / 4% daily /
+6% max drawdown). Per-seed spread: 29-49% pass. Zero attempts ran past
+the ~30-trading-day window undecided -- every attempt resolves to
+pass/fail within that horizon.
+
+This lands close to the old (differently-flawed) session-46 estimate of
+~30-45%, but for a different, more honest reason: this run uses real
+ATR-adaptive risk sizing instead of a fixed stop, so the number now
+reflects genuine bad-volatility stretches instead of smoothing them out.
+The fail rate (61.4%) is the one that matters for planning: at current
+settings, expected attempts-to-pass ≈ 1/0.386 ≈ 2.6, i.e. more likely
+than not to need at least one restart before passing a real challenge.
+
+Honest framing for the user: this is not a reason to loosen the risk
+guards (CLAUDE.md's evidence law says the opposite direction needs the
+same bar of proof) -- it's a reason to look hard at whether TIGHTENING
+slightly (smaller risk_per_trade_pct, which the sim can test directly)
+raises pass_rate by cutting fail_rate more than it costs in speed. That
+test is a natural next step, not yet run.
