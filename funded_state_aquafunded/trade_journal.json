@@ -1028,14 +1028,33 @@
       "entry_price": 0.6968,
       "entry_time": "2026-07-23T20:59:07.406989+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 0.69687,
+      "exit_time": "2026-07-23T21:45:38.165246+00:00",
+      "pnl": -1.1200000000002319e-05,
+      "pnl_pct": -0.010045924225021707,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [
         "mfe:-0.000072",
         "mae:-0.000660"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "db4091da1a86",
+      "symbol": "EURUSD",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 1.13802,
+      "entry_time": "2026-07-23T21:44:38.190305+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 1.13807,
+      "exit_time": "2026-07-23T21:45:39.289548+00:00",
+      "pnl": 4.999999999988347e-07,
+      "pnl_pct": 0.004393595894613966,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "mfe:0.000018",
+        "mae:0.000018"
       ],
       "stop_pct": null
     }

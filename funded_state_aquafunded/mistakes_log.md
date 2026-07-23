@@ -7,3 +7,4 @@
 - 2026-07-23T19:34 **AUDUSD** short -0.00 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.5%) -- locking in the day
 - 2026-07-23T19:36 **AUDUSD** short -0.00 (-0.00%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.3%) -- locking in the day
 - 2026-07-23T20:58 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+6.1%) -- locking in the day
+- 2026-07-23T21:45 **AUDUSD** short -0.00 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
