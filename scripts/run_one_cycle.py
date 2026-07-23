@@ -1,22 +1,32 @@
-"""Session 48: ONE desk cycle, then exit. Built for GitHub Actions (a cron
-job, not a persistent process) -- NOT a thin wrapper around
-bots.autopilot.run_autopilot()'s loop, on purpose: that loop's `cycles`
-counter only increments when the market is actually open, so a run
-triggered while forex is closed would sleep forever waiting for
-max_cycles=1 to be satisfied, which is exactly wrong for a cron job with a
-runner timeout. This script checks the market clock once, does at most one
-cycle of real work, and returns immediately either way.
+"""Session 48: desk cycles for GitHub Actions.
+
+GitHub's scheduler has a hard floor of 5 minutes between job STARTS --
+confirmed the hard way this session (a 1-minute cron simply never fired,
+zero runs in 80+ minutes). That floor is on how often a job starts, not
+on what the job does once running. `main()` below exploits that: each
+5-minute-triggered job loops internally, checking the market every 60
+seconds for its own runtime, so the real-world check cadence is genuinely
+1 minute (matching MambaFX's documented style) while the trigger itself
+respects GitHub's actual rules.
+
+Each iteration checks the market clock fresh (not just once at job start)
+-- NOT a thin wrapper around bots.autopilot.run_autopilot()'s loop, on
+purpose: that loop's `cycles` counter only increments when the market is
+open, so a run triggered while forex is closed would sleep forever
+waiting for max_cycles=1, wrong for a job with a runner timeout. Here,
+a closed-market iteration just logs and moves to the next one -- the
+loop itself, not run_autopilot(), owns the timing.
 
 Mirrors bots/cli.py's cmd_autopilot() desk construction exactly (funded
-config, leverage-aware PaperBroker, realistic spread) so a GitHub Actions
-run behaves identically to the live `python -m bots autopilot --funded`
-command it replaces -- same account, same rules, just triggered by a
-schedule instead of a sleep loop.
+config, leverage-aware PaperBroker, realistic spread) so this behaves
+identically to `python -m bots autopilot --funded`, just triggered by a
+schedule instead of a persistent sleep loop.
 
     BOT_DATA_DIR=paper_state PYTHONPATH=. python scripts/run_one_cycle.py
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -39,14 +49,17 @@ SYMBOLS = [
 ]
 WEEKEND_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD"]
 
+CHECK_INTERVAL_SECONDS = 60
+# Stop looping with enough margin before the runner's own timeout (and
+# before the NEXT scheduled trigger 5 min later) that a slow cycle can
+# never overlap the next job -- GitHub Actions concurrency already queues
+# overlapping runs, but finishing early avoids relying on that.
+LOOP_BUDGET_SECONDS = 4 * 60 + 15  # ~4m15s of a 5-minute window
 
-def main() -> None:
-    config = funded_account_config(timeframe="1m")
-    broker = get_broker("paper", model_spread=True, leverage=config.max_leverage)
-    desk = TradingDesk(broker=broker, config=config)
 
+def run_one_cycle(desk) -> None:
     now = datetime.now(tz=NY)
-    stamp = now.strftime("%Y-%m-%d %H:%M ET")
+    stamp = now.strftime("%Y-%m-%d %H:%M:%S ET")
     weekend_ok = getattr(desk.config, "weekend_trading_allowed", True)
     active_market, active_symbols, _stock_active = select_active_market(
         "forex", SYMBOLS, WEEKEND_SYMBOLS, None, weekend_ok, now
@@ -67,6 +80,26 @@ def main() -> None:
         print(f"[{stamp}] cycle{label}:")
     print(report.describe())
     write_last_cycle(desk, report, stamp)
+
+
+def main() -> None:
+    config = funded_account_config(timeframe="1m")
+    broker = get_broker("paper", model_spread=True, leverage=config.max_leverage)
+    desk = TradingDesk(broker=broker, config=config)
+
+    start = time.monotonic()
+    checks = 0
+    while time.monotonic() - start < LOOP_BUDGET_SECONDS:
+        loop_t0 = time.monotonic()
+        run_one_cycle(desk)
+        checks += 1
+        elapsed_this_check = time.monotonic() - loop_t0
+        sleep_for = max(0.0, CHECK_INTERVAL_SECONDS - elapsed_this_check)
+        if time.monotonic() - start + sleep_for >= LOOP_BUDGET_SECONDS:
+            break
+        time.sleep(sleep_for)
+    print(f"\n{checks} checks this job run "
+          f"({time.monotonic() - start:.0f}s), handing off to the next scheduled trigger")
 
 
 if __name__ == "__main__":

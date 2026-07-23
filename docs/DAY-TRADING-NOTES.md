@@ -2961,3 +2961,27 @@ runs the desk + nightly self-train on GitHub's infrastructure with zero
 Claude involvement; journal-driven probation/cooldowns/MFE tracking
 self-update every close. Claude is only involved when writing code
 changes like this one.
+
+### Session 48 addendum: real 1-minute cadence within GitHub's real 5-minute floor
+
+User wants true 1-minute checks (MambaFX style), token-free, forever.
+GitHub's floor is 5 minutes between job STARTS (confirmed this session --
+a 1-minute cron fired zero times in 80+ minutes). That floor is NOT a
+floor on what a running job does. Fix: each 5-minute-triggered job now
+loops internally, checking the market every 60 seconds for ~4m15s of its
+own runtime, before handing off to the next scheduled trigger. Real
+1-minute cadence, inside GitHub's real rules.
+
+`run_one_cycle.py` and `run_one_cycle_aquafunded.py` both refactored:
+market-check logic extracted into `run_one_cycle(desk)`, called in a
+timed loop from `main()`. The AquaFunded version deliberately connects
+to TradeLocker ONCE per job and reuses that connection across all
+internal checks -- reconnecting (re-authenticating) every 60s would be
+wasteful and risks the broker's own rate limits. A single failed cycle
+inside the loop is caught and logged, not fatal -- the loop keeps
+checking every minute regardless, matching what a real always-on process
+would do.
+
+Verified: loop timing logic tested directly (3 checks at exact 3s
+intervals within an 8s budget, mocked cycle function, no network
+dependency) -- confirmed correct. 151 tests passing.
