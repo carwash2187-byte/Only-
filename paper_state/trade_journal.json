@@ -1650,14 +1650,14 @@
       "entry_price": 2974.848686169434,
       "entry_time": "2026-07-23T01:40:32.373164+00:00",
       "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 2968.5515161743165,
+      "exit_time": "2026-07-23T03:49:51.436493+00:00",
+      "pnl": -26.833500783195355,
+      "pnl_pct": -0.2116803461095107,
+      "notes": "user watchlist | time stop: 129 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.2%)",
       "tags": [
         "mfe:0.000320",
-        "mae:-0.001159"
+        "mae:-0.002067"
       ],
       "stop_pct": 0.003
     },
@@ -1669,14 +1669,14 @@
       "entry_price": 29207.5420725,
       "entry_time": "2026-07-23T01:41:57.343782+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 29094.9590475,
+      "exit_time": "2026-07-23T03:49:51.739945+00:00",
+      "pnl": -48.79348303499996,
+      "pnl_pct": -0.38545874459597895,
+      "notes": "user watchlist | stop loss hit (-0.4%)",
       "tags": [
         "mfe:0.001471",
-        "mae:-0.002253"
+        "mae:-0.003845"
       ],
       "stop_pct": 0.003
     },
