@@ -3299,3 +3299,70 @@ fundamentals, or accepting the honest limits of retail-accessible
 data/compute for finding a trading edge), not another walk-forward
 variant on the same price-only features. Desk stays protected-not-
 profitable; guards + demo remain correct.
+
+## Session 49
+
+Live-incident day on the AquaFunded account, then a user directive to
+make the desk trade "fewer, better" like a discretionary scalper.
+
+**Live bugs found and fixed (the 103-position incident).** A manually
+opened short AUDUSD position would not close; the account accumulated 103
+separate small SELL positions instead of one. Two real, interlocking
+broker bugs behind it, both traced against the actual `tradelocker`
+library source, not guessed:
+- `TradeLockerBroker.sell()` closed positions via
+  `close_position(position_id=..., close_quantity=0)`. The library's
+  docstring says `close_quantity=0` means "close the whole position" --
+  but that shortcut only exists on its `order_id` code path. On the
+  `position_id` path it passes the value straight through as the DELETE
+  request's `qty`, so `0` asks the exchange to close ZERO units. The API
+  still returns ok, so the desk logged a fake `realized PnL +0.00` every
+  cycle while nothing closed. Fixed: always pass the real quantity.
+- When a close failed for any reason, `sell()` fell back to a naked
+  `_order(..., "sell")` market order. On a hedging-mode account that does
+  not close anything -- it OPENS a new short next to the old one, while
+  reporting ok. That is what multiplied one stuck position into 103: each
+  failed close silently added more exposure and the caller believed the
+  exit had succeeded. Fixed: a failed close now returns ok=False, never
+  opens risk. Tests cover both failure modes (close rejected; no matching
+  position) -- neither may ever place an order.
+
+Also added a per-cycle diagnostic that logs exactly which TradeLocker
+account the login resolved to (the library picks whichever account comes
+back first when none is pinned), so a multi-account login mismatch is
+visible in the job log instead of looking like a phantom-position bug.
+
+**Anti-overtrade cap (user directive).** `aquafunded_instant_config`
+`max_trades_per_day` 10 -> 4. A frequency cap is strictly risk-reducing
+(it can only stop an entry, never force one), so no evidence ceremony --
+matches the project preference for fewer higher-conviction shots over a
+looser filter, and the user's own read that one or two good trades beat
+thirty tiny ones.
+
+**Reversal-candle profit-protection exit (user directive: "learn
+reversal candles, take my profit when one shows up").** New
+`reversal_candle(df, side)` detects the two reversal signals with the
+most empirical support -- the engulfing pattern and the long-wick
+rejection bar (pin/hammer/shooting-star, wick >= 2x body). Deliberately
+excluded: lone doji (indecision, high false-positive rate) and three-bar
+patterns (too few clean bars on a 1m scalp). Wired into `_manage_position`
+as `reversal_exit`, gated on `change > 0`: it can only bank an
+already-green trade early on a strong opposite candle, never realize a
+loss (that stays the stop-loss's job). Enabled on the funded presets;
+off by default elsewhere.
+
+**Explicitly NOT done, and why (honesty log).** The same directive asked
+for a large bundle -- liquidity-sweep entry detection, partial/scale-out
+profit taking, full candlestick-pattern reading, and three timed
+session routines (NY-open NAS100/US30, evening XAU, ~2-3am DAX/UK100).
+Not shipped this session:
+- Partial/scale-out exits were already researched and REJECTED on
+  evidence in session 16 (worse results in backtest). Not silently
+  re-added; would need new evidence beating that bar.
+- Liquidity-sweep entries and the timed session routines are each a
+  separate research-first + tested build under the project's own working
+  pattern. Dumping them untested onto a funded account is exactly the
+  failure mode that produced the 103-position incident above. Deferred to
+  their own sessions rather than half-built. No "guaranteed profit"
+  framing was accepted -- the honesty norm holds: today's real gain was
+  the user's own manual trade, and one trade is not a proven edge.

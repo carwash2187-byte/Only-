@@ -2451,6 +2451,106 @@ def test_short_position_take_profit_triggers_on_a_real_gain_not_a_real_loss(tl_b
 
 
 # ---------------------------------------------------------------------------
+# Session 49: reversal-candle profit-protection exit
+# ---------------------------------------------------------------------------
+
+def _reversal_history(entry_up=True):
+    """300 bars of gentle OHLC with a clean reversal on the LAST bar:
+    entry_up=True -> a bearish engulfing (tops out a long); False -> a
+    bullish engulfing (bottoms out a short)."""
+    n = 300
+    if entry_up:
+        close = np.linspace(2360.0, 2400.0, n)
+    else:
+        close = np.linspace(2440.0, 2400.0, n)
+    open_ = np.concatenate([[close[0]], close[:-1]]).astype(float)
+    high = np.maximum(open_, close) + 0.5
+    low = np.minimum(open_, close) - 0.5
+    if entry_up:
+        # prev small green, last red body engulfing it -> bearish reversal
+        open_[-2], close[-2] = 2398.0, 2401.0
+        high[-2], low[-2] = 2401.5, 2397.5
+        open_[-1], close[-1] = 2402.0, 2397.0
+        high[-1], low[-1] = 2403.0, 2396.0
+    else:
+        # prev small red, last green body engulfing it -> bullish reversal
+        open_[-2], close[-2] = 2402.0, 2399.0
+        high[-2], low[-2] = 2402.5, 2398.5
+        open_[-1], close[-1] = 2398.0, 2403.0
+        high[-1], low[-1] = 2404.0, 2397.0
+    return pd.DataFrame({"open": open_, "high": high, "low": low, "close": close})
+
+
+def test_reversal_candle_detects_core_patterns_and_ignores_noise():
+    from bots.organization import reversal_candle
+
+    # bearish engulfing / shooting star -> exit a LONG
+    bear_engulf = pd.DataFrame({"open": [10, 10.5, 11.0], "high": [10.6, 11.2, 11.1],
+                                "low": [9.9, 10.4, 10.2], "close": [10.5, 11.0, 10.3]})
+    assert "engulfing" in reversal_candle(bear_engulf, "long")
+    shooting = pd.DataFrame({"open": [10, 10.5, 11.0], "high": [10.6, 11.2, 12.0],
+                             "low": [9.9, 10.4, 10.95], "close": [10.5, 11.0, 11.05]})
+    assert "shooting-star" in reversal_candle(shooting, "long")
+    # bullish engulfing / hammer -> exit a SHORT
+    bull_engulf = pd.DataFrame({"open": [11, 10.5, 10.0], "high": [11.1, 10.6, 10.9],
+                                "low": [10.4, 9.9, 9.95], "close": [10.5, 10.0, 10.8]})
+    assert "engulfing" in reversal_candle(bull_engulf, "short")
+    hammer = pd.DataFrame({"open": [11, 10.5, 10.0], "high": [11.1, 10.6, 10.1],
+                           "low": [10.4, 9.9, 9.0], "close": [10.5, 10.0, 10.05]})
+    assert "hammer" in reversal_candle(hammer, "short")
+    # a plain trending bar is NOT a reversal (no false exit)
+    calm = pd.DataFrame({"open": [10, 10.2, 10.4], "high": [10.3, 10.5, 10.7],
+                         "low": [9.95, 10.15, 10.35], "close": [10.2, 10.4, 10.65]})
+    assert reversal_candle(calm, "long") is None
+    # a bearish candle argues nothing against a SHORT (only against a long)
+    assert reversal_candle(bear_engulf, "short") is None
+
+
+def test_reversal_exit_banks_profit_on_a_reversal_candle_when_green(tl_broker, tmp_path, journal):
+    # user directive (session 49): a GREEN trade + an opposite reversal
+    # candle should take the profit now. Long GOLD entry 2380, broker price
+    # 2400 = +0.84% (green, below the +1R breakeven and the 10% target), and
+    # the history's last bar is a bearish engulfing -> exit citing the
+    # reversal, not stop/target.
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2380.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, _reversal_history(entry_up=True),
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.02, take_profit_pct=0.10,
+                                       breakeven_at_1r=False, reversal_exit=True))
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells, report.describe()
+    assert "reversal" in sells[0].reason.lower(), sells[0].reason
+    assert "stop loss" not in sells[0].reason.lower()
+
+
+def test_reversal_exit_never_fires_on_a_losing_trade(tl_broker, tmp_path, journal):
+    # The reversal exit is profit-protection ONLY (gated change > 0). A
+    # long that is currently RED must never be closed with the "taking the
+    # profit" reversal reason, even with a textbook bearish candle present --
+    # losers are the stop-loss's job, not this. Entry 2440, price 2400 =
+    # -1.6% (red), stop set wide (5%) so the stop-loss doesn't fire either.
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2440.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, _reversal_history(entry_up=True),
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.05, take_profit_pct=0.10,
+                                       breakeven_at_1r=False, reversal_exit=True))
+    report = desk.run_once(symbols=[])
+    sells = [a for a in report.actions if a.action == "sell"]
+    assert not any("taking the profit" in a.reason.lower() for a in sells), \
+        [a.reason for a in sells]
+
+
+def test_funded_presets_enable_the_reversal_profit_exit():
+    from bots.organization import (aquafunded_instant_config, funded_account_config,
+                                    DeskConfig)
+    assert funded_account_config().reversal_exit is True
+    assert aquafunded_instant_config().reversal_exit is True
+    # default (paper/generic) desk leaves it off unless asked
+    assert DeskConfig().reversal_exit is False
+
+
+# ---------------------------------------------------------------------------
 # Session 31: bad-market survival -- loss-budget headroom + rollover blackout
 # ---------------------------------------------------------------------------
 
@@ -3302,6 +3402,12 @@ def test_aquafunded_instant_config_matches_checkout_screenshot_and_tos():
     # the preset's docstring; raising it back needs new journal evidence.
     assert cfg.risk_per_trade_pct == 0.0025
     assert funded_account_config().risk_per_trade_pct == 0.015  # paper desk unchanged
+    # Anti-overtrade cap (session 48, explicit user directive): 4 entries/day,
+    # down from the funded default of 10. A frequency cap is risk-reducing
+    # (can only stop an entry, never force one), so it doesn't need the
+    # evidence ceremony a sizing increase would.
+    assert cfg.max_trades_per_day == 4
+    assert funded_account_config().max_trades_per_day == 10  # paper desk unchanged
 
 
 # --- challenge pass-probability Monte Carlo (session 46) --------------------

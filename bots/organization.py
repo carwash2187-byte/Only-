@@ -71,6 +71,7 @@ class DeskConfig:
     friday_flatten: bool = False  # close all non-crypto positions in the last half hour before Friday 5pm ET (prop rule: no weekend holding without an add-on)
     symbol_cooldown_minutes: int = 0  # after a losing close on a symbol, wait this long before re-entering IT (0 = off; anti-revenge-trading)
     trail_after_target: bool = False  # hybrid exit: at the fixed target, convert to an ATR trailing stop (floor +1R) instead of cashing out -- OFF until session 34's exit fix proves itself on real trades
+    reversal_exit: bool = False  # profit-protection only: when a trade is already GREEN and a strong opposite-direction reversal candle (engulfing / long-wick rejection) closes on the entry timeframe, take the profit now instead of waiting for a full retrace. Can only ever CLOSE a winning trade early, never open one and never turn a winner into a loser -- so it needs no risk-sizing evidence ceremony (session 49, user directive: "when a reversal candle comes out, take my profit")
     vol_spike_entry_filter: float = 0.0  # 0 = off; e.g. 3.0: skip NEW entries when the last completed bar's range exceeds this multiple of ATR14 (don't chase a flash move into wide spreads)
     adr_exhaustion_pct: float = 0.0  # 0 = off; e.g. 1.0: skip NEW entries once today's range has consumed this fraction of the 14-day average daily range (late entries into a spent day have poor odds)
     zone_min_touches: int = 0  # 0 = off; e.g. 2: skip entries at a nearby swing level that hasn't been tested at least this many times in real history (fresh/virgin levels reverse ~70% of the time in backtests -- the desk shouldn't trust a "breakout" through one)
@@ -207,6 +208,15 @@ def funded_account_config(**overrides) -> "DeskConfig":
         # cap; leverage changes notional, not the stop-based risk math.
         max_leverage=5.0,
         max_position_pct=3.0,
+        # Session 49 (user directive: "learn reversal candles and take my
+        # profit when one shows up"). Profit-protection exit: on a trade
+        # that is already GREEN, a strong opposite-direction reversal candle
+        # (engulfing / long-wick rejection) on the entry timeframe banks the
+        # open profit instead of waiting for a full retrace. Strictly a
+        # winner's early exit (gated change > 0), so it can never realize a
+        # loss through this path -- safe to run on the funded account
+        # without the evidence ceremony a risk-sizing change needs.
+        reversal_exit=True,
     )
     base.update(overrides)
     return DeskConfig(**base)
@@ -314,6 +324,17 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         challenge_target_pct=0.0,  # Instant: no challenge phase, no target to lock
         news_blackout=True,  # risk discipline, not required by this firm (news trading IS permitted)
         risk_per_trade_pct=0.0025,  # see docstring: survival-first sizing, evidence-law change
+        # Anti-overtrade cap (session 48, explicit user directive): 4 entries
+        # per day, down from the funded default of 10. The user's own read of
+        # the day the desk did well was "one or two GOOD trades beat thirty
+        # tiny ones"; the journal agrees the high-frequency days bled via
+        # spread/churn (same finding that drove min_hold_minutes=30). Fewer,
+        # higher-conviction shots at the same bar is the project's stated
+        # preference over a looser filter (CLAUDE.md honesty norms). This is a
+        # frequency cap, strictly risk-reducing -- it can only ever stop the
+        # desk entering, never force one -- so it doesn't need the evidence
+        # ceremony a risk-sizing INCREASE would.
+        max_trades_per_day=4,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -680,6 +701,62 @@ def trend_direction(df, fast: int = 10, slow: int = 30) -> Optional[str]:
         if f != f or s != s:  # NaN check
             return None
         return "up" if f >= s else "down"
+    except Exception:
+        return None
+
+
+def reversal_candle(df, position_side: str) -> Optional[str]:
+    """Detect a strong reversal candlestick on the LAST CLOSED bar that
+    argues against an open position, or None. Used only as a
+    profit-protection exit (see DeskConfig.reversal_exit) -- it can close a
+    winning trade, never open one.
+
+    Evidence basis (session 49 research, user directive to "learn reversal
+    candles"): the two single/two-bar reversal signals with the most
+    consistent empirical support in the pattern literature are the
+    ENGULFING pattern (Bulkowski ranks bullish/bearish engulfing among the
+    more reliable two-bar reversals) and the long-wick REJECTION bar
+    (pin bar / hammer / shooting star -- a bar whose wick against the trend
+    is >= 2x its body, i.e. price pushed one way and got firmly rejected).
+    Deliberately NOT included: doji alone (indecision, not reversal -- too
+    many false positives), and any three-bar pattern (needs more bars than
+    a 1m scalp reliably has clean). Read on the last CLOSED bar only; the
+    caller is responsible for passing a frame whose final row is complete.
+
+    For a LONG we look for a BEARISH reversal (something topping out); for a
+    SHORT, a BULLISH one. Anything else -> None (hold).
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("open", "high", "low", "close")) or len(df) < 2:
+            return None
+        o2 = float(df[cols["open"]].iloc[-1]); c2 = float(df[cols["close"]].iloc[-1])
+        h2 = float(df[cols["high"]].iloc[-1]); l2 = float(df[cols["low"]].iloc[-1])
+        o1 = float(df[cols["open"]].iloc[-2]); c1 = float(df[cols["close"]].iloc[-2])
+        body2 = abs(c2 - o2)
+        rng2 = h2 - l2
+        if rng2 <= 0:
+            return None
+        upper_wick = h2 - max(o2, c2)
+        lower_wick = min(o2, c2) - l2
+        side = position_side.lower()
+        if side == "long":
+            # bearish engulfing: today red, yesterday green, today's body
+            # fully covers yesterday's body
+            if c2 < o2 and c1 > o1 and c2 <= o1 and o2 >= c1:
+                return "bearish engulfing candle (reversal) -- taking the profit"
+            # shooting-star / bearish pin: long upper wick rejecting higher
+            # prices, small body, little lower wick
+            if body2 > 0 and upper_wick >= 2 * body2 and lower_wick <= body2:
+                return "shooting-star rejection wick (reversal) -- taking the profit"
+        elif side == "short":
+            # bullish engulfing
+            if c2 > o2 and c1 < o1 and c2 >= o1 and o2 <= c1:
+                return "bullish engulfing candle (reversal) -- taking the profit"
+            # hammer / bullish pin: long lower wick rejecting lower prices
+            if body2 > 0 and lower_wick >= 2 * body2 and upper_wick <= body2:
+                return "hammer rejection wick (reversal) -- taking the profit"
+        return None
     except Exception:
         return None
 
@@ -1365,7 +1442,23 @@ class TradingDesk:
                               f"{hwm:+.1%} high-water mark, target was {target_pct:+.1%})")
             elif change >= target_pct:
                 reason = f"take profit hit ({change:+.1%})"
-            elif cfg.max_hold_minutes > 0 and not breakeven_armed:
+            elif cfg.reversal_exit and change > 0:
+                # Profit-protection reversal exit (session 49, user directive:
+                # "when a reversal candle comes out, take my profit"). Only
+                # considered when the trade is already GREEN and hasn't hit a
+                # hard stop/target above -- a strong opposite-direction
+                # reversal candle (engulfing / long-wick rejection) on the
+                # entry timeframe means banking the open profit now beats
+                # waiting for the full retrace. Strictly a WINNER's early
+                # exit: gated on change > 0, so it can never realize a loss
+                # through this path (the stop-loss branch above owns losers).
+                try:
+                    rev = reversal_candle(self.history_fn(symbol), record.side)
+                    if rev:
+                        reason = f"{rev} ({change:+.1%})"
+                except Exception:
+                    pass
+            if reason is None and cfg.max_hold_minutes > 0 and not breakeven_armed:
                 # Time stop: the entry thesis was a fast intraday move. If
                 # the trade hasn't even reached +1R after max_hold_minutes,
                 # the setup didn't confirm -- exit on the clock, free the
