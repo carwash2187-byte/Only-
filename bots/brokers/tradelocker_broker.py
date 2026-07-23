@@ -54,7 +54,11 @@ MIN_LOT = 0.01
 TRADELOCKER_ALIASES: Dict[str, list] = {
     "GOLD": ["XAUUSD", "GOLD"],
     "SILVER": ["XAGUSD", "SILVER"],
-    "OIL": ["USOIL", "XTIUSD", "WTIUSD", "CRUDEOIL", "OIL"],
+    # WTI added session 48: confirmed via AquaFunded's real account
+    # instrument list (api.get_all_instruments()) -- their EQUITY_CFD name
+    # for WTI crude is literally "WTI", none of the previously-tried
+    # aliases matched on this broker.
+    "OIL": ["USOIL", "XTIUSD", "WTIUSD", "CRUDEOIL", "WTI", "OIL"],
     "NAS100": ["NAS100", "US100", "USTEC", "NDX100"],
     "US30": ["US30", "DJ30", "DOW30"],
     "US500": ["US500", "SPX500", "SP500"],

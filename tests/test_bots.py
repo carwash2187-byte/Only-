@@ -2107,7 +2107,7 @@ class _FakeTLAPI:
     """Stands in for tradelocker.TLAPI: a firm that names gold XAUUSD and
     the Nasdaq index US100, with one EURUSD long already open."""
 
-    INSTRUMENTS = {"EURUSD": 1, "XAUUSD": 101, "US100": 202}
+    INSTRUMENTS = {"EURUSD": 1, "XAUUSD": 101, "US100": 202, "WTI": 404}
 
     def __init__(self, *args, **kwargs):
         self.orders = []
@@ -2130,7 +2130,7 @@ class _FakeTLAPI:
         )
 
     def get_latest_asking_price(self, iid):
-        return {1: 1.1000, 101: 2400.0, 202: 20000.0}[int(iid)]
+        return {1: 1.1000, 101: 2400.0, 202: 20000.0, 404: 78.5}[int(iid)]
 
     def get_account_state(self):
         return {"availableFunds": 5000.0, "equity": 5000.0}
@@ -2168,6 +2168,14 @@ def test_tradelocker_demo_by_default_and_alias_resolution(tl_broker):
     assert tl_broker.price("GOLD") == 2400.0
     with pytest.raises(ValueError, match="US500"):
         tl_broker._instrument_id("US500")  # firm doesn't offer it -> loud error
+
+
+def test_tradelocker_oil_resolves_to_wti(tl_broker):
+    # Session 48: confirmed against a real AquaFunded account -- their
+    # EQUITY_CFD name for crude oil is literally "WTI", not any of the
+    # previously-tried aliases (USOIL, XTIUSD, WTIUSD, CRUDEOIL).
+    assert tl_broker._instrument_id("OIL") == 404
+    assert tl_broker.price("OIL") == 78.5
 
 
 def test_tradelocker_positions_map_back_to_desk_names_after_restart(tl_broker):

@@ -2808,3 +2808,47 @@ verified a full 45,000-bar attempt now takes single-digit seconds instead
 of hanging indefinitely. Re-launched the survival sweep with the fix.
 
 149 tests passing (was 148).
+
+### Session 48 addendum: AquaFunded account connected, real instrument-naming fix
+
+User bought an AquaFunded Instant Funded account and provided TradeLocker
+credentials (server: AQUA). Ran the established preflight process
+(`scripts/preflight_funded.py`, read-only, no orders) before anything
+else -- same safety pattern as the existing funded TradeLocker accounts.
+
+**Connection succeeded on the first real attempt.** Account resolved:
+$2,500 cash/equity, no open positions. 17/19 watchlist symbols matched
+immediately via existing aliases.
+
+**Found and fixed a real naming gap**: OIL didn't resolve on this
+account. Queried the account's actual instrument list directly
+(`api.get_all_instruments()`) instead of guessing -- this broker's name
+for WTI crude is literally `"WTI"`, none of the 5 previously-tried
+aliases (USOIL/XTIUSD/WTIUSD/CRUDEOIL/OIL) matched. Added `"WTI"` to
+`TRADELOCKER_ALIASES["OIL"]` in `tradelocker_broker.py` -- same bug class
+as the earlier GOLD/OIL/US30 alias gaps (sessions 45/46), same fix
+pattern. Test: `test_tradelocker_oil_resolves_to_wti`.
+
+**US2000 confirmed genuinely unavailable on this account** -- not a
+naming issue. Pulled the account's full EQUITY_CFD instrument list (11
+total) and manually confirmed no Russell-2000-equivalent CFD is offered
+at all by this broker. Verified the desk handles this safely already:
+both `_manage_position` and the entry-evaluation path catch a broker
+price/resolution failure per-symbol and skip with a clear note, never
+crashing the cycle -- so 18/19 resolvable is fully safe to run on, the
+19th just never generates a signal on this account.
+
+150 tests passing (was 149).
+
+**Credentials handling**: written directly to `bot_data/aquafunded.env`
+(gitignored, `chmod 600`), never committed, never echoed back in chat.
+User pasted the password in plain chat text twice during setup --
+flagged both times and recommended rotating it; this is a real exposure
+via chat-log persistence that direct env-file entry would have avoided,
+worth remembering for the next account.
+
+**Not yet done, deliberately**: still running against the DEMO
+TradeLocker environment (`TRADELOCKER_LIVE` unset) -- per the existing
+safety convention (start on demo, prove it, only then flip
+`TRADELOCKER_LIVE=1` with explicit confirmation), no real order has been
+placed and the autopilot has not been launched against this account yet.
