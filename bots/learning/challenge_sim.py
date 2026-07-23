@@ -121,7 +121,9 @@ def simulate_attempt(
             if atr_stops:
                 from bots.organization import atr_pct
 
-                entry_stop_pct = atr_pct(df.iloc[: i + 1].tail(atr_window + 1), period=atr_window)
+                entry_stop_pct = atr_pct(
+                    df.iloc[max(0, i - atr_window) : i + 1], period=atr_window
+                )
                 entry_stop_pct = min(max(1.5 * entry_stop_pct, 0.003), 0.05) if entry_stop_pct else stop_loss_pct
                 trade_risk_scale = risk_per_trade_pct / entry_stop_pct
             else:
