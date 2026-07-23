@@ -2,3 +2,7 @@
 - 2026-07-23T08:34 **SILVER** long -0.00 (-0.00%) setup=`copytrade` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-23T19:30 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.1%) -- locking in the day
 - 2026-07-23T19:31 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.3%) -- locking in the day
+- 2026-07-23T19:32 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.4%) -- locking in the day
+- 2026-07-23T19:33 **AUDUSD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.3%) -- locking in the day
+- 2026-07-23T19:34 **AUDUSD** short -0.00 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.5%) -- locking in the day
+- 2026-07-23T19:36 **AUDUSD** short -0.00 (-0.00%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.3%) -- locking in the day
