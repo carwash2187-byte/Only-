@@ -3129,3 +3129,31 @@ HONESTY: +1.6% is over ONE week of unseen 1m data across 9 symbols -- a
 real, promising first edge, NOT proven-rich. Next brick
 (scripts/minhold_robustness.py): confirm it's broad across symbols, not
 one lucky one, before trusting it with real money.
+
+### Session 48 addendum: robustness check WALKED BACK the min-hold "edge" -- it was one symbol
+
+Immediately ran scripts/minhold_robustness.py on the +1.6% min-hold-30
+result before trusting it. Per-symbol, unseen days:
+
+  OIL    +6.08% (77 trades)   <- carrying the entire result
+  AUDUSD +0.33%
+  EURUSD -0.49% | GBPUSD -0.41% | USDJPY -1.11% | USDCAD -0.14%
+  EURJPY -0.87% | GBPJPY -0.52% | GOLD -1.28%
+  => only 2/9 symbols profitable. FRAGILE / one-symbol-driven.
+
+The "+1.6% profitable" was OIL masking 7 losing symbols. NOT a broad edge.
+The finer hold sweep (35 min = +4.0%) is the same OIL-driven noise --
+chasing it would be curve-fitting to one week of one symbol.
+
+Decision: KEEP min_hold_minutes=30 anyway -- it is a legitimate DEFENSIVE
+fix (kills the -15.8% churn bleed; even the losing symbols lose less than
+while churning; does no harm). But do NOT claim it as an edge, and do NOT
+cherry-pick "trade only OIL" (survivorship-bias overfitting to one week).
+
+Honest standing after session 48's edge work: the catastrophic churn leak
+is plugged, but there is still no broad, proven profit edge. The bot is
+"protected, not yet profitable." Next real work must find an edge that
+holds across MANY symbols out-of-sample, not one -- and be validated on
+more than a single week of 1m data (a real limitation: yfinance only
+serves ~8 days of 1m history, so longer-horizon validation needs 5m bars
+or a stored tape).
