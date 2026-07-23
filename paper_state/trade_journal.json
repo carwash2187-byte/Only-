@@ -1621,6 +1621,22 @@
         "breakeven-armed"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "cdf56c3a2cb9",
+      "symbol": "CL=F",
+      "side": "long",
+      "quantity": 173.6197,
+      "entry_price": 87.94318980522156,
+      "entry_time": "2026-07-23T00:33:46.222773+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
