@@ -1,0 +1,8 @@
+# Minimal dependencies for the bots/ trading loop (autopilot + watchdog +
+# self-train). Deliberately does NOT install the full TradingAgents package
+# (langchain/langgraph/etc) -- those are only needed for --llm-committee
+# mode, which the live desk never uses (see CLAUDE.md's always-on law:
+# the trading loop is token-free by construction).
+pandas>=2.3.0
+numpy>=1.26.0
+requests>=2.32.4

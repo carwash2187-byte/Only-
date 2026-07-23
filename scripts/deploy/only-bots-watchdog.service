@@ -1,0 +1,25 @@
+[Unit]
+Description=Only- trading desk watchdog (autopilot + nightly self-train + git-sync)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Edit these two paths for your machine, or override via
+# /etc/systemd/system/only-bots-watchdog.service.d/override.conf
+WorkingDirectory=/opt/only-
+Environment=BOT_DATA_DIR=paper_state
+Environment=PYTHONPATH=/opt/only-
+ExecStart=/usr/bin/bash /opt/only-/scripts/watchdog.sh
+Restart=always
+RestartSec=10
+# Belt-and-suspenders: watchdog.sh already self-heals every 5 minutes from
+# the inside (dead autopilot/crashed practice run); systemd's Restart=always
+# is the second layer, for when the watchdog SCRIPT ITSELF dies (OOM kill,
+# unhandled exception, host reboot). Between the two, nothing short of the
+# whole machine being off should stop this.
+StandardOutput=append:/var/log/only-bots-watchdog.log
+StandardError=append:/var/log/only-bots-watchdog.log
+
+[Install]
+WantedBy=multi-user.target

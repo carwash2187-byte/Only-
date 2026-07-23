@@ -23,6 +23,10 @@ echo "watchdog started $(date -u +%FT%TZ) (pid $$)"
 while true; do
     out=$(bash scripts/keepalive.sh 2>&1)
     [[ -n "$out" ]] && echo "[$(date -u +%FT%TZ)] $out"
+    # Heartbeat (session 48): a timestamp any external monitor -- a free
+    # UptimeRobot-style check, a cron job, or just a human -- can read to
+    # confirm the loop is actually alive, not just assumed to be.
+    date -u +%FT%TZ > /tmp/only_bots_heartbeat 2>/dev/null || true
 
     # Self-improvement law (session 47): once a day, retrain the live
     # Q-table on recent rough market windows -- plain python, no Claude
