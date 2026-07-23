@@ -80,7 +80,24 @@ def run_one_cycle(desk, live: bool) -> None:
     write_last_cycle(desk, report, stamp)
 
 
+PAUSE_FLAG = os.path.join(os.path.dirname(__file__), "..", "AQUAFUNDED_PAUSED")
+
+
 def main() -> None:
+    if os.path.exists(PAUSE_FLAG):
+        # Session 48 incident: a live short position stacked into 103
+        # separate SELL positions instead of closing (close_position's
+        # close_quantity=0 silently closed nothing on the position_id
+        # path -- see bots/brokers/tradelocker_broker.py's sell()). User
+        # closed everything by hand and asked for the bugs fixed and
+        # verified BEFORE this trades again. This flag hard-stops the
+        # cycle before it touches the broker at all -- delete the
+        # AQUAFUNDED_PAUSED file (repo root) to resume once the close
+        # path has been re-verified against a real live position.
+        print("PAUSED: AQUAFUNDED_PAUSED flag present -- refusing to run a cycle. "
+              "Delete that file once the close-position fix is re-verified live.")
+        return
+
     for var in ("TRADELOCKER_EMAIL", "TRADELOCKER_PASSWORD", "TRADELOCKER_SERVER"):
         if not os.environ.get(var):
             print(f"FAIL: {var} is not set -- refusing to start")

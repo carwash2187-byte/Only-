@@ -1,0 +1,12 @@
+Trading on the AquaFunded account is paused as of 2026-07-23.
+
+Reason: a live short AUDUSD position stacked into 103 separate SELL
+positions instead of closing, because TradeLocker's close_position()
+silently accepted close_quantity=0 as "close nothing" on the position_id
+code path (see bots/brokers/tradelocker_broker.py's sell() docstring and
+git history for the full writeup). The user closed everything by hand
+and asked for every close-path bug to be found, fixed, and verified
+before this account trades again.
+
+Delete this file to resume once the fix has been re-verified against a
+real live position closing cleanly (not just unit tests).
