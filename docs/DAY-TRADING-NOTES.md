@@ -2622,3 +2622,42 @@ same bar of proof) -- it's a reason to look hard at whether TIGHTENING
 slightly (smaller risk_per_trade_pct, which the sim can test directly)
 raises pass_rate by cutting fail_rate more than it costs in speed. That
 test is a natural next step, not yet run.
+
+### Session 48: real 24/7-independent-of-Claude deployment (VPS/systemd)
+
+User asked for the desk to genuinely survive Claude usage running out, not
+just survive a container restart. The honest limit from session 47's
+always-on law was: the watchdog is real and token-free, but it still lives
+inside a Claude Code cloud container, which the platform can reclaim if
+Claude usage hits zero. That's a real gap, not a hypothetical -- addressed
+it directly instead of re-describing the same watchdog as if it were the
+full answer.
+
+**Shipped `scripts/deploy/`:**
+- `requirements-bots.txt` -- confirmed by grepping every import in
+  `bots/`: the trading loop needs only pandas/numpy/requests, nothing
+  from the full TradingAgents/LLM stack in pyproject.toml. A VPS install
+  stays lean.
+- `only-bots-watchdog.service` -- systemd unit, `Restart=always`. Two
+  independent self-heal layers now exist: `watchdog.sh`'s own 5-minute
+  internal loop (restarts a dead autopilot process), and systemd
+  restarting the watchdog SCRIPT ITSELF if it dies outright (OOM, crash,
+  host reboot). `systemctl enable` also means it starts on boot with no
+  manual step.
+- `setup_vps.sh` -- one-shot bootstrap: installs python3/git, clones the
+  repo on the live branch, builds a lean venv, installs the systemd
+  service (path-substituted, PATH override so watchdog.sh's bare
+  `python` calls resolve to the venv), enables + starts it.
+- `healthcheck.sh` -- reads a new heartbeat file (`watchdog.sh` now
+  touches `/tmp/only_bots_heartbeat` every loop) and checks the autopilot
+  process is actually running; exits 1 with a reason if either is stale.
+  Wireable into cron + `mail` for a free alert, no network dependency.
+- `docs/DEPLOY-24-7.md` -- plain-English walkthrough (get a $5/mo VPS,
+  SSH in, run the script, done) plus an explicit "honest limits" section:
+  this removes the Claude-usage dependency specifically, it does not
+  claim to be literally indestructible (VPS outages/disk-full are still
+  possible), and it doesn't change what the paper account's numbers mean
+  -- still simulated money proving out the strategy.
+
+No `bots/` trading logic changed this session -- pure deployment
+tooling, so the existing 147-test suite is unaffected.
