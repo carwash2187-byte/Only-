@@ -1656,7 +1656,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000118",
+        "mfe:0.000286",
         "mae:-0.000319"
       ],
       "stop_pct": 0.003
@@ -1675,8 +1675,28 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000872",
+        "mfe:0.001274",
         "mae:0.000872"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "9a4f38fe61c7",
+      "symbol": "SI=F",
+      "side": "long",
+      "quantity": 1.2873,
+      "entry_price": 60.099013652610786,
+      "entry_time": "2026-07-23T01:44:57.224674+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override",
+        "mfe:-0.001731",
+        "mae:-0.001731"
       ],
       "stop_pct": 0.003
     }
