@@ -2304,6 +2304,19 @@ def test_tradelocker_sell_closes_position_instead_of_opening_short(tl_broker):
     assert tl_broker.api.closed == [{"position_id": 9, "close_quantity": 0.5}]
 
 
+def test_tradelocker_sell_closes_a_short_position_too(tl_broker):
+    # BUG FOUND AND FIXED (session 48): sell() used to only close "buy"
+    # (long) positions, skipping "sell" (short) rows entirely -- a real
+    # short AUDUSD position looped "SELL AUDUSD ... realized PnL +0.00"
+    # every single cycle for hours, never actually closing, because
+    # nothing here knew how to close a short.
+    tl_broker.api.positions_rows = [[13, 1, "sell", 1.64, 0.6969]]  # short EURUSD, 1.64 lots
+    result = tl_broker.sell("EURUSD", 164_000)  # 1.64 lots' worth of units
+    assert result.ok
+    assert tl_broker.api.closed == [{"position_id": 13, "close_quantity": 0}]  # 0 = close it all
+    assert tl_broker.api.orders == []  # never fell through to a naked order
+
+
 def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):
     # the weekend fallback journals "BTC-USD" (Yahoo-style); TradeLocker
     # calls it BTCUSD. Both directions must agree or the reconciler
@@ -2362,6 +2375,43 @@ def test_adopted_position_gets_a_real_stop_loss_not_just_rl_fallback(tl_broker, 
 
     sells = [a for a in report.actions if a.action == "sell" and a.ok]
     assert sells and "stop loss" in sells[0].reason.lower(), report.describe()
+
+
+def test_short_position_stop_loss_triggers_on_a_real_loss_not_a_real_gain(tl_broker, tmp_path, journal, price_df):
+    # BUG FOUND AND FIXED (session 48): the exit-trigger math was
+    # direction-blind, so a SHORT's stop-loss/take-profit were backwards --
+    # a price RISE (a real loss on a short) used to read as "take profit,"
+    # and a price DROP (a real gain) used to read as "stop loss." Entry
+    # 2350, fixed GOLD price (fake API) is 2400 -- price ROSE ~2.1%, a real
+    # LOSS for a short, past a 2% stop. Must say "stop loss," not "take
+    # profit."
+    tl_broker.api.positions_rows = [[7, 101, "sell", 0.5, 2350.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.02, take_profit_pct=0.10))
+    report = desk.run_once(symbols=[])
+
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells, report.describe()
+    assert "stop loss" in sells[0].reason.lower(), sells[0].reason
+    assert "take profit" not in sells[0].reason.lower()
+
+
+def test_short_position_take_profit_triggers_on_a_real_gain_not_a_real_loss(tl_broker, tmp_path, journal, price_df):
+    # Mirror case: entry 2670, price 2400 -- price DROPPED ~10.1%, a real
+    # GAIN for a short, past the 10% target. Must say "take profit," and
+    # must NOT have been stopped out early on the way there.
+    tl_broker.api.positions_rows = [[7, 101, "sell", 0.5, 2670.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       stop_loss_pct=0.02, take_profit_pct=0.10,
+                                       breakeven_at_1r=False, trail_after_target=False))
+    report = desk.run_once(symbols=[])
+
+    sells = [a for a in report.actions if a.action == "sell" and a.ok]
+    assert sells, report.describe()
+    assert "take profit" in sells[0].reason.lower(), sells[0].reason
+    assert "stop loss" not in sells[0].reason.lower()
 
 
 # ---------------------------------------------------------------------------

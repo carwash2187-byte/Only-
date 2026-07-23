@@ -1289,7 +1289,19 @@ class TradingDesk:
         if force_exit:
             reason = force_exit_reason
         elif record:
-            change = price / record.entry_price - 1.0
+            # BUG FOUND AND FIXED (session 48): this was direction-blind --
+            # `change` is meant to mean "how favorable has this trade
+            # moved," but computed this way it only means that for a LONG.
+            # For a SHORT, a price DROP (real profit) came out negative and
+            # tripped the stop-loss branch below, while a price RISE (real
+            # loss) came out positive and tripped "take profit" -- exit
+            # logic exactly backwards for every short. The journal's own
+            # close_trade() already flips sign by side (direction = 1.0 if
+            # long else -1.0); this now matches that, so a short's stop-
+            # loss/breakeven/take-profit/trailing all trigger on the real
+            # direction of the trade, not the raw price direction.
+            direction = 1.0 if record.side == "long" else -1.0
+            change = direction * (price / record.entry_price - 1.0)
             # Max favorable/adverse excursion (session 47): record how far
             # every trade actually ran for/against us, cycle by cycle. 26 of
             # the first 63 live trades died at the time stop below +1R and
@@ -1417,7 +1429,14 @@ class TradingDesk:
             report.actions.append(DeskAction("hold", symbol, "within risk limits"))
             return
 
-        result = self.broker.sell(symbol, quantity)
+        # Session 48 bug fix: `quantity` here comes straight from
+        # broker.positions(), which is SIGNED (negative for a short). A
+        # broker's sell()/close call expects a magnitude -- how much to
+        # close -- not a signed direction. Passing the raw negative value
+        # broke lot-size math downstream (caught live: a short AUDUSD
+        # position never actually closed, just kept partially closing a
+        # sliver every cycle for hours). abs() here, not at every broker.
+        result = self.broker.sell(symbol, abs(quantity))
         if result.ok and record:
             closed = self.journal.close_trade(
                 record.trade_id, result.fill_price or price, notes=reason

@@ -286,13 +286,22 @@ class TradeLockerBroker(Broker):
                                error=f"bracket order failed ({exc}) -- no unprotected entry")
 
     def sell(self, symbol: str, quantity: float) -> OrderResult:
-        """Exit: close open long positions via the position endpoint.
+        """Exit: close ANY open position on this symbol via the position
+        endpoint, long or short.
 
-        A naked sell order on a hedging-mode account (the prop-firm
-        default) would open a short alongside the long instead of closing
-        it. Only if there is genuinely nothing to close does this fall
-        through to a plain sell order (the desk is long-only, so that
-        path is effectively unused).
+        BUG FOUND AND FIXED (session 48): this used to only close "buy"
+        (long) positions, on the stale assumption "the desk is long-only."
+        That assumption stopped being true once the desk started adopting
+        untracked positions (see TradingDesk._adopt_untracked_positions),
+        which can be short. The old code silently skipped short positions
+        in the closing loop, `closed` stayed 0, and fell through to a
+        useless plain sell order every single cycle -- caught live: a
+        short AUDUSD position repeated "SELL AUDUSD ... locking in the
+        day | realized PnL +0.00" every cycle for hours, never actually
+        closing, because there was nothing here that knew how to close a
+        short. Closing a short through the position endpoint (not a naked
+        opposite-direction order) is still correct on a hedging-mode
+        account -- it's a genuine close, not "open a long alongside it."
         """
         try:
             iid = self._instrument_id(symbol)
@@ -302,8 +311,6 @@ class TradeLockerBroker(Broker):
             if df is not None and len(df):
                 mine = df[df["tradableInstrumentId"] == iid]
                 for _, row in mine.iterrows():
-                    if str(row.get("side", "buy")).lower() != "buy":
-                        continue
                     remaining = lots_wanted - closed
                     if remaining <= 0:
                         break
