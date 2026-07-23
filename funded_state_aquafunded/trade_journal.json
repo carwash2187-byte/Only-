@@ -981,6 +981,25 @@
         "mae:0.000373"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "25d4ed941619",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 0.69681,
+      "entry_time": "2026-07-23T20:48:26.504235+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69681,
+      "exit_time": "2026-07-23T20:48:36.019920+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+6.2%) -- locking in the day",
+      "tags": [
+        "mfe:0.000000",
+        "mae:0.000000"
+      ],
+      "stop_pct": null
     }
   ]
 }
