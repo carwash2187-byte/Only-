@@ -182,17 +182,31 @@ test asserting the numbers, and flag in the docstring that live numbers
 should be re-verified against the firm's actual current page before
 connecting real money — firms change terms without notice.
 
-**Two-key live-trading law (session 48):** real money on a funded account
-requires TWO independent things: (1) the account's credential secrets
-(demo-only on their own), and (2) a separate go-live secret
-(`AQUAFUNDED_GO_LIVE` = exactly `LIVE-I-UNDERSTAND-THE-RISK`) that only
-the account owner can add via GitHub repo settings. The workflow derives
-`TRADELOCKER_LIVE` from that secret at run time — no committed file or
-code path ever hardcodes live mode, and deleting the secret stands the
-account down to demo on the next cycle. Claude must never add, request
-the value of, or work around this secret; the owner adding it IS the
-consent. Also learned the hard way this session: GitHub's scheduler
-minimum is 5 minutes — a sub-`*/5` cron silently never fires.
+**AquaFunded accounts are permanently simulated — RETIRED the two-key
+live-trading law (session 48, corrected same session):** the original law
+assumed a separate "live" TradeLocker server existed for the account and
+that a go-live secret (`AQUAFUNDED_GO_LIVE`) would unlock it. That
+assumption was wrong. Confirmed against AquaFunded's own FAQ and
+TradeLocker's account switcher: "AquaFunded's Funded Accounts should not
+be considered live trading accounts... All accounts provided by
+AquaFunded are demo accounts with virtual funds." There is no live server
+for this product to ever connect to, by design, permanently — this is the
+standard prop-firm model (FTMO and every firm like it work the same way),
+not a bug or a missing feature. `scripts/run_one_cycle_aquafunded.py` is
+now hardcoded to `live=False`; a stray `AQUAFUNDED_GO_LIVE` secret, if
+still present, is no longer read anywhere and is safe to delete. **Real
+payouts happen through AquaFunded's own "Request Payout" flow** against
+this same simulated account (eligible 14 days after the first trade, no
+rule violations, positions flat, 90% profit split) — getting paid was
+never blocked by a missing code switch, only by the account not yet being
+profitable. If a genuinely different broker/firm is ever connected that
+does have a real live endpoint, build a fresh two-key-style gate for it
+specifically — don't assume this pattern transfers. Also learned the hard
+way this session: GitHub's scheduler minimum is 5 minutes — a sub-`*/5`
+cron silently never fires; and a chain-trigger step must be `if:
+success()`, never `if: always()`, or one bad startup (e.g. a malformed
+credential secret) spins a runaway re-trigger loop instead of falling
+back to the cron.
 
 ## Honesty norms (carried over from the whole project history)
 

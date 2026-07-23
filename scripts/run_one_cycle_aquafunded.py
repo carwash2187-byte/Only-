@@ -15,9 +15,22 @@ law").
 
 Credentials come ONLY from environment variables (GitHub Actions repository
 secrets when run there) -- never hardcoded, never read from a committed
-file. TRADELOCKER_LIVE is set here ONLY when AQUAFUNDED_GO_LIVE (passed
-through as TRADELOCKER_LIVE by the workflow's two-key gate) is present --
-see .github/workflows/trading-cycle-aquafunded.yml's comments.
+file.
+
+CORRECTED (session 48): this connector is hardcoded to live=False. Verified
+against AquaFunded's own FAQ and TradeLocker's account switcher -- every
+account this firm issues is a permanent simulated/DEMO account by design
+("AquaFunded's Funded Accounts should not be considered live trading
+accounts... All accounts provided by AquaFunded are demo accounts with
+virtual funds"). There is no live server for this product to ever connect
+to; real payouts happen through AquaFunded's own "Request Payout" flow
+against this same account, not a different live connection. An earlier
+version of this script derived live-mode from an AQUAFUNDED_GO_LIVE /
+TRADELOCKER_LIVE two-key gate, modeled on a wrong assumption that a
+separate live account existed -- every attempt 401'd against
+live.tradelocker.com and (correctly, by the runaway-loop fix) stalled the
+self-chain each time. See .github/workflows/trading-cycle-aquafunded.yml's
+comments for the full incident writeup.
 
     TRADELOCKER_EMAIL=... TRADELOCKER_PASSWORD=... TRADELOCKER_SERVER=AQUA \
         BOT_DATA_DIR=funded_state_aquafunded PYTHONPATH=. \
@@ -74,9 +87,22 @@ def main() -> None:
             sys.exit(1)
 
     config = aquafunded_instant_config()
-    live = os.environ.get("TRADELOCKER_LIVE") == "1"
+    # Session 48, corrected (confirmed against AquaFunded's own FAQ and
+    # TradeLocker's account switcher -- every account this firm issues shows
+    # DEMO, permanently, by design): "AquaFunded's Funded Accounts should not
+    # be considered live trading accounts... All accounts provided by
+    # AquaFunded are demo accounts with virtual funds." There is no live
+    # TradeLocker server for this product to ever connect to -- a prior
+    # version of this script derived `live` from TRADELOCKER_LIVE and every
+    # attempt 401'd, which (correctly, by the if:success() runaway-loop
+    # fix) stalled the whole self-chain waiting on the flaky backup cron.
+    # Real payouts happen through AquaFunded's own "Request Payout" flow
+    # against THIS simulated account, not a different live connection -- so
+    # this connector is now hardcoded to the only account that has ever
+    # existed for this firm. If AquaFunded ever ships an actual live
+    # product, add a NEW connector for it rather than reviving this flag.
     try:
-        broker = TradeLockerBroker(live=live)
+        broker = TradeLockerBroker(live=False)
     except Exception as exc:
         print(f"FAIL: could not connect to TradeLocker: {exc}")
         sys.exit(1)
@@ -87,7 +113,7 @@ def main() -> None:
     while time.monotonic() - start < LOOP_BUDGET_SECONDS:
         loop_t0 = time.monotonic()
         try:
-            run_one_cycle(desk, live)
+            run_one_cycle(desk, live=False)
         except Exception as exc:
             # A single bad cycle (transient network blip, broker hiccup)
             # must not kill the whole job -- the loop keeps checking every
