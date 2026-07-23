@@ -1,0 +1,36 @@
+{
+  "trades": [
+    {
+      "trade_id": "e94235a7de40",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 218.374,
+      "entry_time": "2026-07-23T08:33:38.012296+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": 218.364,
+      "exit_time": "2026-07-23T08:34:22.704030+00:00",
+      "pnl": -9.999999999990905e-05,
+      "pnl_pct": -0.004579299733475928,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "772d7bece58f",
+      "symbol": "SILVER",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 58.913,
+      "entry_time": "2026-07-23T08:34:04.742721+00:00",
+      "setup": "copytrade",
+      "exit_price": 58.912,
+      "exit_time": "2026-07-23T08:34:23.871637+00:00",
+      "pnl": -9.999999999976694e-06,
+      "pnl_pct": -0.0016974182268758575,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": null
+    }
+  ]
+}

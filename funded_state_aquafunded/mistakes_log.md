@@ -1,0 +1,2 @@
+- 2026-07-23T08:34 **GBPJPY** long -0.00 (-0.00%) setup=`copytrade:trend-down|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-07-23T08:34 **SILVER** long -0.00 (-0.00%) setup=`copytrade` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
