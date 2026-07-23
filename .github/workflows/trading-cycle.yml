@@ -34,10 +34,24 @@ name: Trading desk cycle
 # the ONLY process that may run desk.run_once() against paper_state/ --
 # do not also run `python -m bots autopilot` anywhere else at the same
 # time, or the same account gets double-traded.
+#
+# SELF-CHAINING FIX (session 48, third attempt): even the */5 cron never
+# fired -- ZERO scheduled runs in 5+ hours after the fix above, verified
+# via the Actions run list (only workflow_dispatch events ever appeared).
+# GitHub's own docs admit scheduled runs "can be delayed or dropped under
+# load," but 5 hours of complete silence on a plain */5 cron is beyond
+# any documented delay -- treat GitHub's scheduler as unreliable for this
+# repo, not just slow. Fix: stop depending on it as the primary driver.
+# The last step below re-dispatches THIS SAME workflow via the Actions
+# API the moment a cycle finishes, so each run chains directly into the
+# next one -- true continuous operation that doesn't wait on GitHub's
+# cron timing at all. `schedule:` stays as a backup restart ONLY, in case
+# the chain ever breaks (e.g. a runner-level failure before the last
+# step) -- it is no longer the thing this depends on.
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch: {}  # manual "Run workflow" button, for testing
+    - cron: "*/5 * * * *"  # backup restart only -- see SELF-CHAINING FIX above
+  workflow_dispatch: {}  # manual "Run workflow" button, also used to seed the chain
 
 concurrency:
   group: paper-trading-cycle
@@ -45,6 +59,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write  # needed to re-dispatch this workflow from within itself
 
 jobs:
   cycle:
@@ -82,3 +97,12 @@ jobs:
             git commit -m "Autopilot cycle $(date -u +%FT%TZ)"
             git push origin HEAD:claude/ai-trading-bot-research-yolqhm
           fi
+
+      - name: Chain-trigger the next cycle
+        if: always()
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/trading-cycle.yml/dispatches" \
+            -d '{"ref":"${{ github.ref_name }}"}'

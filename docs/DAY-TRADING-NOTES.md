@@ -3064,3 +3064,30 @@ signal freqtrade's community has repeatedly found useful. Next nightly
 self-train run (and the manual practice run already in flight) will start
 building real experience on the new feature; report the win-rate delta
 once there's enough of it to mean something, not before.
+
+### Session 48 addendum: GitHub's cron never fired at all -- switched to self-chaining runs
+
+Checked the Actions run history directly: */5 * * * * had produced **zero
+scheduled runs in over 5 hours** on the correctly-configured, active,
+default-branch-synced workflow -- only manual workflow_dispatch runs ever
+executed. GitHub's docs describe scheduled runs as occasionally delayed
+under load, but 5 hours of total silence on a plain 5-minute cron is past
+any documented delay; treated as GitHub's scheduler being unreliable for
+this workflow, not just slow, and stopped depending on it.
+
+Fix: both trading-cycle.yml and trading-cycle-aquafunded.yml now end with
+a "Chain-trigger the next cycle" step (`if: always()`, so it runs even if
+the desk cycle itself throws) that calls the Actions API
+(`POST .../actions/workflows/<file>/dispatches`) to start the *next* run
+of the same workflow against the same ref, using the repo's own
+GITHUB_TOKEN (needs `permissions: actions: write`, added to both files).
+Each run's internal 60s-check loop (already ~4m15s long) plus this
+immediate re-dispatch means the workflow is now continuously self-
+sustaining -- true back-to-back cycles, not dependent on GitHub's cron
+timing at all. `schedule: */5 * * * *` is kept ONLY as a backup restart
+in case the chain ever breaks (e.g. a runner-level failure before the
+final step runs); it is no longer the primary driver.
+
+To (re)start the chain after this change: one manual "Run workflow"
+dispatch per workflow is enough -- from then on each run relaunches the
+next one itself, indefinitely, requiring no further intervention.
