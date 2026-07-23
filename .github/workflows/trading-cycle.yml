@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: claude/ai-trading-bot-research-yolqhm
-          fetch-depth: 1
+          fetch-depth: 0  # full history so the push-retry rebase below always has a common ancestor
 
       - uses: actions/setup-python@v5
         with:
@@ -102,10 +102,23 @@ jobs:
           git add paper_state/
           if git diff --cached --quiet; then
             echo "no state changes this cycle"
-          else
-            git commit -m "Autopilot cycle $(date -u +%FT%TZ)"
-            git push origin HEAD:claude/ai-trading-bot-research-yolqhm
+            exit 0
           fi
+          git commit -m "Autopilot cycle $(date -u +%FT%TZ)"
+          # Concurrent writers (the AquaFunded workflow, my code commits) move
+          # the branch tip while this job runs, so a plain push gets rejected
+          # (non-fast-forward). Rebase our state-only commit onto the latest
+          # tip and retry -- the bot only ever touches paper_state/, which no
+          # other writer touches, so the rebase is always clean.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:claude/ai-trading-bot-research-yolqhm; then
+              echo "pushed on attempt $attempt"; exit 0
+            fi
+            echo "push rejected (attempt $attempt) -- rebasing on latest tip, retrying"
+            git fetch origin claude/ai-trading-bot-research-yolqhm
+            git rebase FETCH_HEAD || { git rebase --abort; exit 1; }
+          done
+          echo "push still failing after 5 attempts"; exit 1
 
       - name: Chain-trigger the next cycle
         if: success()
