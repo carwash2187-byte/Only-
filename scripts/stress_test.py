@@ -97,15 +97,23 @@ def fetch_rough_window() -> dict:
     return _window_around(full, roughest)
 
 
-def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
+def practice_on_rough_windows(episodes: int = 60, windows: int = 15) -> None:
     """Train the LIVE Q-agent (respects BOT_DATA_DIR, same model_path the
-    autopilot loads) on the N real roughest windows found -- genuine
-    practice on real historical hard conditions, using the exact same
-    agent.train() mechanism the daily SPY/NVDA training already uses
-    safely. This only ever updates the Q-table; it never opens/closes a
-    TradeRecord, so it cannot touch the journal, the win-rate/
-    profit-factor numbers, or anything the funded-account-readiness
-    question is graded on -- those stay 100% real trades only."""
+    autopilot loads) on the N real roughest AND N real strongest-trend
+    windows found -- genuine practice on real historical good and bad
+    conditions, using the exact same agent.train() mechanism the daily
+    SPY/NVDA training already uses safely. This only ever updates the
+    Q-table; it never opens/closes a TradeRecord, so it cannot touch the
+    journal, the win-rate/profit-factor numbers, or anything the funded-
+    account-readiness question is graded on -- those stay 100% real
+    trades only.
+
+    Session 48: defaults raised substantially (3->15 windows, 20->60
+    episodes) per user request for real volume, not a token amount --
+    across ~19 symbols x 30 windows x 60 episodes this typically clears
+    several thousand REAL closed practice trades in one run (the true
+    total is measured and printed at the end via
+    QTraderAgent.train()'s `training_trades` stat, not estimated)."""
     full = _fetch_full_history()
     rough_days = find_roughest_days(full, windows)
     trend_days = [d for d in find_best_trend_days(full, windows) if d not in rough_days]
@@ -120,6 +128,7 @@ def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
     before_states = len(agent.q)
     print(f"live model: {'loaded existing table' if loaded else 'starting fresh'} "
           f"({before_states} known states)")
+    total_practice_trades = 0
     for day in rough_days:
         dfs = _window_around(full, day)
         print(f"\n-- practicing on the window around {day.date()} --")
@@ -127,12 +136,15 @@ def practice_on_rough_windows(episodes: int = 20, windows: int = 3) -> None:
             if len(df) < 120:
                 continue
             stats = agent.train(df, episodes=episodes)
+            total_practice_trades += stats["training_trades"]
             print(f"  {sym} ({len(df)} bars x {episodes} episodes): "
-                  f"{stats['trades']} eval trades, win rate {stats['win_rate']:.0%}, "
+                  f"{stats['training_trades']} practice trades this pass, "
+                  f"win rate {stats['win_rate']:.0%}, "
                   f"return {stats['total_return_pct']:+.1f}%")
     agent.save()
     print(f"\nsaved -- live model now knows {len(agent.q)} states "
           f"({len(agent.q) - before_states:+d} vs before). "
+          f"TOTAL real closed practice trades this run: {total_practice_trades:,}. "
           "Restart the live autopilot process to pick this up "
           "(it loaded its agent at startup, in memory).")
 

@@ -148,6 +148,22 @@ def test_agent_trains_and_signals(price_df, tmp_path):
     assert fresh.q == agent.q
 
 
+def test_agent_train_reports_real_total_practice_trades(price_df, tmp_path):
+    # Session 48: train() must report the REAL total closed trades summed
+    # across every exploring pass, not just the final eval pass -- so
+    # practice scripts can print an honest, measured total instead of
+    # guessing from episode count alone.
+    agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
+    stats = agent.train(price_df, episodes=15)
+    assert "training_trades" in stats
+    assert stats["training_trades"] >= stats["trades"]
+
+    # more episodes over the same data -> at least as much total practice
+    more = QTraderAgent(model_path=str(tmp_path / "q2.json"))
+    more_stats = more.train(price_df, episodes=45)
+    assert more_stats["training_trades"] >= stats["training_trades"]
+
+
 def test_agent_accepts_yfinance_columns(price_df, tmp_path):
     agent = QTraderAgent(model_path=str(tmp_path / "q.json"))
     upper = price_df.rename(columns={"close": "Close"})

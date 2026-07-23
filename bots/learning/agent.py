@@ -225,13 +225,23 @@ class QTraderAgent:
     def train(self, df: pd.DataFrame, episodes: int = 20, warmup: int = 30) -> Dict[str, float]:
         """Run `episodes` passes over the price history, learning as it goes.
 
-        Returns simple stats from the final (greedy) evaluation pass.
+        Returns stats from the final (greedy) evaluation pass, plus
+        `training_trades` -- the REAL total closed trades experienced across
+        every exploring pass (session 48: previously only the final eval
+        pass's trade count was visible, which massively understated how
+        much practice actually happened during a big run; this lets
+        practice scripts report an honest, measured total instead of
+        guessing from episode count alone).
         """
         df = _normalize_ohlcv(df)
+        training_trades = 0
         for _ in range(episodes):
-            self._run_episode(df, warmup, explore=True)
+            stats = self._run_episode(df, warmup, explore=True)
+            training_trades += stats["trades"]
             self.trained_episodes += 1
-        return self._run_episode(df, warmup, explore=False)
+        result = self._run_episode(df, warmup, explore=False)
+        result["training_trades"] = training_trades
+        return result
 
     def _run_episode(self, df: pd.DataFrame, warmup: int, explore: bool) -> Dict[str, float]:
         holding = False

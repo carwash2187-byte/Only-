@@ -2731,3 +2731,47 @@ Known follow-up: repo Settings -> Actions -> General -> Workflow
 permissions must have "Read and write permissions" enabled for the
 default `GITHUB_TOKEN` to push -- if the first scheduled run fails on the
 git push step, that setting is the first thing to check.
+
+### Session 48 addendum: practice volume raised substantially (real measured trades, not a token amount)
+
+User asked for a lot more practice on the past -- real good AND bad
+historical markets, roughly "1000 closed trades" scale, run like the
+original continuous-practice sessions.
+
+**`QTraderAgent.train()` now reports real practice volume.** Previously
+it only returned stats from the FINAL evaluation pass -- every trade from
+the `episodes` exploring passes before that was silently discarded, so
+there was no honest way to say how much practice a run actually did.
+Added `training_trades`: the true sum of closed trades across every
+exploring pass. Test: `test_agent_train_reports_real_total_practice_trades`.
+
+**`practice_on_rough_windows()` defaults raised**: `windows` 3 -> 15
+(so up to 30 real historical days get used: 15 roughest + 15
+strongest-trend, deduped), `episodes` 20 -> 60. Across ~19 symbols this
+typically produces several thousand real, measured closed practice
+trades in one run -- the actual total is now printed at the end
+(`TOTAL real closed practice trades this run: N`), not estimated or
+promised. `.github/workflows/trading-selftrain.yml`'s timeout widened
+30 -> 180 minutes to match the real wall-clock cost of the bigger run
+(tens of minutes of real network + compute, not seconds).
+
+148 tests passing (was 147).
+
+**Deliberately did NOT increase self-train frequency** beyond once
+daily: Q-table convergence has diminishing returns past a point, and
+each real day that rolls into the ~60-day intraday data window already
+gives natural day-over-day variety without needing hourly reruns.
+
+**Blocked on the public-repo request:** user also asked to make the
+GitHub repo public for genuinely free 1-minute-cadence checks
+(unlimited Actions minutes on public repos, vs. 2,000/month on private).
+No GitHub MCP tool exists to change repository visibility -- confirmed
+by checking the available tool set, not assumed. This is a manual step
+only the user can do (GitHub Settings -> General -> Danger Zone ->
+Change visibility). trading-cycle.yml's cadence was deliberately left at
+30 minutes (not sped up to every minute) until visibility is confirmed
+public -- pushing a 1-minute cron while still private would blow well
+past the 2,000 free-minutes budget and risk real charges if a payment
+method is on file. Checked current visibility via the GitHub API
+(embedded in a workflow-run response) immediately before deciding this:
+still private as of this addendum.
