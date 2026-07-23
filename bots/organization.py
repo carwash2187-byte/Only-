@@ -278,6 +278,13 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
     page before connecting real money -- this was read off a screenshot
     and their help-center article, not a live API, and firms change
     terms.
+
+    UNVERIFIED (honesty flag, session 48): unlike Clarity (confirmed
+    weekend trading banned outright), no explicit weekend-trading policy
+    was found in what's been read of AquaFunded's rules/ToS. This preset
+    leaves `weekend_trading_allowed` at the funded default (True) --
+    that is an ASSUMPTION, not a confirmed fact. Verify directly before
+    this account is ever live over a weekend.
     """
     base = dict(
         max_daily_loss_pct=0.03,

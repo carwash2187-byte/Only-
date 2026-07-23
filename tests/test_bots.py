@@ -2677,6 +2677,7 @@ def test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag():
         live_i_understand_the_risk = False
         timeframe = None  # simulates --timeframe never being passed
         funded = True
+        firm_preset = None
         day_trading = False
         llm_committee = False
         symbols = "EURUSD"
@@ -2703,6 +2704,51 @@ def test_cli_funded_timeframe_defaults_to_one_minute_without_the_flag():
     finally:
         autopilot_mod.run_autopilot = orig
     assert captured["timeframe"] == "1m"
+
+
+def test_cli_firm_preset_selects_the_real_firm_rules_not_generic_defaults():
+    # Session 48: --firm-preset must actually change which config gets
+    # built, not just exist as a flag -- this is the gap that was found:
+    # --funded alone always used generic funded_account_config() (5% max
+    # drawdown), never a firm's CONFIRMED real numbers.
+    from bots.cli import cmd_autopilot
+
+    class FakeArgs:
+        broker = "paper"
+        live_i_understand_the_risk = False
+        timeframe = None
+        funded = False  # deliberately NOT set -- firm_preset alone must imply it
+        firm_preset = "aquafunded"
+        day_trading = False
+        llm_committee = False
+        symbols = "EURUSD"
+        stock_symbols = ""
+        market = "forex"
+        weekend_symbols = "none"
+        interval = 1
+
+    captured = {}
+
+    def fake_run_autopilot(*, desk, **kwargs):
+        captured["config"] = desk.config
+        raise SystemExit(0)
+
+    import bots.autopilot as autopilot_mod
+
+    orig = autopilot_mod.run_autopilot
+    autopilot_mod.run_autopilot = fake_run_autopilot
+    try:
+        try:
+            cmd_autopilot(FakeArgs())
+        except SystemExit:
+            pass
+    finally:
+        autopilot_mod.run_autopilot = orig
+
+    cfg = captured["config"]
+    assert cfg.max_daily_loss_pct == 0.03
+    assert cfg.max_total_drawdown_pct == 0.06  # AquaFunded's real number, not the generic 0.05
+    assert cfg.timeframe == "1m"  # funded implied -> 1-minute law still applies
 
 
 # ---------------------------------------------------------------------------

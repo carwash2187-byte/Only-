@@ -263,14 +263,37 @@ def cmd_autopilot(args) -> None:
     from bots.brokers import get_broker
     from bots.organization import DeskConfig, TradingDesk
 
+    # --firm-preset implies --funded (session 48): a firm's confirmed real
+    # rules only mean something layered on top of the funded-account base
+    # (day trading, ATR stops, correlation caps, news blackout etc), never
+    # standing alone.
+    funded = args.funded or bool(args.firm_preset)
     # Law: funded accounts trade 1-minute candles, matching MambaFX's own
     # documented timeframe -- not just when --timeframe 1m happens to be
     # passed, but as the actual fallback if it's ever omitted.
-    if args.funded:
+    if funded:
         timeframe = args.timeframe or "1m"
     else:
         timeframe = args.timeframe or ("5m" if args.day_trading else "1d")
-    if args.funded:
+    if args.firm_preset == "clarity":
+        from bots.organization import clarity_one_step_challenge_config
+
+        config = clarity_one_step_challenge_config(
+            funded=False, use_llm_committee=args.llm_committee, timeframe=timeframe
+        )
+    elif args.firm_preset == "clarity-funded":
+        from bots.organization import clarity_one_step_challenge_config
+
+        config = clarity_one_step_challenge_config(
+            funded=True, use_llm_committee=args.llm_committee, timeframe=timeframe
+        )
+    elif args.firm_preset == "aquafunded":
+        from bots.organization import aquafunded_instant_config
+
+        config = aquafunded_instant_config(
+            use_llm_committee=args.llm_committee, timeframe=timeframe
+        )
+    elif funded:
         from bots.organization import funded_account_config
 
         config = funded_account_config(use_llm_committee=args.llm_committee, timeframe=timeframe)
@@ -318,7 +341,7 @@ def cmd_autopilot(args) -> None:
     # on by default) that halves position size specifically during this
     # window -- 24/7 coverage without pretending the weekend risk isn't real.
     weekend_symbols = resolve_weekend_symbols(
-        args.weekend_symbols, args.market, args.funded
+        args.weekend_symbols, args.market, funded
     )
     from bots.marketdata import resolve_symbol
 
@@ -327,7 +350,7 @@ def cmd_autopilot(args) -> None:
     )
     stock_symbols = (
         [resolve_symbol(s) for s in args.stock_symbols.split(",")] if args.stock_symbols else (
-            ["AAPL", "MSFT", "NVDA", "SPY", "QQQ"] if (args.market == "forex" and args.funded) else None
+            ["AAPL", "MSFT", "NVDA", "SPY", "QQQ"] if (args.market == "forex" and funded) else None
         )
     )
     run_autopilot(
@@ -520,6 +543,13 @@ def main() -> None:
     p_auto.add_argument("--funded", action="store_true",
                         help="funded-account rules: 3%% daily loss limit, 5%% max total drawdown, "
                              "day-trading+ATR+correlation+news-blackout all on")
+    p_auto.add_argument("--firm-preset", default=None,
+                        choices=["clarity", "clarity-funded", "aquafunded"],
+                        help="use a specific firm's CONFIRMED real rules instead of the generic "
+                             "--funded defaults (see CLAUDE.md's 'funded-account rule presets are "
+                             "law' section) -- implies --funded. 'clarity' = Clarity One-Step "
+                             "challenge phase, 'clarity-funded' = same firm post-pass, "
+                             "'aquafunded' = AquaFunded Instant Funded")
     p_auto.add_argument("--timeframe", default=None,
                         help="candle size for signals, e.g. 5m/15m/1h (default: 1d, or 5m if --day-trading)")
     p_auto.add_argument("--market", default=None, choices=["stocks", "forex", "crypto"],

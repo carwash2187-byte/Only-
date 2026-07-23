@@ -2852,3 +2852,39 @@ TradeLocker environment (`TRADELOCKER_LIVE` unset) -- per the existing
 safety convention (start on demo, prove it, only then flip
 `TRADELOCKER_LIVE=1` with explicit confirmation), no real order has been
 placed and the autopilot has not been launched against this account yet.
+
+### Session 48 addendum: closed the gap between "rules written as law" and "rules actually enforced"
+
+User caught something real: `aquafunded_instant_config()` existed and
+was tested, but nothing in the actual launch path used it.
+`python -m bots autopilot --broker tradelocker --funded` (the exact
+command `scripts/run_funded_accounts.sh` uses) always built
+`funded_account_config()` -- generic defaults (5% max drawdown), never
+a firm's confirmed real numbers. This affected the EXISTING Clarity
+accounts too, not just the new AquaFunded one -- `clarity_one_step_
+challenge_config()` had the same problem: written as law, never wired.
+
+**Fixed properly, not patched around.** Added `--firm-preset
+{clarity,clarity-funded,aquafunded}` to `python -m bots autopilot`.
+Setting it now actually selects the firm's real preset function instead
+of the generic one, and implies `--funded` (so the 1-minute-candle law,
+weekend-symbol defaults, etc. all still apply without needing both flags
+remembered separately). Test:
+`test_cli_firm_preset_selects_the_real_firm_rules_not_generic_defaults`
+-- asserts the built config's `max_total_drawdown_pct` is AquaFunded's
+real 0.06, not the generic 0.05, proving the wiring actually changes
+behavior, not just that the flag parses.
+
+Also added an honesty flag directly in `aquafunded_instant_config()`'s
+docstring: unlike Clarity (confirmed weekend-trading ban), no explicit
+AquaFunded weekend policy has been found yet -- `weekend_trading_allowed`
+stays at the default (True) as an ASSUMPTION, not a confirmed fact. Must
+verify before this account is ever live over a weekend.
+
+151 tests passing (was 150).
+
+**Not yet done** (told the user directly, not glossed over): this
+funded account is not yet wired into the GitHub-Actions-based
+Claude-independent runner the paper account has -- if launched today it
+would only run inside this Claude session. That's the next real step
+before this account should touch live trading, not a detail to skip.
