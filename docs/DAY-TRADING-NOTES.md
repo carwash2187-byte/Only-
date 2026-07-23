@@ -3221,3 +3221,39 @@ demonstrated out-of-sample (the only faint lead is commodities > FX, and
 that is unproven). scikit-learn was installed LOCALLY for this experiment
 only; it was deliberately NOT added to the live requirements -- the live
 trading path is unchanged, no new dependency, no new attack surface.
+
+### Session 48 addendum: 249-window walk-forward -- CONCLUSIVE, no edge, prior "wins" were luck
+
+User asked for a sped-up equivalent of "weeks of forward testing" instead
+of the earlier 3-day holdout. Built scripts/walkforward_sim.py: ~60 days
+of real 5-minute bars per symbol, walk-forward (train on a block, test on
+the NEXT unseen block, roll forward, retrain, repeat) -- 23-29 independent
+out-of-sample test windows per symbol, 249 total across the watchlist.
+
+RESULT: 28/249 windows profitable (11%). 50% = coin flip = no edge; 11% is
+WORSE than random, consistently, not just noisy. Per symbol, ALL NINE lose
+overall:
+  EURUSD 7/29 (-4.86%) GBPUSD 4/29 (-13.82%) USDJPY 0/29 (-26.09%)
+  AUDUSD 3/29 (-7.42%) USDCAD 0/29 (-20.07%) EURJPY 0/29 (-24.06%)
+  GBPJPY 0/29 (-23.95%) GOLD 7/23 (-12.16%)  OIL 7/23 (-24.45%)
+
+Decisive: OIL and GOLD were the two "wins" in the earlier 3-day holdout
+(session 48 GBM-brain addendum: OIL +3.95%, GOLD +1.51%). With 5-7x more
+data (60d vs 3d) BOTH FLIP HARD NEGATIVE (OIL -24.45%, GOLD -12.16%). This
+confirms directly, not just by inference, that those earlier "wins" were
+small-sample luck, not a real edge -- exactly the trap flagged at the time.
+
+FINAL CONCLUSION for session 48's edge-hunting arc: four independent
+approaches (Q-learning brain, gradient-boosted-tree brain, anti-churn exit
+tuning, ADX trend-strength entry filter) across both a small and a large
+(249-window) out-of-sample test ALL converge on the same result -- no
+tradeable directional edge exists in this watchlist at this timeframe with
+these methods. This is now evidence-conclusive, not a tuning gap. Further
+ad-hoc model-swapping tonight would not be honest "continued improvement";
+the signal is consistent and in. Desk posture: protected (guards, min-hold
+anti-churn kept as a real defensive win), NOT profitable, stays in demo.
+Any future edge-finding work needs a genuinely different research
+direction (e.g. multi-day swing horizons instead of intraday, fundamental/
+macro features, or accepting FX/commodities day-trading may not be a
+solvable problem at retail-accessible data/compute) -- not another
+intraday-minutes model on the same feature set.
