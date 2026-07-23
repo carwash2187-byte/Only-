@@ -2189,6 +2189,7 @@ class _FakeTLAPI:
         self.orders = []
         self.closed = []
         self.reject_orders = False
+        self.reject_closes = False
         self.positions_rows = []
 
     def get_instrument_id_from_symbol_name(self, name):
@@ -2219,7 +2220,7 @@ class _FakeTLAPI:
 
     def close_position(self, order_id=0, position_id=0, close_quantity=0):
         self.closed.append({"position_id": position_id, "close_quantity": close_quantity})
-        return True
+        return not self.reject_closes
 
 
 @pytest.fixture
@@ -2325,6 +2326,31 @@ def test_tradelocker_sell_closes_a_short_position_too(tl_broker):
     # writeup above; 0 silently closes nothing on the position_id path.
     assert tl_broker.api.closed == [{"position_id": 13, "close_quantity": 1.64}]
     assert tl_broker.api.orders == []  # never fell through to a naked order
+
+
+def test_tradelocker_sell_reports_failure_instead_of_opening_a_naked_position(tl_broker):
+    # BUG FOUND AND FIXED (session 48, round 3): when close_position failed
+    # for every matching position, sell() used to fall back to a naked
+    # market sell order. On this hedging-mode account that doesn't close
+    # anything -- it OPENS A NEW SHORT next to whatever is already there
+    # (this class's own docstring already explains why, for the entry
+    # side). That silent fallback is what actually compounded one stuck
+    # short AUDUSD position into 103 separate open positions live: every
+    # cycle close_position failed, the fallback added more exposure and
+    # reported ok=True, so the caller believed the exit succeeded. A
+    # failed close must come back as ok=False, never as more risk.
+    tl_broker.api.positions_rows = [[13, 1, "sell", 1.64, 0.6969]]
+    tl_broker.api.reject_closes = True
+    result = tl_broker.sell("EURUSD", 164_000)
+    assert not result.ok
+    assert "naked" in result.error
+    assert tl_broker.api.orders == []  # never fell through to a naked order
+
+    # no matching position at all -- still must not open one
+    tl_broker.api.positions_rows = []
+    result = tl_broker.sell("EURUSD", 164_000)
+    assert not result.ok
+    assert tl_broker.api.orders == []
 
 
 def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):

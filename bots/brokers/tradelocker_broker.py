@@ -336,7 +336,30 @@ class TradeLockerBroker(Broker):
                         closed += take
             if closed > 0:
                 return OrderResult(True, _clean_symbol(symbol), "sell", closed)
-            return self._order(symbol, quantity, "sell")
+            # BUG FOUND AND FIXED (session 48, round 3): this used to fall
+            # back to a naked `_order(symbol, quantity, "sell")` market
+            # order whenever close_position failed or found no match. This
+            # class's OWN docstring above already explains why that is
+            # wrong on a hedging-mode account: a naked sell does not close
+            # anything, it OPENS A NEW SHORT position next to whatever is
+            # already there. sell() is only ever called from
+            # TradingDesk._manage_position as an exit on a position the
+            # broker already reports open (never as a fresh entry -- the
+            # desk only ever opens new positions via buy_bracket) -- so
+            # this fallback had no legitimate case to serve. In practice
+            # it's what turned one stuck short AUDUSD position into 103
+            # separate open positions: every cycle that close_position
+            # failed for any reason, this fallback silently added MORE
+            # short exposure and reported ok=True, so the caller believed
+            # the exit had succeeded and marked the journal trade closed
+            # while the real, now-larger position stayed open under a
+            # fresh "untracked" adoption next cycle. A failed close must
+            # be reported as a failure, never masked by opening more risk.
+            reason = "no matching open position found" if closed == 0 and not (
+                df is not None and len(df) and len(df[df["tradableInstrumentId"] == iid])
+            ) else "close_position was rejected for every matching position"
+            return OrderResult(False, _clean_symbol(symbol), "sell", quantity,
+                               error=f"refusing to close via naked order -- {reason}")
         except Exception as exc:
             return OrderResult(False, _clean_symbol(symbol), "sell", quantity,
                                error=str(exc))
