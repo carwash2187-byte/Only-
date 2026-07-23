@@ -1057,6 +1057,54 @@
         "mae:0.000018"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "9c6962a95067",
+      "symbol": "SILVER",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 57.61,
+      "entry_time": "2026-07-23T22:15:26.060060+00:00",
+      "setup": "copytrade",
+      "exit_price": 57.611,
+      "exit_time": "2026-07-23T22:15:55.660157+00:00",
+      "pnl": 9.999999999976694e-06,
+      "pnl_pct": 0.001735809755243345,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "75ecc27a5646",
+      "symbol": "SILVER",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 57.622,
+      "entry_time": "2026-07-23T22:16:21.492535+00:00",
+      "setup": "copytrade",
+      "exit_price": 57.627,
+      "exit_time": "2026-07-23T22:16:55.682931+00:00",
+      "pnl": 5.000000000002558e-05,
+      "pnl_pct": 0.008677241331445096,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "03b58ea6f80a",
+      "symbol": "SILVER",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 57.626,
+      "entry_time": "2026-07-23T22:17:21.406181+00:00",
+      "setup": "copytrade",
+      "exit_price": 57.626,
+      "exit_time": "2026-07-23T22:17:55.679962+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": null
     }
   ]
 }
