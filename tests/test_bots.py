@@ -3015,6 +3015,23 @@ def test_clarity_one_step_challenge_config_matches_screenshotted_rules():
     assert live.challenge_target_pct == 0.0  # nothing to lock once funded
 
 
+def test_aquafunded_instant_config_matches_checkout_screenshot_and_tos():
+    from bots.organization import aquafunded_instant_config, funded_account_config
+
+    cfg = aquafunded_instant_config()
+    assert cfg.max_daily_loss_pct == 0.03
+    assert cfg.max_total_drawdown_pct == 0.06
+    # Instant Funded skips the challenge entirely -- no target to lock in,
+    # unlike Clarity's One-Step (challenge_target_pct == 0.10 pre-funding)
+    assert cfg.challenge_target_pct == 0.0
+    # the desk's own leverage stays conservative regardless of the
+    # broker's 1:50 ceiling -- this preset doesn't touch max_leverage
+    assert cfg.max_leverage == funded_account_config().max_leverage
+    # overrides still work, same pattern as the Clarity preset
+    tighter = aquafunded_instant_config(max_daily_loss_pct=0.02)
+    assert tighter.max_daily_loss_pct == 0.02
+
+
 # --- challenge pass-probability Monte Carlo (session 46) --------------------
 
 def test_simulate_attempt_untrained_agent_never_resolves():

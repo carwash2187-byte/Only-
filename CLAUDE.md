@@ -155,6 +155,33 @@ keep the same link alive instead of minting a new one.
    `CronCreate`/Routine keep-alive job references the old command string,
    update it too.
 
+## Funded-account rule presets are LAW, not suggestions (user directive, session 48)
+
+Once a prop firm's real rules are confirmed (their own site/FAQ/ToS, not
+a secondhand review), they get codified as a `bots/organization.py`
+preset function and treated as binding for that account — never trade
+that firm's account on hand-tuned settings that drift from its actual
+rules. Presets so far:
+
+- `clarity_one_step_challenge_config()` — Clarity Traders One-Step: 10%
+  target / 4% daily / 6% max during the challenge, 4%/10% once funded,
+  no weekend trading, EA's Allowed add-on required (session 46).
+- `aquafunded_instant_config()` — AquaFunded Instant Funded: 3% daily
+  loss / 6% max total drawdown, 1:50 broker leverage ceiling (the desk's
+  own `max_leverage` stays at the conservative default, well under
+  that), no challenge phase (no target to lock), payout on demand, news
+  trading permitted (blackout kept as risk discipline, not a
+  requirement). EA policy confirmed straight from AquaFunded's own help
+  center: allowed for "your own personal trading strategy," not HFT/
+  latency-arbitrage/mass-market commercial EAs — this desk qualifies
+  (session 48).
+
+Adding a new firm's account = add a new preset the same way, cite the
+source (their own page, not a review aggregator) in the docstring, add a
+test asserting the numbers, and flag in the docstring that live numbers
+should be re-verified against the firm's actual current page before
+connecting real money — firms change terms without notice.
+
 ## Honesty norms (carried over from the whole project history)
 
 - No feature ships with a "guaranteed profit" framing — there is no such

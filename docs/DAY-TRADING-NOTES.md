@@ -2775,3 +2775,36 @@ past the 2,000 free-minutes budget and risk real charges if a payment
 method is on file. Checked current visibility via the GitHub API
 (embedded in a workflow-run response) immediately before deciding this:
 still private as of this addendum.
+
+### Session 48 addendum: AquaFunded rules codified as law + a real perf bug caught and fixed
+
+User asked for the AquaFunded rules from their checkout screenshot to be
+made permanent/binding, not just chat context that evaporates.
+
+**Added `aquafunded_instant_config()`** (`bots/organization.py`): 3%
+daily loss / 6% max total drawdown, no challenge target (Instant skips
+the challenge entirely), 1:50 broker leverage ceiling documented (the
+desk's own `max_leverage` stays at the conservative funded default, well
+under that -- raising it would need the same evidence bar as any other
+risk change). EA policy quoted directly from AquaFunded's own help
+center: allowed for "your own personal trading strategy," not HFT/
+latency-arbitrage/mass-market EAs -- this desk qualifies (custom
+strategy, 1-minute checks via GitHub Actions, not sub-second reaction).
+Test: `test_aquafunded_instant_config_matches_checkout_screenshot_and_tos`.
+Codified in CLAUDE.md as a new law: confirmed firm rules become binding
+presets, not hand-tuned settings that can silently drift.
+
+**Also caught and fixed a real bug while testing this.** The instant-odds
+risk-sweep simulation from earlier had been running for over an hour with
+zero output. Root cause: `challenge_sim.py`'s ATR-stop sizing sliced
+`df.iloc[:i+1].tail(atr_window+1)` -- copying the ENTIRE prefix of the
+tape on every single buy just to grab the last 15 rows. O(i) work per
+call instead of O(atr_window); on a 45,000-bar simulation with the profit
+target deliberately set unreachable (testing "does it survive the month",
+not "does it hit a target"), every attempt runs the full tape and hits
+this cost on every trade -- effectively O(n^2) total. Fixed by slicing
+directly around the window (`df.iloc[max(0, i - atr_window):i+1]`) --
+verified a full 45,000-bar attempt now takes single-digit seconds instead
+of hanging indefinitely. Re-launched the survival sweep with the fix.
+
+149 tests passing (was 148).

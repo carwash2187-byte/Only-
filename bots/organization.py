@@ -248,6 +248,49 @@ def clarity_one_step_challenge_config(funded: bool = False, **overrides) -> "Des
     return cfg
 
 
+def aquafunded_instant_config(**overrides) -> "DeskConfig":
+    """Preset for AquaFunded's Instant Funded account (session 48 -- user's
+    checkout screenshot + their own site/help-center, read directly, not
+    secondhand): 3% max daily loss, 6% max total drawdown, 1:50 account
+    leverage, TradeLocker platform, payout on demand (no 14-day cadence
+    like Clarity), news trading allowed. No challenge phase -- Instant
+    skips straight to a live account, so unlike
+    clarity_one_step_challenge_config() there is no target to lock in;
+    challenge_target_pct stays 0 (off) permanently for this preset.
+
+    EA/bot policy -- quoted directly from AquaFunded's own help center
+    (https://help.aquafunded.com, "Are EAs & Trade Copiers allowed?"):
+    "Yes, EAs are allowed, provided they are used as part of your own
+    personal trading strategy." This desk qualifies: it's a custom
+    strategy, not a mass-market commercial EA, and does not do
+    high-frequency trading or latency arbitrage (both explicitly
+    prohibited) -- it checks in on a 1-minute cadence via GitHub Actions,
+    not sub-second reaction to price ticks.
+
+    The 1:50 leverage figure is the BROKER's ceiling, not this desk's own
+    setting -- max_leverage stays at funded_account_config()'s
+    conservative 5.0 (well under 1:50) unless explicitly overridden;
+    raising it toward 1:50 would need the same evidence-based case any
+    other risk change needs (see CLAUDE.md's evidence law), not just
+    "the broker allows more."
+
+    NOTE: verify these numbers against AquaFunded's live checkout/rules
+    page before connecting real money -- this was read off a screenshot
+    and their help-center article, not a live API, and firms change
+    terms.
+    """
+    base = dict(
+        max_daily_loss_pct=0.03,
+        max_total_drawdown_pct=0.06,
+        challenge_target_pct=0.0,  # Instant: no challenge phase, no target to lock
+        news_blackout=True,  # risk discipline, not required by this firm (news trading IS permitted)
+    )
+    cfg = funded_account_config(**base)
+    for key, value in overrides.items():
+        setattr(cfg, key, value)
+    return cfg
+
+
 # Correlated clusters: N positions inside one cluster are effectively ONE
 # bet at N-times size ("hidden leverage"), because these names move together
 # intraday. The desk caps entries per cluster.
