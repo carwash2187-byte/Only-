@@ -32,10 +32,16 @@ name: AquaFunded trading desk cycle
 # Runs are queued in their OWN concurrency group, separate from the paper
 # account's -- different broker, different state directory
 # (funded_state_aquafunded/), no shared-file race with paper_state/.
+#
+# SELF-CHAINING FIX (session 48, third attempt, same as trading-cycle.yml):
+# */5 never fired on its own either -- zero scheduled runs observed. The
+# last step below re-dispatches this same workflow via the Actions API
+# when a cycle finishes, so it chains continuously instead of depending
+# on GitHub's cron timing. `schedule:` is now a backup restart only.
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch: {}
+    - cron: "*/5 * * * *"  # backup restart only -- see SELF-CHAINING FIX above
+  workflow_dispatch: {}  # also used to seed the chain
 
 concurrency:
   group: aquafunded-trading-cycle
@@ -43,6 +49,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write  # needed to re-dispatch this workflow from within itself
 
 jobs:
   cycle:
@@ -95,3 +102,12 @@ jobs:
             git commit -m "AquaFunded cycle $(date -u +%FT%TZ)"
             git push origin HEAD:claude/ai-trading-bot-research-yolqhm
           fi
+
+      - name: Chain-trigger the next cycle
+        if: always()
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/trading-cycle-aquafunded.yml/dispatches" \
+            -d '{"ref":"${{ github.ref_name }}"}'
