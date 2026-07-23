@@ -11,22 +11,30 @@ name: Trading desk cycle
 # run. Keep both copies identical; this file is the source of truth.
 #
 # Free, zero-signup replacement for a persistent Claude-session process:
-# GitHub's own scheduler runs this repo's bots/ code every 30 minutes,
-# forever, on GitHub's infrastructure -- no VPS, no server, no account to
-# create, no Claude usage. Real timing from the first live run: ~26s wall
-# clock, but GitHub bills a full minute per job regardless -- at 30 min
-# (48 runs/day) that's ~1,440 min/month, safely under the free-tier 2,000
-# Actions-minutes/month budget for a private repo with headroom left for
-# the nightly self-train job (public repos get unlimited minutes; this
-# repo is private). A 15-min cadence would have run ~2,880 min/month,
-# OVER budget -- caught this from the actual first run's numbers, not a
-# guess. Runs are queued, never parallel (concurrency group below), so
-# this is the ONLY process that may run desk.run_once() against
-# paper_state/ -- do not also run `python -m bots autopilot` anywhere else
-# at the same time, or the same account gets double-traded.
+# GitHub's own scheduler runs this repo's bots/ code every minute,
+# matching MambaFX's actual documented cadence, forever, on GitHub's
+# infrastructure -- no VPS, no server, no account to create, no Claude
+# usage. Session 48: this repo is now PUBLIC specifically to unlock
+# unlimited free Actions minutes (a private repo's 2,000 min/month budget
+# could not support this cadence -- confirmed by real timing on the first
+# live run, see git history for the 30-min interval that was used until
+# the repo went public).
+#
+# Honest caveat, from GitHub's own docs: scheduled workflows are NOT
+# guaranteed to fire exactly every minute even with `* * * * *` --
+# GitHub states the platform can delay scheduled runs, especially under
+# load, and in practice many users see closer to ~5-minute real-world
+# cadence regardless of the cron expression. This is set to the true
+# 1-minute cron as requested; the REAL delivered frequency is up to
+# GitHub's scheduler, not something this repo controls.
+#
+# Runs are queued, never parallel (concurrency group below), so this is
+# the ONLY process that may run desk.run_once() against paper_state/ --
+# do not also run `python -m bots autopilot` anywhere else at the same
+# time, or the same account gets double-traded.
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "* * * * *"
   workflow_dispatch: {}  # manual "Run workflow" button, for testing
 
 concurrency:
