@@ -31,6 +31,101 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": null
+    },
+    {
+      "trade_id": "8c2d09f7ad5b",
+      "symbol": "AUDUSD",
+      "side": "short",
+      "quantity": 1.5400000000000007,
+      "entry_price": 0.6969,
+      "entry_time": "2026-07-23T18:54:28.203707+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69661,
+      "exit_time": "2026-07-23T18:54:37.593439+00:00",
+      "pnl": 0.0004466000000000194,
+      "pnl_pct": 0.04161285693786709,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.0%) -- locking in the day",
+      "tags": [
+        "mfe:-0.000387",
+        "mae:-0.000387"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "6aff2410c6d7",
+      "symbol": "AUDUSD",
+      "side": "short",
+      "quantity": 1.5500000000000007,
+      "entry_price": 0.6969,
+      "entry_time": "2026-07-23T18:55:25.826196+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69661,
+      "exit_time": "2026-07-23T18:55:35.255962+00:00",
+      "pnl": 0.00044950000000001955,
+      "pnl_pct": 0.04161285693786709,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.1%) -- locking in the day",
+      "tags": [
+        "mfe:-0.000416",
+        "mae:-0.000416"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "37364783a043",
+      "symbol": "AUDUSD",
+      "side": "short",
+      "quantity": 1.5600000000000007,
+      "entry_price": 0.6969,
+      "entry_time": "2026-07-23T18:56:25.792386+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69661,
+      "exit_time": "2026-07-23T18:56:35.197191+00:00",
+      "pnl": 0.00045240000000001967,
+      "pnl_pct": 0.04161285693786709,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.1%) -- locking in the day",
+      "tags": [
+        "mfe:-0.000402",
+        "mae:-0.000402"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "1901e5a2f6f8",
+      "symbol": "AUDUSD",
+      "side": "short",
+      "quantity": 1.5700000000000007,
+      "entry_price": 0.6969,
+      "entry_time": "2026-07-23T18:57:25.784128+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69653,
+      "exit_time": "2026-07-23T18:57:35.193118+00:00",
+      "pnl": 0.0005808999999999711,
+      "pnl_pct": 0.053092265748311274,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.6%) -- locking in the day",
+      "tags": [
+        "mfe:-0.000502",
+        "mae:-0.000502"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "7fd7608e6eac",
+      "symbol": "AUDUSD",
+      "side": "short",
+      "quantity": 1.5800000000000007,
+      "entry_price": 0.6969,
+      "entry_time": "2026-07-23T18:58:25.788558+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.6965,
+      "exit_time": "2026-07-23T18:58:36.244182+00:00",
+      "pnl": 0.0006319999999999307,
+      "pnl_pct": 0.0573970440522209,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | daily profit target hit (+5.8%) -- locking in the day",
+      "tags": [
+        "mfe:-0.000560",
+        "mae:-0.000560"
+      ],
+      "stop_pct": null
     }
   ]
 }

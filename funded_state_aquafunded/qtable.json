@@ -1,0 +1,20 @@
+{
+  "q": {
+    " opened outside the desk (manual trade)": {
+      "hold": 0.0,
+      "buy": 0.0001965244654900131,
+      "sell": 0.0
+    },
+    "trend-down|rsi-neutral|vwap-below|pos-out": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    },
+    "trend-down|rsi-oversold|vwap-below|pos-out": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    }
+  },
+  "episodes": 0
+}
