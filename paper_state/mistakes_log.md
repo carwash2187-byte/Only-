@@ -24,3 +24,17 @@
 - 2026-07-23T01:47 **SI=F** long -0.31 (-0.40%) setup=`copytrade:trend-down|rsi-neutral|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.3%)
 - 2026-07-23T03:49 **RTY=F** long -26.83 (-0.21%) setup=`copytrade:trend-down|rsi-neutral|vwap-above|pos-out` -- user watchlist | time stop: 129 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.2%)
 - 2026-07-23T03:49 **NQ=F** long -48.79 (-0.39%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.4%)
+- 2026-07-23T19:13 **GOLD** long -50.00 (-4.00%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | stop loss hit (-4.0%)
+- 2026-07-23T19:14 **GOLD** short -25.00 (-2.13%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | stop loss hit (-2.1%)
+- 2026-07-23T19:14 **TEST** long -50.00 (-5.00%) setup=`bad-setup` -- 
+- 2026-07-23T19:14 **TEST** long -50.00 (-5.00%) setup=`bad-setup` -- 
+- 2026-07-23T19:14 **TEST** long -50.00 (-5.00%) setup=`bad-setup` -- 
+- 2026-07-23T19:14 **TEST** long -50.00 (-5.00%) setup=`bad-setup` -- 
+- 2026-07-23T19:14 **TEST** long -50.00 (-5.00%) setup=`bad-setup` -- 
+- 2026-07-23T19:14 **TEST** long -100.00 (-10.00%) setup=`s4` -- 
+- 2026-07-23T19:14 **TEST** long -100.00 (-10.00%) setup=`s5` -- 
+- 2026-07-23T19:14 **DEMO** long -100.00 (-10.00%) setup=`test` -- stop loss hit (-10.0%)
+- 2026-07-23T19:14 **DEMO** long -60.00 (-6.00%) setup=`test` -- stop loss hit (-6.0%)
+- 2026-07-23T19:15 **X** long -30.00 (-30.00%) setup=`s` -- 
+- 2026-07-23T19:15 **X** long -20.00 (-20.00%) setup=`s` -- 
+- 2026-07-23T19:15 **OTHER** long -50.00 (-5.00%) setup=`daytrade` -- 
