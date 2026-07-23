@@ -316,10 +316,21 @@ class TradeLockerBroker(Broker):
                         break
                     pos_qty = float(row["qty"])
                     take = min(pos_qty, remaining)
-                    # close_quantity=0 means "close the whole position"
+                    # BUG FOUND AND FIXED (session 48, round 2): close_position's
+                    # own docstring says close_quantity=0 means "close the whole
+                    # position" -- true ONLY on its order_id code path. On the
+                    # position_id path (what we use here), the library passes
+                    # close_quantity straight through as the literal `qty` field
+                    # of the DELETE request with NO substitution -- close_quantity=0
+                    # sends qty="0" to TradeLocker, a request to close ZERO units.
+                    # The API still returns ok=True (order accepted), so our code
+                    # logged a fake "realized PnL +0.00" success every cycle while
+                    # the real position never shrank at all -- this is what kept
+                    # the live short AUDUSD position open through the whole first
+                    # round of fixes. Always pass the real quantity to close.
                     ok = self.api.close_position(
                         position_id=int(row["id"]),
-                        close_quantity=0 if take >= pos_qty else take,
+                        close_quantity=take,
                     )
                     if ok:
                         closed += take

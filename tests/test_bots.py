@@ -2295,7 +2295,15 @@ def test_tradelocker_sell_closes_position_instead_of_opening_short(tl_broker):
     tl_broker.api.positions_rows = [[9, 1, "buy", 1.0, 1.0950]]
     result = tl_broker.sell("EURUSD", 100_000)  # 1.0 lots
     assert result.ok
-    assert tl_broker.api.closed == [{"position_id": 9, "close_quantity": 0}]
+    # BUG FOUND AND FIXED (session 48, round 2): the tradelocker library's
+    # close_position(position_id=...) sends close_quantity straight through
+    # as the literal qty on the DELETE request -- 0 does NOT mean "close it
+    # all" on this code path (that shortcut only exists on the order_id
+    # path). Passing 0 here silently asked the exchange to close zero
+    # units; the API still returned ok=True, so a real short AUDUSD
+    # position looped "realized PnL +0.00" every cycle and never actually
+    # closed. The real full-position quantity must always be sent.
+    assert tl_broker.api.closed == [{"position_id": 9, "close_quantity": 1.0}]
     assert tl_broker.api.orders == []  # no sell order was ever submitted
 
     # partial exit passes the partial quantity through
@@ -2313,7 +2321,9 @@ def test_tradelocker_sell_closes_a_short_position_too(tl_broker):
     tl_broker.api.positions_rows = [[13, 1, "sell", 1.64, 0.6969]]  # short EURUSD, 1.64 lots
     result = tl_broker.sell("EURUSD", 164_000)  # 1.64 lots' worth of units
     assert result.ok
-    assert tl_broker.api.closed == [{"position_id": 13, "close_quantity": 0}]  # 0 = close it all
+    # close_quantity must be the real size (1.64), not 0 -- see round-2 bug
+    # writeup above; 0 silently closes nothing on the position_id path.
+    assert tl_broker.api.closed == [{"position_id": 13, "close_quantity": 1.64}]
     assert tl_broker.api.orders == []  # never fell through to a naked order
 
 
