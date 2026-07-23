@@ -1641,6 +1641,41 @@
         "mae:-0.001060"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "828f7df15d9e",
+      "symbol": "RTY=F",
+      "side": "long",
+      "quantity": 4.2612,
+      "entry_price": 2974.848686169434,
+      "entry_time": "2026-07-23T01:40:32.373164+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000319",
+        "mae:-0.000319"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "4accd0b8437a",
+      "symbol": "NQ=F",
+      "side": "long",
+      "quantity": 0.4334,
+      "entry_price": 29207.5420725,
+      "entry_time": "2026-07-23T01:41:57.343782+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
