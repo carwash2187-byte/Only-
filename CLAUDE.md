@@ -6,30 +6,46 @@ TauricResearch/TradingAgents. See `bots/README.md` for the module tour and
 "Session N" entries — read the most recent few before assuming something
 hasn't been tried).
 
-## Always-on law (user directive, session 47)
+## Always-on law (user directive, session 47; superseded runner in 48)
 
 The bots must keep trading with **zero Claude/LLM involvement in the loop**
-and survive Claude usage running out, for as long as the container lives:
+and survive Claude usage running out completely, not just a container
+restart:
 
 - The trading loop is token-free by construction: `--llm-committee` is off
   in every real launch command and must stay off for the live desk —
   signals come from the on-disk Q-table + indicator filters only. Never
   wire an LLM call into the live trading path.
-- `scripts/watchdog.sh` must be running at all times (`nohup bash
-  scripts/watchdog.sh >> /tmp/watchdog.log 2>&1 &` — idempotent, refuses
-  to double-start via `/tmp/bots_watchdog.pid`). It self-heals every bot
-  and git-syncs all state dirs every 5 minutes via `scripts/keepalive.sh`,
-  using no Claude usage at all. **Any session touching `bots/` must verify
-  it is alive** (`kill -0 $(cat /tmp/bots_watchdog.pid)`) and relaunch it
-  if not.
-- The hourly keep-alive Routine's only irreplaceable job is keeping the
-  remote container itself alive; everything else is the watchdog's job.
-  If Claude usage runs out, the Routine suspends and the container will
-  eventually be reclaimed — the watchdog's git-sync means no trading
-  record is lost, and the whole desk resumes from committed state on the
-  next session. True 24/7 independence requires running this repo on the
-  user's own machine/VPS (`scripts/install_trading_stack.sh` +
-  `scripts/watchdog.sh` under systemd/cron).
+- **Primary runner (session 48): GitHub Actions**, not a local process.
+  `.github/workflows/trading-cycle.yml` (every 15 min) and
+  `trading-selftrain.yml` (nightly) run `bots/` on GitHub's own free
+  infrastructure — no server, no VPS bill, no Claude usage, genuinely
+  survives Claude usage hitting zero. **Exactly ONE thing may run
+  `desk.run_once()`/`python -m bots autopilot` against `paper_state/` at
+  a time** — running the local autopilot process (or `scripts/watchdog.sh`,
+  which restarts it) AT THE SAME TIME as the GitHub Actions workflows
+  double-trades the account (two writers racing on the same state files).
+  Do not relaunch the local autopilot/watchdog while the GitHub Actions
+  workflows are enabled, and vice versa.
+  - **Both workflow files must exist identically on the repo's DEFAULT
+    branch** (`claude/smillin-repo-install-3jsep0` — an unrelated stale
+    import branch, not the trading branch) for the `schedule:` trigger to
+    fire at all — GitHub only reads cron schedules from the default
+    branch's copy. Their `checkout`/`push` steps are pinned to
+    `claude/ai-trading-bot-research-yolqhm` regardless, so the actual
+    code/account touched is always correct either way. Keep both copies
+    identical when editing either workflow.
+  - Repo Settings → Actions → General → Workflow permissions needs "Read
+    and write permissions" for the default `GITHUB_TOKEN` to push state
+    back — check this first if a scheduled run's git push step fails.
+- `scripts/watchdog.sh` + the systemd/VPS path
+  (`scripts/deploy/setup_vps.sh`, `docs/DEPLOY-24-7.md`) remain documented
+  as an alternative for anyone who wants a tighter 1-minute cadence via a
+  persistent process instead of GitHub's 15-minute cron — but pick ONE
+  runner, never two at once, for the reason above.
+- The hourly keep-alive Routine's job (keeping the Claude Code container
+  itself alive) is now optional, not load-bearing — GitHub Actions doesn't
+  need this session's container to exist at all.
 
 ## Self-improvement + market-watch laws (user directive, session 47)
 

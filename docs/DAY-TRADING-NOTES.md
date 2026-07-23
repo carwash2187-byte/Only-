@@ -2661,3 +2661,73 @@ full answer.
 
 No `bots/` trading logic changed this session -- pure deployment
 tooling, so the existing 147-test suite is unaffected.
+
+### Session 48 addendum: genuinely free, GitHub-hosted 24/7 (no VPS purchase needed)
+
+User wanted a free option, self-built, using GitHub if it helps. Found a
+better fit than the VPS doc for a zero-signup, zero-cost path:
+`bots.autopilot.run_autopilot` already had `max_cycles` support, but
+reusing its loop directly for a one-shot cron job doesn't work --
+`cycles` only increments when the market is actually open, so a run
+triggered while forex is closed would sleep forever inside a runner with
+a hard timeout (the exact trap documented in session 46's testing notes).
+
+**Built `scripts/run_one_cycle.py`** instead: checks the market clock
+once via the existing pure functions (`select_active_market`,
+`market_is_open`), does at most one real cycle (or flatten, or nothing if
+closed), and returns immediately either way -- safe for a scheduled job.
+Mirrors `cmd_autopilot`'s desk construction exactly (funded config,
+leverage-aware `PaperBroker`, realistic spread) so behavior matches the
+live command precisely.
+
+**Added `.github/workflows/trading-cycle.yml`** (every 15 min) and
+`trading-selftrain.yml` (nightly) -- GitHub's own free CI minutes run the
+exact same `bots/` code on a schedule, commit+push any `paper_state/`
+changes back, forever, with no server, no VPS bill, no account signup
+beyond the GitHub account that already exists. Confirmed the trading loop
+needs only pandas/numpy/requests (grepped every import in `bots/`), so
+`scripts/deploy/requirements-bots.txt` (built in the earlier VPS work)
+covers this too.
+
+**Real gotcha found and fixed:** GitHub only evaluates `schedule:`
+triggers on the repo's DEFAULT branch copy of the workflow file. This
+repo's default branch is `claude/smillin-repo-install-3jsep0` -- an
+unrelated single-commit stale import branch, not the live trading
+branch -- so the cron would never fire from a copy living only on
+`claude/ai-trading-bot-research-yolqhm`. Fixed by also placing an
+identical copy on the default branch, with `checkout`'s `ref:` and the
+final `git push` both explicitly pinned to
+`claude/ai-trading-bot-research-yolqhm` -- the workflow definition must
+live on the default branch to be scheduled at all, but every actual
+read/write still targets the real trading branch. This is pure CI/
+scheduling plumbing (the workflow YAML itself, not trading logic or
+account state), so it doesn't conflict with the "never push trading-
+logic changes to any other branch" rule.
+
+**Correctness risk caught before deploying:** running this cron ALONGSIDE
+the local Claude-session `python -m bots autopilot` process would double-
+trade the same account (two independent writers racing on the same
+`paper_state/` files -- the exact hazard `has_pending_order()`'s docstring
+already warns about for a second process against the same state dir). The
+concurrency group in both workflows prevents overlapping GitHub Actions
+runs with each other, but not against the local process. Resolution:
+GitHub Actions becomes the ONE runner going forward; the local autopilot
+process and its supporting `watchdog.sh` loop are being stood down in
+this same session to avoid the conflict. `scripts/deploy/` (systemd/VPS)
+remains documented as an alternative for anyone who later wants a tighter
+1-minute cadence via a persistent process instead of a 15-minute cron.
+
+**Verified before trusting it:** a scratch single-symbol smoke test
+(bypassing today's Yahoo Finance rate-limit backlog in this dev sandbox,
+confirmed via a direct 429 response) proved the full call chain --
+market-open check, `desk.run_once()`, session filter, `write_last_cycle`
+-- works correctly end to end. A full 19-symbol dry run in this same
+sandbox was abandoned as a timing benchmark once the rate-limit cause was
+confirmed, since it doesn't represent GitHub's actual runner IPs. The
+first real scheduled run is the true timing test -- worth checking after
+it fires.
+
+Known follow-up: repo Settings -> Actions -> General -> Workflow
+permissions must have "Read and write permissions" enabled for the
+default `GITHUB_TOKEN` to push -- if the first scheduled run fails on the
+git push step, that setting is the first thing to check.
