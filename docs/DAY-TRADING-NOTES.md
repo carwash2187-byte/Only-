@@ -2935,3 +2935,29 @@ Actions -> New repository secret. No tool exists to do this
 programmatically (checked the available GitHub MCP tools -- none cover
 repo secrets), and that's appropriate: secret creation shouldn't be
 something automatable without the account owner's own action.
+
+### Session 48 addendum: scheduler root cause + the two-key live-trading gate
+
+**The 1-minute cron never fired -- root cause found.** 80+ minutes after
+setting `* * * * *`, the Actions run list showed ZERO scheduled runs
+(only manual dispatches). GitHub's own docs: "The shortest interval you
+can run scheduled workflows is once every 5 minutes." A sub-minimum cron
+isn't clamped -- it's silently never scheduled. Both trading workflows
+corrected to `*/5 * * * *`. Honest consequence: the real cadence is
+5 minutes (GitHub's floor), not 1 -- the earlier 1-minute claim was
+wrong and is corrected here. Anyone needing true 1-minute checks needs
+the VPS path (docs/DEPLOY-24-7.md), not GitHub's scheduler.
+
+**Two-key live gate built (user asked for the switch explicitly).**
+Key 1 = credential secrets -> demo only. Key 2 = `AQUAFUNDED_GO_LIVE`
+secret whose value must be exactly `LIVE-I-UNDERSTAND-THE-RISK` -> the
+workflow derives TRADELOCKER_LIVE at run time. Only the account owner
+can add repo secrets, so adding Key 2 IS the owner's go-live consent;
+deleting it stands the account down to demo next cycle. Codified in
+CLAUDE.md: Claude never adds, requests, or works around Key 2.
+
+Everything the bot does at run time remains token-free: GitHub Actions
+runs the desk + nightly self-train on GitHub's infrastructure with zero
+Claude involvement; journal-driven probation/cooldowns/MFE tracking
+self-update every close. Claude is only involved when writing code
+changes like this one.

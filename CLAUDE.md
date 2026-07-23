@@ -182,6 +182,18 @@ test asserting the numbers, and flag in the docstring that live numbers
 should be re-verified against the firm's actual current page before
 connecting real money — firms change terms without notice.
 
+**Two-key live-trading law (session 48):** real money on a funded account
+requires TWO independent things: (1) the account's credential secrets
+(demo-only on their own), and (2) a separate go-live secret
+(`AQUAFUNDED_GO_LIVE` = exactly `LIVE-I-UNDERSTAND-THE-RISK`) that only
+the account owner can add via GitHub repo settings. The workflow derives
+`TRADELOCKER_LIVE` from that secret at run time — no committed file or
+code path ever hardcodes live mode, and deleting the secret stands the
+account down to demo on the next cycle. Claude must never add, request
+the value of, or work around this secret; the owner adding it IS the
+consent. Also learned the hard way this session: GitHub's scheduler
+minimum is 5 minutes — a sub-`*/5` cron silently never fires.
+
 ## Honesty norms (carried over from the whole project history)
 
 - No feature ships with a "guaranteed profit" framing — there is no such
