@@ -3257,3 +3257,45 @@ direction (e.g. multi-day swing horizons instead of intraday, fundamental/
 macro features, or accepting FX/commodities day-trading may not be a
 solvable problem at retail-accessible data/compute) -- not another
 intraday-minutes model on the same feature set.
+
+### Session 48 addendum: the "swing edge" was a trend-riding illusion -- debunked against buy-and-hold
+
+Pivoted to years of real daily data (free, unlike intraday's ~60-day cap)
+to test a multi-day swing horizon after intraday was conclusively dead.
+scripts/swing_walkforward.py, ~5y history, walk-forward, gradient-boosted
+brain: GOLD, US30/NAS100/US500, EURJPY, GBPJPY all showed "CONSISTENT
+EDGE" (60%+ windows green, total returns up to +82%).
+
+Immediately suspicious: every "edge" symbol was one that had a strong
+one-directional bull trend over 2020-2025 -- the classic disguised-
+buy-and-hold trap. Checked directly against a real buy-and-hold baseline
+over the identical period:
+
+  GOLD    model +82.0% vs buy-and-hold +127.3%  -- model WORSE
+  NAS100  model +60.3% vs buy-and-hold  +92.4%  -- model WORSE
+  GBPJPY  model +22.7% vs buy-and-hold  +44.0%  -- model WORSE
+  EURJPY  model +15.0% vs buy-and-hold  +43.8%  -- model WORSE
+  US500   model +32.4% vs buy-and-hold  +70.7%  -- model WORSE
+  US30    model +32.4% vs buy-and-hold  +49.5%  -- model WORSE
+
+EVERY "edge" symbol underperforms simply buying once and holding for 5
+years. There was no discovered edge -- the classifier correctly noticed
+these assets trend up and mostly bought, then UNDERPERFORMED the trivial
+baseline because trading in/out (missing low-confidence days, eating
+costs) is strictly worse than never selling during a real bull run. This
+is the same small-sample-luck trap as the earlier OIL/GOLD 3-day result,
+now debunked with an even more convincing (and more dangerous-looking)
+number, caught the same way: check against the naive baseline before
+believing a backtest.
+
+FINAL STATE after session 48's full edge-hunting arc: intraday (2 brains,
+2 rule levers, small + 249-window large sample) = no edge, worse than
+coin flip. Swing/daily (years of data, walk-forward) = no edge beyond
+what buy-and-hold already gives for free. Every honest test tonight
+converges on the same wall. Stopping the model-swapping here -- the
+evidence is exhaustive and consistent, not a tuning gap. Any future work
+needs a fundamentally different research direction (real alternative data,
+fundamentals, or accepting the honest limits of retail-accessible
+data/compute for finding a trading edge), not another walk-forward
+variant on the same price-only features. Desk stays protected-not-
+profitable; guards + demo remain correct.
