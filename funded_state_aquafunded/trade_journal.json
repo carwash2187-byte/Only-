@@ -1114,13 +1114,13 @@
       "entry_price": 4045.83,
       "entry_time": "2026-07-24T07:09:36.075256+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 4046.41,
+      "exit_time": "2026-07-24T07:11:23.623160+00:00",
+      "pnl": 0.005799999999999273,
+      "pnl_pct": 0.014335748165383855,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [
-        "mfe:-0.000129",
+        "mfe:0.000410",
         "mae:-0.000129"
       ],
       "stop_pct": null
