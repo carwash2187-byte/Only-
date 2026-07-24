@@ -41,3 +41,5 @@
 - 2026-07-24T01:55 **AUDJPY** long -0.65 (-0.01%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
 - 2026-07-24T02:41 **NZDUSD** long -0.94 (-0.01%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
 - 2026-07-24T19:37 **BN** long -0.22 (-0.03%) setup=`copytrade:trend-down|rsi-oversold|pos-out` -- BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding | quant desk: RL agent says exit (position red, cutting the loser early)
+- 2026-07-24T20:30 **NTRA** long -3.45 (-0.46%) setup=`copytrade:trend-up|rsi-oversold|pos-out` -- NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding | Friday close-out: no weekend holding on this account
+- 2026-07-24T20:30 **TSM** long -0.20 (-0.03%) setup=`copytrade:trend-down|rsi-oversold|pos-out` -- TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding | Friday close-out: no weekend holding on this account
