@@ -1124,6 +1124,24 @@
         "mae:-0.000129"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "2e155d17de93",
+      "symbol": "USDCHF",
+      "side": "long",
+      "quantity": 0.05,
+      "entry_price": 0.81841,
+      "entry_time": "2026-07-24T20:07:15.504522+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
