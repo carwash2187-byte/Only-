@@ -313,6 +313,78 @@ def test_risk_per_trade_sizing(price_df, tmp_path, journal):
     assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
 
 
+def test_min_position_value_floors_a_tiny_calculated_size(price_df, tmp_path, journal):
+    # Session 49 (user directive: "60 cents to a dollar minimum"). A tiny
+    # risk_per_trade_pct on a small account with a wide stop calculates a
+    # near-nothing position (10000 * 0.0001 / 0.5 = $2 notional here,
+    # itself already small) -- min_position_value_usd floors it up to $5,
+    # well above what the risk math alone would have produced.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          risk_per_trade_pct=0.0001, stop_loss_pct=0.5,
+                          min_position_value_usd=5.0),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    assert buys[0].quantity * 100.0 == pytest.approx(5.0, rel=0.01)
+
+
+def test_min_position_value_never_exceeds_the_existing_hard_caps(price_df, tmp_path, journal):
+    # The floor must NEVER push a trade past max_position_pct or buying
+    # power -- it can only lift a genuinely tiny size, never override the
+    # real ceiling. Set an absurdly high floor ($50,000) on a $10,000
+    # account with max_position_pct capping any single name at 3%.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          risk_per_trade_pct=0.0001, stop_loss_pct=0.5,
+                          min_position_value_usd=50_000.0, max_position_pct=0.03),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    # capped at 3% of 10,000 = 300, nowhere near the 50,000 floor
+    assert buys[0].quantity * 100.0 == pytest.approx(300.0, rel=0.01)
+
+
+def test_min_position_value_does_not_shrink_an_already_larger_size(price_df, tmp_path, journal):
+    # A low floor must never REDUCE a size the risk math legitimately
+    # calculated larger than the floor -- max(), not a hard override.
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DEMO": 100.0},
+    )
+    desk = make_desk(
+        tmp_path, broker, journal, price_df,
+        # risking 0.5% with a 5% stop -> $1000 notional, well above a $1 floor
+        config=DeskConfig(news_blackout=False, min_copy_score=0,
+                          risk_per_trade_pct=0.005, stop_loss_pct=0.05,
+                          min_position_value_usd=1.0),
+    )
+    report = desk.run_once(symbols=["DEMO"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert buys, report.describe()
+    assert buys[0].quantity * 100.0 == pytest.approx(1_000.0, rel=0.01)
+
+
+def test_min_position_value_off_by_default_paper_desk(price_df, tmp_path, journal):
+    from bots.organization import aquafunded_instant_config, funded_account_config
+
+    assert aquafunded_instant_config().min_position_value_usd == 1.0
+    assert funded_account_config().min_position_value_usd == 0.0
+    assert DeskConfig().min_position_value_usd == 0.0
+
+
 def test_paper_broker_margin_buying_power(tmp_path):
     # cash account (leverage 1): unchanged, can't spend beyond cash
     cash_acct = PaperBroker(

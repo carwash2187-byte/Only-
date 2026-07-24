@@ -85,6 +85,7 @@ class DeskConfig:
     challenge_target_pct: float = 0.0  # 0 = off; e.g. 0.10: once cumulative gain from the challenge's starting equity hits this, lock in the pass -- no new entries, ever (until the state file is cleared for a new challenge)
     weekend_trading_allowed: bool = True  # False for firms that ban ALL weekend trading outright: makes autopilot's weekend-crypto-fallback a no-op for this account even if --weekend-symbols is passed (by default or by habit), so a forgotten CLI flag can't violate the firm's rule
     max_leverage: float = 1.0  # total notional exposure cap as a multiple of equity; 1.0 = cash account (no leverage). Funded preset uses 5x -- see session 47: without leverage a 1m-scalp ATR stop (~0.5%) physically cannot risk more than ~0.1% of equity, no matter what risk_per_trade_pct says
+    min_position_value_usd: float = 0.0  # 0 = off; e.g. 1.0: floor the notional value of a new entry at this many dollars, so an extremely small risk-formula result (very tight stop on a small account, deep into headroom/probation/anti-martingale reductions) doesn't round down to a near-zero, degenerate order. Applied BEFORE the existing hard caps (max_position_pct, buying_power) -- it can only lift a genuinely negligible size up to a sane floor, it cannot push a trade past those caps or undo a safety reduction that still leaves a meaningful size (session 49, user directive: "60 cents to a dollar minimum")
 
 
 def funded_account_config(**overrides) -> "DeskConfig":
@@ -381,6 +382,17 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         # so a trade that reaches its target and later reverses still
         # locks in a real profit, never gives back to breakeven or a loss.
         trail_after_target=True,
+        # Session 49 (user directive: "put a dollar on lot size if
+        # possible, if not the minimum is 60 cents"). $1 -- the "if
+        # possible" target -- floors the notional value of a new entry,
+        # not the risk-formula output itself: risk_per_trade_pct=0.0025
+        # (this preset's own survival-first sizing above) still governs
+        # dollar risk on every trade that would have been bigger than $1
+        # anyway, which is effectively every real trade at this account's
+        # current equity -- this floor only guards against a genuinely
+        # degenerate near-zero size, it does not raise real trades above
+        # what the risk math already calculates.
+        min_position_value_usd=1.0,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -2251,6 +2263,13 @@ class TradingDesk:
             buying_power = max(equity * cfg.max_leverage - exposure, 0.0)
         else:
             buying_power = self.broker.cash()
+        if cfg.min_position_value_usd > 0:
+            # Session 49 (user directive: "60 cents to a dollar minimum").
+            # Only ever lifts a genuinely tiny calculated size up to this
+            # floor -- the min() below still enforces every existing hard
+            # cap (max_position_pct, buying_power) afterward, so this can
+            # never push a trade bigger than those already allow.
+            risk_budget = max(risk_budget, cfg.min_position_value_usd)
         budget = min(risk_budget, equity * cfg.max_position_pct, buying_power)
         quantity = round(budget / price, 4) if price > 0 else 0.0
         if quantity <= 0:
