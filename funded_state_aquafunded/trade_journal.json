@@ -1105,6 +1105,25 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": null
+    },
+    {
+      "trade_id": "878219642e96",
+      "symbol": "GOLD",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 4045.83,
+      "entry_time": "2026-07-24T07:09:36.075256+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.000129",
+        "mae:-0.000129"
+      ],
+      "stop_pct": null
     }
   ]
 }
