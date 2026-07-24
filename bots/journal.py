@@ -348,13 +348,22 @@ class TradeJournal:
         """Minutes since this symbol's most recent losing close (None if it
         has never lost). Powers the re-entry cooldown: the same signal that
         just got stopped out usually still 'looks good' one cycle later --
-        that re-entry is revenge trading with extra steps."""
+        that re-entry is revenge trading with extra steps.
+
+        A genuine breakeven-stop exit is excluded even when its realized
+        pnl lands marginally negative from spread/slippage at the fill
+        (session 49, user directive: "if it hits breakeven it goes out,
+        like I didn't go in the trade at all... it hops back in"). The
+        setup still has to clear every other filter to re-enter -- this
+        only stops a real-money-neutral exit from silently eating the
+        30-minute revenge-trading cooldown meant for actual losers.
+        """
         key = symbol.upper().strip()
         losses = [
             t.exit_time for t in self.trades.values()
             if not t.is_open and t.pnl is not None and t.pnl < 0
             and t.symbol.upper().strip() == key and "admin" not in t.tags
-            and t.exit_time
+            and t.exit_time and "breakeven stop hit" not in (t.notes or "")
         ]
         if not losses:
             return None
@@ -415,6 +424,32 @@ class TradeJournal:
         streak = 0
         for t in closed_today:
             if t.pnl < 0:
+                streak += 1
+            else:
+                break
+        return streak
+
+    def consecutive_wins_today(self) -> int:
+        """Trailing streak of winning closed trades this trading day,
+        newest first -- the mirror of consecutive_losses_today (session 49,
+        user directive: "if I win 2 trades back to back, you're done
+        trading"). A breakeven-stop close (pnl ~ 0, not a real win) breaks
+        the streak the same way it would break a loss streak: neither a
+        loss nor a win, so it can't extend either one."""
+        today = trading_day()
+        closed_today = sorted(
+            (
+                t for t in self.trades.values()
+                if not t.is_open and t.pnl is not None
+                and _entry_trading_day(t.exit_time or "") == today
+                and "admin" not in t.tags
+            ),
+            key=lambda t: t.exit_time or "",
+            reverse=True,
+        )
+        streak = 0
+        for t in closed_today:
+            if t.pnl > 0:
                 streak += 1
             else:
                 break

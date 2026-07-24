@@ -52,6 +52,7 @@ class DeskConfig:
     max_per_correlation_group: int = 2  # cap positions per correlated cluster
     breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
     max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
+    max_consecutive_wins: int = 0  # "win-streak rule" (session 49, user directive: "if I win 2 back to back, you're done trading"): stop entering after N straight wins today, quit while ahead the same way the daily profit target does but per-streak instead of per-equity (0 = off)
     atr_stops: bool = False  # volatility-adaptive stops: 1.5x ATR(14) instead of fixed %
     max_total_drawdown_pct: float = 0.0  # 0 = off; e.g. 0.05 = funded-account 5% max loss limit
     daily_profit_target_pct: float = 0.0  # 0 = off; e.g. 0.02: once up 2% on the day, cash out everything and stop
@@ -63,6 +64,7 @@ class DeskConfig:
     min_hold_minutes: int = 0  # anti-churn: the RL "cut it early" discretionary exit can't fire until a trade is this old (0 = off). Safety exits (stop-loss, breakeven, take-profit, time stop) ALWAYS fire regardless. Session 48: out-of-sample test showed the raw agent churned 100-160 trades/day at a loss; a 30-min floor turned unseen-day P&L from -15.8% to +1.6% (the profit-maximizing point; 60 min over-held back to breakeven).
     orb_retest_required: bool = False  # MambaFX-style: don't chase an extended breakout candle early in the session, wait for a retest
     high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
+    high_conviction_breakout_strength: float = 0.0  # 0 = off; session 49 user directive ("know if it's going to do a heavy breakout, add it to everything you already know"): a second, independent way to qualify for the SAME high-conviction override budget (max_high_conviction_overrides is still the hard cap) -- breakout_strength(df) at or above this bypasses the daily trade cap exactly like a strong ADX does, still has to pass every other filter
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
     asian_session_budget_pct: float = 0.0  # 0 = off; e.g. 0.4: only 40% of max_trades_per_day may be spent during the Asian session, saving the rest for London/NY
     weekend_crypto_caution: bool = True  # halve risk sizing on crypto trades during the weekend forex-closed window (documented thinner liquidity, session 19)
@@ -75,6 +77,8 @@ class DeskConfig:
     vol_spike_entry_filter: float = 0.0  # 0 = off; e.g. 3.0: skip NEW entries when the last completed bar's range exceeds this multiple of ATR14 (don't chase a flash move into wide spreads)
     adr_exhaustion_pct: float = 0.0  # 0 = off; e.g. 1.0: skip NEW entries once today's range has consumed this fraction of the 14-day average daily range (late entries into a spent day have poor odds)
     zone_min_touches: int = 0  # 0 = off; e.g. 2: skip entries at a nearby swing level that hasn't been tested at least this many times in real history (fresh/virgin levels reverse ~70% of the time in backtests -- the desk shouldn't trust a "breakout" through one)
+    price_action_entry_confirm: bool = False  # session 49, user directive ("focus on the consolidation area... breakout is your entry point" + "liquidity sweep... that's when it'll know to go into the trade"): require EITHER a fresh consolidation_breakout OR a liquidity_sweep_entry to confirm the entry timeframe agrees, on top of every other filter. Narrowing-only -- can only refuse an entry, never force one -- so it doesn't carry the risk-sizing evidence bar.
+    stacked_timeframe_confirm: bool = False  # session 49, user directive ("chart up on the hourly, 30 min, 15 min... before taking the trade"): stricter version of htf_confirm -- requires 15m AND 1h AND 4h to each NOT be in a down trend (any with enough history to judge), not just the single higher timeframe htf_confirm already checks. Narrowing-only, same reasoning as price_action_entry_confirm.
     max_live_spread_multiple: float = 0.0  # 0 = off; e.g. 3.0: skip entries when the broker's LIVE bid/ask spread is this many times the symbol's normal spread (measured, not guessed)
     symbol_probation: bool = False  # half-size any symbol whose own closed-trade record is net-negative over a real sample (journal-driven, self-updating)
     symbol_probation_min_trades: int = 10  # sample size before probation can trigger (below this, no judgment)
@@ -345,6 +349,38 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         # _manage_position are completely unaffected and fire exactly as
         # before regardless of how long this window is.
         max_hold_minutes=240,
+        # Session 49 continued (user directive: "if I win 2 trades back to
+        # back, you're done trading"). Quit-while-ahead on the streak, same
+        # spirit as the equity-based daily_profit_target_pct rule -- exits
+        # still run, only new entries stop, resets fresh tomorrow.
+        max_consecutive_wins=2,
+        # Narrowing-only entry filters -- each can only REFUSE a candidate
+        # that would otherwise have been taken, never force a trade the RL
+        # vote + every existing filter didn't already want. Safe to enable
+        # by the same reasoning as min_adx/zone_min_touches/orb_retest_
+        # required above: it can only reduce trade count, and reducing
+        # trade count is the explicit user directive this whole session.
+        price_action_entry_confirm=True,
+        stacked_timeframe_confirm=True,
+        # A second, independent way to qualify for the high-conviction
+        # override -- doesn't touch max_high_conviction_overrides (the
+        # actual cap). Threshold picked from real synthetic-data testing
+        # (session 49): a genuine breakout-from-consolidation bar scored
+        # ~2.9 on breakout_strength's 0-4 scale; an ordinary bar inside an
+        # already-established trend scored ~1.6. 2.5 sits between the two.
+        high_conviction_breakout_strength=2.5,
+        # First live enablement (session 49, user directive: "move stop
+        # loss to an appropriate area... hold it longer if it goes my
+        # direction"). trail_after_target already existed and already had
+        # real evidence behind it (session 37 comparative NQ backtests:
+        # profit factor 1.6 vs 1.1 for a fixed target) but was left off
+        # "until it proves itself on real trades" -- it's exactly the
+        # trailing-stop behavior asked for here, so turning it on now
+        # rather than leaving tested code idle. Floored so the exit can
+        # never drop below +1R (see _manage_position's trail_floor logic),
+        # so a trade that reaches its target and later reverses still
+        # locks in a real profit, never gives back to breakeven or a loss.
+        trail_after_target=True,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -821,6 +857,126 @@ def liquidity_sweep_reversal(df, position_side: str, lookback: int = 20) -> Opti
         return None
 
 
+def consolidation_breakout(df, lookback: int = 20, tightness: float = 0.6) -> Optional[str]:
+    """Detect a fresh breakout out of a tight consolidation range (session
+    49, user directive: "focus on the consolidation area... when it
+    reaches a breakout, that's your entry point"). Looks at the
+    `lookback` bars BEFORE the last one for a range that's compressed
+    relative to the instrument's normal volatility (high-low over that
+    window <= `tightness` x ATR(14) over a longer window -- compression
+    is relative to the instrument, not an arbitrary percent), then checks
+    whether the LAST closed bar closes outside that range with a real
+    body (not just a wick poking out).
+
+    Returns "up"/"down" for a real breakout direction, None otherwise
+    (no consolidation was there, or the last bar didn't clear it). Used
+    as an entry-qualification filter (see
+    DeskConfig.consolidation_breakout_required) -- narrows candidates, is
+    never on its own sufficient (every other filter still applies).
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("open", "high", "low", "close")):
+            return None
+        if len(df) < lookback + 2:
+            return None
+        window = df.iloc[-(lookback + 1):-1]
+        range_high = float(window[cols["high"]].max())
+        range_low = float(window[cols["low"]].min())
+        box = range_high - range_low
+        if box <= 0:
+            return None
+        atr = atr_pct(df.iloc[:-1])
+        ref_close = float(window[cols["close"]].iloc[-1])
+        if not atr or ref_close <= 0:
+            return None
+        typical_range = atr * ref_close
+        if typical_range <= 0 or box > tightness * typical_range * lookback ** 0.5:
+            # not actually compressed relative to this instrument's normal
+            # bar-to-bar movement -- a wide chop isn't a consolidation
+            return None
+        last_open = float(df[cols["open"]].iloc[-1])
+        last_close = float(df[cols["close"]].iloc[-1])
+        # Close must clear the range AND the bar itself must be a real
+        # directional body in that direction (not a doji/reversal bar that
+        # merely wicked beyond it) -- deliberately NOT requiring the open
+        # to sit inside the range, since a genuine breakout can gap open
+        # past it in a fast-moving market and that's still a real breakout.
+        if last_close > range_high and last_close > last_open:
+            return "up"
+        if last_close < range_low and last_close < last_open:
+            return "down"
+        return None
+    except Exception:
+        return None
+
+
+def liquidity_sweep_entry(df, lookback: int = 20) -> bool:
+    """Bullish-only entry confirmation (session 49, user directive: "as
+    long as it catches when it's going its direction because it'll be a
+    liquidity sweep, that's when it'll know to go into the trade"). True
+    if the last closed bar swept below the prior `lookback`-bar swing low
+    (a stop hunt) and closed back above it -- a bear trap resolving
+    bullish. This desk only ever opens LONGS (buy_bracket is the only
+    entry path -- see TradingDesk._consider_entry), so only the bullish
+    case is implemented; the bearish mirror has no entry path to serve.
+    Structurally the same signal as liquidity_sweep_reversal's short-side
+    case, applied to confirm an entry instead of protect an exit.
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("high", "low", "close")) or len(df) < lookback + 1:
+            return False
+        low, high, close = df[cols["low"]], df[cols["high"]], df[cols["close"]]
+        prior_low = float(low.iloc[-(lookback + 1):-1].min())
+        last_low, last_close = float(low.iloc[-1]), float(close.iloc[-1])
+        return last_low < prior_low and last_close > prior_low
+    except Exception:
+        return False
+
+
+def breakout_strength(df) -> float:
+    """0+ score for how much the LAST closed bar looks like the start of
+    a genuinely powerful move, not routine noise (session 49, user
+    directive: "know if it's going to do a heavy breakout"). Three
+    measured components, each capped so no single one dominates:
+
+    - range expansion: this bar's range vs. its own trailing ATR(14) --
+      a bar 2x+ the recent average range is real expansion, capped at 2.0
+    - close-at-the-extreme: how close the bar closed to its own high (for
+      an up move) -- a strong close near the top means real follow-
+      through, not a wick that got rejected back, capped at 1.0
+    - trend acceleration: current ADX vs. ADX a few bars ago -- a RISING
+      ADX means the trend is accelerating right now, not already spent
+
+    Used to extend the existing high-conviction override (see
+    DeskConfig.high_conviction_adx) with a second, independent
+    qualifying signal -- it only ever ADDS a way to qualify for the same
+    existing, already-capped override budget, never loosens anything else.
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("high", "low", "close")) or len(df) < 20:
+            return 0.0
+        high, low, close = df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        last_range = float(high.iloc[-1] - low.iloc[-1])
+        atr = atr_pct(df.iloc[:-1])
+        ref_close = float(close.iloc[-2])
+        typical_range = (atr * ref_close) if atr and ref_close > 0 else 0.0
+        expansion = min(last_range / typical_range, 2.0) if typical_range > 0 else 0.0
+        bar_range = float(high.iloc[-1] - low.iloc[-1])
+        close_strength = (
+            min(max((float(close.iloc[-1]) - float(low.iloc[-1])) / bar_range, 0.0), 1.0)
+            if bar_range > 0 else 0.0
+        )
+        adx_now = adx_value(df)
+        adx_prior = adx_value(df.iloc[:-3]) if len(df) >= 23 else None
+        accel = 1.0 if (adx_now is not None and adx_prior is not None and adx_now > adx_prior) else 0.0
+        return expansion + close_strength + accel
+    except Exception:
+        return 0.0
+
+
 # Session 49 (user directive): watch specific instruments hardest around
 # the real-world windows a discretionary day trader would -- NY cash open
 # for the US indices (volatility picks up sharp at 9:30 ET), gold in the
@@ -1224,6 +1380,24 @@ class TradingDesk:
                 )
                 return report
 
+        # 2d. Win-streak rule (session 49, user directive: "if I win 2 trades
+        #     back to back, you're done trading"). The mirror of the
+        #     loss-streak rule above: N clean wins in a row means quit while
+        #     ahead on THIS run of form, same "banked pass beats the
+        #     marginal upside of one more trade" logic as the daily profit
+        #     target, just keyed on streak instead of equity so it can fire
+        #     even on a day too small in dollar terms to hit that target.
+        #     Exits above still run; only new entries stop.
+        if cfg.max_consecutive_wins > 0:
+            win_streak = self.journal.consecutive_wins_today()
+            if win_streak >= cfg.max_consecutive_wins:
+                report.notes.append(
+                    f"[risk] win-streak rule: {win_streak} clean wins in a row today "
+                    f"(cap {cfg.max_consecutive_wins}) -- quitting while ahead, "
+                    "no new entries until tomorrow"
+                )
+                return report
+
         # 3. New entries from research + quant + committee, filtered by lessons.
         # A "slot" is used by a filled position OR a trade the journal still
         # considers open (which includes orders placed but not yet filled --
@@ -1257,7 +1431,7 @@ class TradingDesk:
         high_conviction_overrides_left = (
             max(0, cfg.max_high_conviction_overrides
                 - self.journal.count_trades_with_tag_today("high-conviction-override"))
-            if cfg.high_conviction_adx > 0
+            if cfg.high_conviction_adx > 0 or cfg.high_conviction_breakout_strength > 0
             else 0
         )
         group_counts: Dict[str, int] = {}
@@ -1318,11 +1492,29 @@ class TradingDesk:
             if trades_left_today is not None and trades_left_today <= 0:
                 if high_conviction_overrides_left > 0 and not info.get("manual"):
                     try:
-                        adx = adx_value(self.history_fn(symbol))
+                        symbol_history = self.history_fn(symbol)
+                        adx = adx_value(symbol_history)
                     except Exception:
-                        adx = None
-                    if adx is not None and adx >= cfg.high_conviction_adx:
+                        adx, symbol_history = None, None
+                    # BUG FOUND AND FIXED (session 49): must gate on
+                    # high_conviction_adx > 0 explicitly -- without it, a
+                    # config that leaves high_conviction_adx at its default
+                    # 0.0 (e.g. one that only sets
+                    # high_conviction_breakout_strength) would trivially
+                    # satisfy `adx >= 0.0` for ANY real ADX reading and
+                    # qualify every candidate, bypassing the daily cap far
+                    # more than intended. This only manifested once the
+                    # outer high_conviction_overrides_left gate (right
+                    # above) was extended to also fire on
+                    # high_conviction_breakout_strength alone.
+                    if cfg.high_conviction_adx > 0 and adx is not None and adx >= cfg.high_conviction_adx:
                         use_high_conviction = True
+                    elif cfg.high_conviction_breakout_strength > 0 and symbol_history is not None:
+                        try:
+                            if breakout_strength(symbol_history) >= cfg.high_conviction_breakout_strength:
+                                use_high_conviction = True
+                        except Exception:
+                            pass
                 if not use_high_conviction:
                     report.actions.append(DeskAction("skip", symbol, cap_reason))
                     continue
@@ -1837,6 +2029,52 @@ class TradingDesk:
                         )
                 except Exception:
                     pass
+
+        if cfg.stacked_timeframe_confirm and not manual:
+            # Session 49 (user directive): a stricter, multi-layer version
+            # of the single-HTF check above -- 15m, 1h, and 4h must each
+            # NOT be in a down trend (any timeframe whose history isn't
+            # available or errors is skipped, same fail-open philosophy as
+            # htf_confirm itself, since a missing feed shouldn't block an
+            # otherwise-good trade). Only narrows candidates further; never
+            # loosens anything the checks above already required.
+            for stacked_tf in ("15m", "1h", "4h"):
+                try:
+                    tf_df = self.htf_history_fn(symbol, stacked_tf)
+                    try:
+                        tf_df = heikin_ashi(tf_df)
+                    except Exception:
+                        pass
+                    tf_trend = trend_direction(tf_df)
+                    if tf_trend == "down":
+                        return DeskAction(
+                            "skip", symbol,
+                            f"stacked-timeframe filter: {stacked_tf} trend is down -- "
+                            "not every higher timeframe agrees with this entry",
+                        )
+                except Exception:
+                    continue
+
+        if cfg.price_action_entry_confirm and not manual:
+            # Session 49 (user directive): "focus on the consolidation
+            # area... breakout is your entry point" + "liquidity sweep...
+            # that's when it'll know to go into the trade." Either signal
+            # confirming is enough -- they're two independent reads of the
+            # same "is this actually the moment to get in" question, not a
+            # requirement that both fire simultaneously (which would be
+            # needlessly restrictive on top of the existing RL vote,
+            # min_adx, htf_confirm, and every other filter already run).
+            try:
+                breakout = consolidation_breakout(df)
+                sweep_in = liquidity_sweep_entry(df)
+                if breakout != "up" and not sweep_in:
+                    return DeskAction(
+                        "skip", symbol,
+                        "price-action filter: no fresh consolidation breakout or "
+                        "liquidity sweep confirming entry right now",
+                    )
+            except Exception:
+                pass
 
         if cfg.adr_exhaustion_pct > 0 and not manual:
             # Session 41: 90-100% of the average daily range already

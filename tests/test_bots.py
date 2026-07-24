@@ -2054,6 +2054,229 @@ def test_high_conviction_overrides_run_out_per_day(tmp_path, journal):
     assert any("daily trade cap" in a.reason for a in report.actions)
 
 
+# ---------------------------------------------------------------------------
+# Session 49, continued: entry-side price action, win-streak rule,
+# breakout-strength high-conviction path, breakeven re-entry
+# ---------------------------------------------------------------------------
+
+def _consolidation_then_breakout_df(n=280):
+    """n bars of gentle noise, then a genuine tight-range consolidation,
+    then a real breakout bar -- long enough to satisfy ADX/ATR/history
+    minimums used elsewhere in the entry filter chain."""
+    rng = np.random.default_rng(7)
+    prefix_close = 100 + np.cumsum(rng.normal(0.0, 0.03, n))
+    box_n = 25
+    box_close = float(prefix_close[-1]) + rng.normal(0, 0.05, box_n)
+    box_open = np.concatenate([[box_close[0]], box_close[:-1]])
+    box_high = np.maximum(box_open, box_close) + 0.05
+    box_low = np.minimum(box_open, box_close) - 0.05
+    range_high = float(box_high.max())
+    brk_open, brk_close = range_high + 0.02, range_high + 0.6
+    brk_high, brk_low = brk_close + 0.05, brk_open - 0.05
+    close = np.concatenate([prefix_close, box_close, [brk_close]])
+    open_ = np.concatenate([prefix_close, box_open, [brk_open]])
+    high = np.concatenate([prefix_close + 0.05, box_high, [brk_high]])
+    low = np.concatenate([prefix_close - 0.05, box_low, [brk_low]])
+    return pd.DataFrame({"open": open_, "high": high, "low": low, "close": close})
+
+
+def test_consolidation_breakout_detects_direction_and_ignores_trends():
+    from bots.organization import consolidation_breakout
+
+    df = _consolidation_then_breakout_df()
+    assert consolidation_breakout(df) == "up"
+
+    n = 200
+    rng = np.random.default_rng(3)
+    close = 100 * np.exp(np.cumsum(rng.normal(0.0015, 0.008, n)))
+    open_ = np.concatenate([[close[0]], close[:-1]])
+    trending = pd.DataFrame({
+        "open": open_, "close": close,
+        "high": np.maximum(open_, close) * 1.01, "low": np.minimum(open_, close) * 0.99,
+    })
+    assert consolidation_breakout(trending) is None
+
+
+def test_liquidity_sweep_entry_bullish_only():
+    from bots.organization import liquidity_sweep_entry
+
+    calm = pd.DataFrame({"high": np.linspace(105, 110, 20), "low": np.linspace(95, 100, 20),
+                         "close": np.linspace(100, 105, 20)})
+    sweep = pd.concat([calm, pd.DataFrame({"high": [102.0], "low": [93.0], "close": [96.0]})],
+                      ignore_index=True)
+    assert liquidity_sweep_entry(sweep) is True
+    no_sweep = pd.concat([calm, pd.DataFrame({"high": [110.5], "low": [100.5], "close": [105.5]})],
+                         ignore_index=True)
+    assert liquidity_sweep_entry(no_sweep) is False
+
+
+def test_breakout_strength_ranks_a_real_breakout_above_routine_bars():
+    from bots.organization import breakout_strength
+
+    breakout_df = _consolidation_then_breakout_df()
+    n = 200
+    rng = np.random.default_rng(3)
+    close = 100 * np.exp(np.cumsum(rng.normal(0.0015, 0.008, n)))
+    open_ = np.concatenate([[close[0]], close[:-1]])
+    trending = pd.DataFrame({
+        "open": open_, "close": close,
+        "high": np.maximum(open_, close) * 1.01, "low": np.minimum(open_, close) * 0.99,
+    })
+    assert breakout_strength(breakout_df) > breakout_strength(trending)
+    assert breakout_strength(breakout_df) >= 2.5  # the aquafunded threshold, from real testing
+
+
+def test_consecutive_wins_today_counts_streak_and_breakeven_breaks_it(journal):
+    from datetime import datetime, timezone
+
+    t1 = journal.open_trade("A", "long", 1, 100.0, setup="x")
+    journal.close_trade(t1.trade_id, 105.0)  # win
+    t2 = journal.open_trade("B", "long", 1, 100.0, setup="x")
+    journal.close_trade(t2.trade_id, 110.0)  # win
+    assert journal.consecutive_wins_today() == 2
+
+    # a real loss breaks the streak
+    t3 = journal.open_trade("C", "long", 1, 100.0, setup="x")
+    journal.close_trade(t3.trade_id, 90.0)  # loss
+    assert journal.consecutive_wins_today() == 0
+
+
+def test_minutes_since_last_loss_excludes_genuine_breakeven_stops(journal):
+    # a real loss DOES start the cooldown
+    real_loss = journal.open_trade("SYM", "long", 1, 100.0, setup="x")
+    journal.close_trade(real_loss.trade_id, 95.0, notes="stop loss hit (-5.0%)")
+    assert journal.minutes_since_last_loss("SYM") is not None
+
+    # a breakeven-stop close that lands marginally negative from spread
+    # must NOT count as the "last loss" for cooldown purposes
+    journal2 = TradeJournal(path=journal.path.replace(".json", "-2.json"))
+    be = journal2.open_trade("SYM2", "long", 1, 100.0, setup="x")
+    journal2.close_trade(be.trade_id, 99.95,
+                         notes="breakeven stop hit (was +1R, now -0.1%) -- risk-free exit")
+    assert journal2.minutes_since_last_loss("SYM2") is None
+
+
+def test_win_streak_rule_stops_new_entries_after_the_cap(price_df, tmp_path, journal):
+    journal.open_trade("A", "long", 1, 100.0, setup="x")
+    journal.close_trade(list(journal.trades.values())[0].trade_id, 105.0)
+    journal.open_trade("B", "long", 1, 100.0, setup="x")
+    journal.close_trade(list(journal.trades.values())[1].trade_id, 110.0)
+    assert journal.consecutive_wins_today() == 2
+
+    broker = PaperBroker(starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"NEXT": 100.0})
+    config = DeskConfig(news_blackout=False, min_copy_score=0, max_consecutive_wins=2)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=["NEXT"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("win-streak rule" in n for n in report.notes), report.describe()
+
+
+def test_win_streak_rule_off_by_default(price_df, tmp_path, journal):
+    journal.open_trade("A", "long", 1, 100.0, setup="x")
+    journal.close_trade(list(journal.trades.values())[0].trade_id, 105.0)
+    journal.open_trade("B", "long", 1, 100.0, setup="x")
+    journal.close_trade(list(journal.trades.values())[1].trade_id, 110.0)
+
+    broker = PaperBroker(starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"NEXT": 100.0})
+    config = DeskConfig(news_blackout=False, min_copy_score=0)  # max_consecutive_wins default 0
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config)
+    report = desk.run_once(symbols=["NEXT"])
+    assert not any("win-streak rule" in n for n in report.notes)
+
+
+def test_price_action_entry_confirm_requires_breakout_or_sweep(tmp_path, journal):
+    broker = PaperBroker(starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"CALM": 100.5})
+    config = DeskConfig(news_blackout=False, min_copy_score=0, price_action_entry_confirm=True)
+
+    # plain noisy history, no consolidation/breakout, no sweep -> blocked
+    rng = np.random.default_rng(11)
+    close = 100 + np.cumsum(rng.normal(0, 0.02, 250))
+    open_ = np.concatenate([[close[0]], close[:-1]])
+    plain = pd.DataFrame({
+        "open": open_, "close": close,
+        "high": np.maximum(open_, close) + 0.03, "low": np.minimum(open_, close) - 0.03,
+    })
+    desk = make_desk(tmp_path, broker, journal, plain, config=config)
+    report = desk.run_once(symbols=["CALM"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("price-action filter" in a.reason for a in report.actions), report.describe()
+
+    # a real consolidation breakout -> allowed through this filter (may
+    # still be blocked by something else, but NOT by price-action)
+    breakout_df = _consolidation_then_breakout_df()
+    broker2 = PaperBroker(starting_cash=100_000, state_path=str(tmp_path / "acct2.json"),
+                          price_overrides={"BREAK": float(breakout_df["close"].iloc[-1])})
+    desk2 = make_desk(tmp_path, broker2, journal, breakout_df, config=config)
+    report2 = desk2.run_once(symbols=["BREAK"])
+    assert not any("price-action filter" in a.reason for a in report2.actions), report2.describe()
+
+
+def test_stacked_timeframe_confirm_blocks_on_any_lower_timeframe_downtrend(price_df, tmp_path, journal):
+    downtrend = pd.DataFrame({"close": np.linspace(120, 80, 60)})
+    uptrend = pd.DataFrame({"close": np.linspace(80, 120, 60)})
+
+    def htf_fn(_s, tf):
+        return downtrend if tf == "1h" else uptrend
+
+    broker = PaperBroker(starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"EURUSD": 1.1})
+    config = DeskConfig(news_blackout=False, min_copy_score=0, stacked_timeframe_confirm=True)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config, htf_history_fn=htf_fn)
+    report = desk.run_once(symbols=["EURUSD"])
+    blocked = [a for a in report.actions if "stacked-timeframe filter" in a.reason]
+    assert len(blocked) == 1, report.describe()
+    assert "1h" in blocked[0].reason
+
+
+def test_stacked_timeframe_confirm_allows_when_all_agree(price_df, tmp_path, journal):
+    uptrend = pd.DataFrame({"close": np.linspace(80, 120, 60)})
+    broker = PaperBroker(starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"EURUSD": 1.1})
+    config = DeskConfig(news_blackout=False, min_copy_score=0, stacked_timeframe_confirm=True)
+    desk = make_desk(tmp_path, broker, journal, price_df, config=config,
+                     htf_history_fn=lambda _s, _tf: uptrend)
+    report = desk.run_once(symbols=["EURUSD"])
+    assert not any("stacked-timeframe filter" in a.reason for a in report.actions), report.describe()
+
+
+def test_high_conviction_breakout_strength_bypasses_daily_cap(tmp_path, journal):
+    breakout_df = _consolidation_then_breakout_df()
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    broker = PaperBroker(starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"STRONG": float(breakout_df["close"].iloc[-1])})
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, high_conviction_breakout_strength=2.5,
+                        max_high_conviction_overrides=1)
+    desk = make_desk(tmp_path, broker, journal, breakout_df, config=config)
+    report = desk.run_once(symbols=["STRONG"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1, report.describe()
+    assert "high-conviction override" in buys[0].reason
+
+
+def test_aquafunded_preset_enables_all_session_49_entry_and_streak_features():
+    from bots.organization import aquafunded_instant_config, funded_account_config
+
+    cfg = aquafunded_instant_config()
+    assert cfg.max_consecutive_wins == 2
+    assert cfg.price_action_entry_confirm is True
+    assert cfg.stacked_timeframe_confirm is True
+    assert cfg.high_conviction_breakout_strength == 2.5
+    assert cfg.trail_after_target is True
+
+    # paper/generic funded desk is completely unaffected
+    plain = funded_account_config()
+    assert plain.max_consecutive_wins == 0
+    assert plain.price_action_entry_confirm is False
+    assert plain.stacked_timeframe_confirm is False
+    assert plain.high_conviction_breakout_strength == 0.0
+    assert plain.trail_after_target is False
+
+
 def test_asian_session_budget_reserves_trades_for_london(price_df, tmp_path, journal, monkeypatch):
     import bots.organization as org_mod
 
