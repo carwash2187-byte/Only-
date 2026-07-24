@@ -1727,11 +1727,11 @@
       "entry_price": 0.5781114326700568,
       "entry_time": "2026-07-24T02:04:38.253270+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 0.5780247224584222,
+      "exit_time": "2026-07-24T02:41:03.507558+00:00",
+      "pnl": -0.9363269363322818,
+      "pnl_pct": -0.014998875084371033,
+      "notes": "user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)",
       "tags": [
         "mfe:0.000388",
         "mae:-0.000075"
