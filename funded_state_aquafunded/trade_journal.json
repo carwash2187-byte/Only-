@@ -1133,11 +1133,11 @@
       "entry_price": 0.81841,
       "entry_time": "2026-07-24T20:07:15.504522+00:00",
       "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 0.81839,
+      "exit_time": "2026-07-24T20:07:53.060731+00:00",
+      "pnl": -1.000000000001e-06,
+      "pnl_pct": -0.002443762906123581,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [
         "high-conviction-override"
       ],
