@@ -97,7 +97,7 @@ def fetch_rough_window() -> dict:
     return _window_around(full, roughest)
 
 
-def practice_on_rough_windows(episodes: int = 60, windows: int = 15) -> None:
+def practice_on_rough_windows(episodes: int = 90, windows: int = 15) -> None:
     """Train the LIVE Q-agent (respects BOT_DATA_DIR, same model_path the
     autopilot loads) on the N real roughest AND N real strongest-trend
     windows found -- genuine practice on real historical good and bad
@@ -113,7 +113,13 @@ def practice_on_rough_windows(episodes: int = 60, windows: int = 15) -> None:
     across ~19 symbols x 30 windows x 60 episodes this typically clears
     several thousand REAL closed practice trades in one run (the true
     total is measured and printed at the end via
-    QTraderAgent.train()'s `training_trades` stat, not estimated)."""
+    QTraderAgent.train()'s `training_trades` stat, not estimated).
+
+    Session 50: episodes raised again, 60->90 (user request: "more time
+    in the simulation"). Session 48's own writeup measured the 60-episode
+    version at "tens of minutes" against a 180-minute job timeout, so
+    there was real headroom; this is a ~50% increase in practice reps per
+    symbol per window, not a re-guess of the timeout budget."""
     full = _fetch_full_history()
     rough_days = find_roughest_days(full, windows)
     trend_days = [d for d in find_best_trend_days(full, windows) if d not in rough_days]
