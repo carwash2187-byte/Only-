@@ -3786,3 +3786,34 @@ connector doesn't currently fetch, and guessing at a multiplier on a
 live funded account is worse than leaving the documented caveat as-is.
 
 Full suite run clean before push.
+
+## Session 53 (continued): enabled weekend crypto fallback on the real AquaFunded account
+
+User wanted the desk to do something Friday night/Saturday instead of
+sitting idle until forex reopens Sunday 17:00 ET. The paper account
+already had a weekend crypto fallback (BTC-USD/ETH-USD/SOL-USD,
+`scripts/run_one_cycle.py`'s `WEEKEND_SYMBOLS`) but the AquaFunded
+script deliberately passed `None` instead, per a session-48 honesty flag:
+"no explicit weekend-trading policy was found... this is an ASSUMPTION,
+not a confirmed fact."
+
+Resolved that flag properly instead of just flipping the switch: fetched
+AquaFunded's own help center directly (not a review aggregator --
+https://help.aquafunded.com/en/articles/11831680, "Can I hold trades
+overnight and over the weekend?"). Exact quote: "Yes, you can hold
+trades overnight and over the weekend... There are no restrictions...
+crypto accounts: trading is available 24/7, including weekends." No
+distinction drawn between challenge and funded accounts. That clears
+the evidence bar this project holds funded-account rule changes to.
+
+`scripts/run_one_cycle_aquafunded.py` now passes real `WEEKEND_SYMBOLS`
+(same three as the paper account) instead of `None`. Nothing else
+changes -- same 3%/6% risk rules, same correlation caps, same ATR stops,
+same RL-agent/trend filters apply to these trades as to forex; this only
+adds a market to check during the gap forex is genuinely closed
+(Friday 17:00 ET - Sunday 17:00 ET is a real market-hours fact, not a
+policy choice, and is unaffected by this change). Updated
+`aquafunded_instant_config()`'s docstring to mark the old UNVERIFIED
+flag RESOLVED with the citation.
+
+Full suite run clean before push.

@@ -62,6 +62,19 @@ SYMBOLS = [
     "DAX", "UK100",
 ]
 
+# Session 53: weekend crypto fallback, same symbols as the paper account's
+# WEEKEND_SYMBOLS. Confirmed directly from AquaFunded's own help center
+# (https://help.aquafunded.com/en/articles/11831680, not a review site --
+# see CLAUDE.md's evidence bar): "Yes, you can hold trades overnight and
+# over the weekend... There are no restrictions... crypto accounts:
+# trading is available 24/7, including weekends." No distinction drawn
+# between challenge and funded accounts. This resolves the "unconfirmed"
+# caveat that used to keep weekend_symbols=None below. If this account's
+# TradeLocker doesn't recognize a symbol name, _instrument_id raises a
+# clean error naming it (same safety pattern as DAX/UK100 above) --
+# never trades blind on an unresolved symbol.
+WEEKEND_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD"]
+
 CHECK_INTERVAL_SECONDS = 60
 LOOP_BUDGET_SECONDS = 4 * 60 + 15  # ~4m15s of a 5-minute window, same margin as the paper script
 
@@ -69,12 +82,14 @@ LOOP_BUDGET_SECONDS = 4 * 60 + 15  # ~4m15s of a 5-minute window, same margin as
 def run_one_cycle(desk, live: bool) -> None:
     now = datetime.now(tz=NY)
     stamp = now.strftime("%Y-%m-%d %H:%M:%S ET")
-    # AquaFunded's weekend-trading policy is unconfirmed (see
-    # aquafunded_instant_config()'s docstring) -- weekend_symbols is
-    # deliberately None here, not the crypto fallback, until that's
-    # verified. This account only trades while forex is actually open.
+    # Session 53: weekend crypto fallback now enabled -- see WEEKEND_SYMBOLS
+    # above for the citation (AquaFunded's own help center, no restrictions
+    # on weekend/crypto trading). Same risk rules (3%/6%, ATR stops,
+    # correlation caps) apply to these trades as to forex -- this only
+    # changes which market is checked, not how carefully it's traded.
     active_market, active_symbols, _ = select_active_market(
-        "forex", SYMBOLS, None, None, desk.config.weekend_trading_allowed, now
+        "forex", SYMBOLS, WEEKEND_SYMBOLS, None,
+        desk.config.weekend_trading_allowed, now
     )
     if not market_is_open(active_market, now):
         print(f"[{stamp}] market closed ({active_market}) -- nothing to do this cycle")

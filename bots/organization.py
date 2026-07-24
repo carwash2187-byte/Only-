@@ -303,12 +303,19 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
     and their help-center article, not a live API, and firms change
     terms.
 
-    UNVERIFIED (honesty flag, session 48): unlike Clarity (confirmed
-    weekend trading banned outright), no explicit weekend-trading policy
-    was found in what's been read of AquaFunded's rules/ToS. This preset
-    leaves `weekend_trading_allowed` at the funded default (True) --
-    that is an ASSUMPTION, not a confirmed fact. Verify directly before
-    this account is ever live over a weekend.
+    RESOLVED (was UNVERIFIED as of session 48, confirmed session 53):
+    weekend-trading policy is now confirmed directly from AquaFunded's own
+    help center (https://help.aquafunded.com/en/articles/11831680,
+    "Can I hold trades overnight and over the weekend?"): "Yes, you can
+    hold trades overnight and over the weekend... There are no
+    restrictions... crypto accounts: trading is available 24/7, including
+    weekends." No distinction drawn between challenge and funded accounts.
+    `weekend_trading_allowed` stays at the funded default (True), and
+    scripts/run_one_cycle_aquafunded.py now passes real WEEKEND_SYMBOLS
+    (BTC-USD, ETH-USD, SOL-USD) instead of None -- forex still closes
+    Friday 17:00-Sunday 17:00 ET (a real market-hours fact, not a policy
+    choice), but this account now trades the weekend crypto fallback
+    across that gap under the same 3%/6% risk rules as everything else.
 
     risk_per_trade_pct=0.005 (session 50, EXPLICIT USER OVERRIDE of the
     session 48 evidence-law sizing, not an evidence-backed increase --
