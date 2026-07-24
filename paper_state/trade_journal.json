@@ -1752,7 +1752,7 @@
       "pnl_pct": null,
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding",
       "tags": [
-        "mfe:-0.000082",
+        "mfe:0.000355",
         "mae:-0.002286"
       ],
       "stop_pct": null
@@ -1784,11 +1784,11 @@
       "entry_price": 41.62103943185806,
       "entry_time": "2026-07-24T19:04:35.725827+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding",
+      "exit_price": 41.608960360336305,
+      "exit_time": "2026-07-24T19:37:35.822564+00:00",
+      "pnl": -0.21735443668389445,
+      "pnl_pct": -0.029021551808017243,
+      "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding | quant desk: RL agent says exit (position red, cutting the loser early)",
       "tags": [
         "mfe:0.000936",
         "mae:-0.000385"

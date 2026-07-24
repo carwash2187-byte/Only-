@@ -40,3 +40,4 @@
 - 2026-07-23T19:15 **OTHER** long -50.00 (-5.00%) setup=`daytrade` -- 
 - 2026-07-24T01:55 **AUDJPY** long -0.65 (-0.01%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
 - 2026-07-24T02:41 **NZDUSD** long -0.94 (-0.01%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
+- 2026-07-24T19:37 **BN** long -0.22 (-0.03%) setup=`copytrade:trend-down|rsi-oversold|pos-out` -- BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding | quant desk: RL agent says exit (position red, cutting the loser early)
