@@ -24,14 +24,20 @@ name: Trading desk nightly self-train
 # risk (both workflows can write paper_state/qtable.json at overlapping
 # times) is handled the same way as the cycle/aquafunded race: rebase +
 # retry on push rejection, not mutual exclusion.
+#
+# SESSION 50: added a second job that runs the exact same practice
+# (episodes raised 60->90 this session too, "more time in the
+# simulation") against the REAL AquaFunded account's own Q-table
+# (funded_state_aquafunded/), not just the paper account's. Before this,
+# only the paper model got nightly practice -- the account actually
+# trading real money never did. Runs as its own job (parallel with
+# self-train, its own concurrency group, its own state dir) so it can't
+# block or be blocked by the paper run, and never touches a broker (Q-
+# table training is pure historical-data replay, no TradeLocker needed).
 on:
   schedule:
     - cron: "0 7 * * *"  # ~3am ET / 7am UTC, after the NY session closes
   workflow_dispatch: {}
-
-concurrency:
-  group: paper-selftrain  # own group -- see the bug writeup above
-  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -40,6 +46,9 @@ jobs:
   self-train:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    concurrency:
+      group: paper-selftrain  # own group -- see the bug writeup above
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,6 +84,53 @@ jobs:
           # continuously and can move the branch tip while this long-running
           # training job is still going. Rebase our commit onto the latest
           # tip and retry, same pattern proven on the cycle workflows.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:claude/ai-trading-bot-research-yolqhm; then
+              echo "pushed on attempt $attempt"; exit 0
+            fi
+            echo "push rejected (attempt $attempt) -- rebasing on latest tip, retrying"
+            git fetch origin claude/ai-trading-bot-research-yolqhm
+            git rebase FETCH_HEAD || { git rebase --abort; exit 1; }
+          done
+          echo "push still failing after 5 attempts"; exit 1
+
+  self-train-aquafunded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    concurrency:
+      group: aquafunded-selftrain  # own group, parallel with self-train above
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/ai-trading-bot-research-yolqhm
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/deploy/requirements-bots.txt
+
+      - name: Install lean bot dependencies
+        run: pip install -r scripts/deploy/requirements-bots.txt
+
+      - name: Practice on real rough/trending windows (AquaFunded's own Q-table)
+        env:
+          BOT_DATA_DIR: funded_state_aquafunded
+          PYTHONPATH: .
+        run: python scripts/stress_test.py --practice
+
+      - name: Commit and push the updated Q-table
+        run: |
+          git config user.name "trading-desk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add funded_state_aquafunded/
+          if git diff --cached --quiet; then
+            echo "no state changes from this training run"
+            exit 0
+          fi
+          git commit -m "Nightly self-train (AquaFunded) $(date -u +%FT%TZ)"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:claude/ai-trading-bot-research-yolqhm; then
               echo "pushed on attempt $attempt"; exit 0
