@@ -91,7 +91,19 @@ def main() -> None:
     checks = 0
     while time.monotonic() - start < LOOP_BUDGET_SECONDS:
         loop_t0 = time.monotonic()
-        run_one_cycle(desk)
+        try:
+            run_one_cycle(desk)
+        except Exception as exc:
+            # Session 51: run_one_cycle_aquafunded.py already had this
+            # guard (a single bad cycle -- transient network blip, data
+            # provider hiccup -- must not kill the whole job); this
+            # script didn't, an inconsistency found while auditing for
+            # "the bot never just stops working." Without it, one
+            # uncaught exception here fails the whole job, which means
+            # the self-chain in trading-cycle.yml's `if: success()` step
+            # never fires and this account falls back to the slower
+            # 5-minute cron until a cycle happens to succeed clean.
+            print(f"cycle failed (will retry next check): {exc}")
         checks += 1
         elapsed_this_check = time.monotonic() - loop_t0
         sleep_for = max(0.0, CHECK_INTERVAL_SECONDS - elapsed_this_check)

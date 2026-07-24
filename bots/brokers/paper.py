@@ -12,7 +12,7 @@ import os
 from typing import Dict, Optional
 
 from bots.brokers.base import Broker, OrderResult
-from bots.paths import data_path
+from bots.paths import data_path, safe_json_load
 
 
 class PaperBroker(Broker):
@@ -46,8 +46,16 @@ class PaperBroker(Broker):
     def _load(self) -> None:
         if not os.path.exists(self.state_path):
             return
-        with open(self.state_path, "r", encoding="utf-8") as fh:
-            state = json.load(fh)
+        # session 51: self-heals on a corrupted state file instead of
+        # crashing every future cycle (same fix as trade_journal.json got
+        # in session 49). Last resort only, and not silent: a corrupt
+        # file gets backed up with a timestamp before falling back to the
+        # constructor's starting_cash/empty positions -- losing the
+        # cached paper balance is a real cost, but it's strictly better
+        # than a permanently dead paper account, and the real funded
+        # account never goes through this path (TradeLockerBroker reads
+        # cash/positions live from the broker, not a local cache).
+        state = safe_json_load(self.state_path)
         self._cash = state.get("cash", self._cash)
         self._positions = state.get("positions", {})
 

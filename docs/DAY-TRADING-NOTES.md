@@ -3599,3 +3599,64 @@ before push. Both workflow branches (trading branch + default branch
 mirror) updated identically.
 
 Full suite run before push.
+
+## Session 51 (robustness audit: "make sure it just works, no matter what")
+
+User gave an open-ended mandate to keep improving the desk while away
+for the week, explicitly emphasizing reliability: "even if you run out
+of token usage... the bot is still live and has no glitches." Given
+this is real trading logic on a real account, chose to audit for and
+fix concrete, verifiable robustness gaps rather than pile on more
+entry filters that could tighten the desk into not trading at all
+(CLAUDE.md's own standing guidance: widen the watchlist over tightening
+a filter).
+
+**Corrupted-state-file crash generalized and fixed everywhere it still
+existed.** Session 49 fixed this for `trade_journal.json` only. Audit
+found the exact same unprotected `json.load()` pattern -- a partial
+write from a killed process, a stray git conflict marker, or a bad
+rebase would crash desk construction on EVERY future 5-minute cycle,
+forever -- still present in SIX other places:
+
+- `DrawdownGuard`, `MaxDrawdownGuard`, `ChallengeTargetGuard` (`bots/
+  risk.py`) -- the daily-loss and max-drawdown CIRCUIT BREAKERS
+  themselves. This was the most important gap: a corrupted state file
+  here didn't just stop new trades, it would have crashed the whole
+  cycle before the guard could even run, which is the one place a
+  silent failure is least acceptable.
+- `QTraderAgent.load()` (`bots/learning/agent.py`) -- the Q-table.
+- `PaperBroker._load()` (`bots/brokers/paper.py`) -- the paper
+  account's cash/positions cache (the real AquaFunded account never
+  goes through this path; TradeLocker reads balance live from the
+  broker, not a local cache).
+- `copytrader.manual._load()` -- the mirror-signal queue.
+
+Added `bots.paths.safe_json_load()`: missing file -> default (unchanged
+behavior), corrupt file -> backed up with a timestamp (evidence
+preserved, same as the session-49 journal fix) and a safe default
+returned instead of raising. All six call sites now route through it.
+`newsguard.py`'s calendar cache already had its own broad
+except-and-fall-back wrapper -- confirmed already safe, left alone.
+
+11 new tests (`safe_json_load` directly, plus one per class/loader
+proving a corrupt file no longer crashes it).
+
+**Paper account's cycle script brought up to the same resilience the
+AquaFunded script already had.** `run_one_cycle_aquafunded.py` already
+wraps each `run_one_cycle()` call in try/except so one transient error
+(network blip, data hiccup) can't kill the whole job -- found while
+auditing that `run_one_cycle.py` (the paper account's script) was
+missing the identical guard. Without it, one uncaught exception mid-
+loop fails the whole GitHub Actions job, which means
+`trading-cycle.yml`'s `if: success()` chain-trigger never fires and the
+account falls back to the slower 5-minute cron until a cycle happens to
+succeed clean. Same fix, same reasoning, now both scripts match.
+
+**Audited and left alone (already correct):** `research_candidates()`'s
+copy-trading feed call, the per-symbol history fetch in the ranking
+loop, and every price-action/pattern detection function already wrap
+their own body in try/except returning a safe default -- confirmed
+already resilient on inspection, no changes made. Not touching working,
+already-defensive code just to have touched something.
+
+Full suite run clean before push (197 -> 208 tests).

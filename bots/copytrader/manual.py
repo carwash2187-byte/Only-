@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from bots.paths import data_path
+from bots.paths import data_path, safe_json_load
 
 
 def default_signals_path() -> str:
@@ -42,10 +42,9 @@ class ManualSignal:
 
 
 def _load(path: str) -> List[ManualSignal]:
-    if not os.path.exists(path):
-        return []
-    with open(path, "r", encoding="utf-8") as fh:
-        return [ManualSignal(**item) for item in json.load(fh)]
+    # session 51: self-heals on a corrupted file instead of crashing
+    # every future cycle (same fix as trade_journal.json, session 49).
+    return [ManualSignal(**item) for item in safe_json_load(path, default=[])]
 
 
 def _save(signals: List[ManualSignal], path: str) -> None:

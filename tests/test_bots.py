@@ -63,6 +63,96 @@ def test_journal_self_heals_a_corrupt_state_file(tmp_path):
     assert reloaded.open_position_for("EURUSD") is not None
 
 
+# ---------------------------------------------------------------------------
+# Session 51: the journal's corruption self-heal (session 49) generalized to
+# every other state file with the same unprotected json.load() pattern --
+# risk.py's three guards, the Q-table, the paper broker's account file, and
+# manual mirror signals. A corrupted file must never crash the desk on every
+# future 5-minute cycle forever; it must back up the evidence and continue.
+# ---------------------------------------------------------------------------
+
+def _write_garbage(path):
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write('{"not": valid json <<<<<< HEAD garbage')
+
+
+def test_safe_json_load_self_heals_and_missing_file_returns_default(tmp_path):
+    import glob
+    from bots.paths import safe_json_load
+
+    missing = str(tmp_path / "nope.json")
+    assert safe_json_load(missing) == {}
+    assert safe_json_load(missing, default=[]) == []
+
+    path = str(tmp_path / "state.json")
+    _write_garbage(path)
+    result = safe_json_load(path, default={"fallback": True})
+    assert result == {"fallback": True}
+    backups = glob.glob(path + ".corrupt-*.bak")
+    assert len(backups) == 1
+    assert "garbage" in open(backups[0]).read()
+
+    # a genuinely valid file loads normally, untouched
+    good_path = str(tmp_path / "good.json")
+    with open(good_path, "w", encoding="utf-8") as fh:
+        fh.write('{"real": "data"}')
+    assert safe_json_load(good_path) == {"real": "data"}
+    assert glob.glob(good_path + ".corrupt-*.bak") == []
+
+
+def test_drawdown_guard_self_heals_a_corrupt_state_file(tmp_path):
+    path = str(tmp_path / "day_state.json")
+    _write_garbage(path)
+    guard = DrawdownGuard(max_daily_loss_pct=0.05, state_path=path)
+    halted, msg = guard.check(10_000.0)  # must not raise
+    assert halted is False
+    assert "day start equity recorded" in msg
+
+
+def test_max_drawdown_guard_self_heals_a_corrupt_state_file(tmp_path):
+    from bots.risk import MaxDrawdownGuard
+
+    path = str(tmp_path / "max_dd.json")
+    _write_garbage(path)
+    guard = MaxDrawdownGuard(max_total_drawdown_pct=0.05, state_path=path)
+    halted, _ = guard.check(10_000.0)  # must not raise
+    assert halted is False
+
+
+def test_challenge_target_guard_self_heals_a_corrupt_state_file(tmp_path):
+    from bots.risk import ChallengeTargetGuard
+
+    path = str(tmp_path / "challenge.json")
+    _write_garbage(path)
+    guard = ChallengeTargetGuard(target_pct=0.10, state_path=path)
+    halted, _ = guard.check(10_000.0)  # must not raise
+    assert halted is False
+
+
+def test_qtrader_agent_self_heals_a_corrupt_qtable(tmp_path):
+    path = str(tmp_path / "q.json")
+    _write_garbage(path)
+    agent = QTraderAgent(model_path=path)
+    loaded = agent.load()  # must not raise
+    assert loaded is True  # the file existed, even though it was corrupt
+    assert agent.q == {}   # self-healed to a fresh table, not crashed
+
+
+def test_paper_broker_self_heals_a_corrupt_state_file(tmp_path):
+    path = str(tmp_path / "acct.json")
+    _write_garbage(path)
+    broker = PaperBroker(starting_cash=5_000.0, state_path=path)  # must not raise
+    assert broker.cash() == 5_000.0  # fell back to the constructor default
+    assert broker.positions() == {}
+
+
+def test_manual_signals_self_heal_a_corrupt_file(tmp_path):
+    path = str(tmp_path / "manual_signals.json")
+    _write_garbage(path)
+    signals = manual._load(path)  # must not raise
+    assert signals == []
+
+
 def test_close_trade_logs_losses_to_mistakes_file(journal, tmp_path, monkeypatch):
     monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))
     log_path = tmp_path / "mistakes_log.md"

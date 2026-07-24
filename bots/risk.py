@@ -13,7 +13,7 @@ import json
 import os
 from typing import Optional, Tuple
 
-from bots.paths import data_path
+from bots.paths import data_path, safe_json_load
 
 
 class DrawdownGuard:
@@ -26,10 +26,7 @@ class DrawdownGuard:
         self.state_path = state_path or data_path("day_state.json")
 
     def _load(self) -> dict:
-        if not os.path.exists(self.state_path):
-            return {}
-        with open(self.state_path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+        return safe_json_load(self.state_path)
 
     def _save(self, state: dict) -> None:
         os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)
@@ -112,10 +109,7 @@ class MaxDrawdownGuard:
         self.state_path = state_path or data_path("max_drawdown_state.json")
 
     def _load(self) -> dict:
-        if not os.path.exists(self.state_path):
-            return {}
-        with open(self.state_path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+        return safe_json_load(self.state_path)
 
     def _save(self, state: dict) -> None:
         os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)
@@ -190,10 +184,7 @@ class ChallengeTargetGuard:
         self.state_path = state_path or data_path("challenge_target_state.json")
 
     def _load(self) -> dict:
-        if not os.path.exists(self.state_path):
-            return {}
-        with open(self.state_path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+        return safe_json_load(self.state_path)
 
     def _save(self, state: dict) -> None:
         os.makedirs(os.path.dirname(self.state_path) or ".", exist_ok=True)

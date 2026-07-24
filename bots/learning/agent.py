@@ -21,7 +21,7 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from bots.paths import data_path
+from bots.paths import data_path, safe_json_load
 
 ACTIONS = ("hold", "buy", "sell")
 
@@ -213,8 +213,11 @@ class QTraderAgent:
         path = path or self.model_path
         if not os.path.exists(path):
             return False
-        with open(path, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
+        # session 51: a corrupted qtable.json used to crash every future
+        # cycle forever (same failure mode trade_journal.json had before
+        # session 49's fix) -- self-heals to a fresh table instead, same
+        # backed-up-and-continue behavior as the journal.
+        data = safe_json_load(path)
         self.q = data.get("q", {})
         self.trained_episodes = data.get("episodes", 0)
         return True
