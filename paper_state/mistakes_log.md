@@ -38,3 +38,4 @@
 - 2026-07-23T19:15 **X** long -30.00 (-30.00%) setup=`s` -- 
 - 2026-07-23T19:15 **X** long -20.00 (-20.00%) setup=`s` -- 
 - 2026-07-23T19:15 **OTHER** long -50.00 (-5.00%) setup=`daytrade` -- 
+- 2026-07-24T01:55 **AUDJPY** long -0.65 (-0.01%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
