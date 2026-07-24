@@ -3736,3 +3736,53 @@ standing note at the top of this file on why both must exist and stay
 identical) updated in sync so the `schedule:` trigger keeps firing.
 
 Full suite run clean before push (197 -> 208 tests).
+
+## Session 53 (real bug: AquaFunded/TradeLocker journal pnl understated by up to 100,000x)
+
+User asked "why don't I see my balance going up" after several real
+AquaFunded closes. Checked the actual account state, not just "is the
+process running": `funded_state_aquafunded/trade_journal.json` showed
+closed forex trades logging pnl like `0.0004` and `-0.00002` -- not
+zero, but not remotely dollar-sized either. Real evidence the account
+*was* moving: `mistakes_log.md` recorded several real "daily profit
+target hit (+5.1%)...(+6.1%)" lock-ins on 7/23, and
+`max_drawdown_state_tradelocker.json` showed peak_equity $2,688.68 vs
+day-start $2,646.32 (+1.6%) -- so the account was fine, the journal's
+own pnl field was lying.
+
+Root cause: `bots/brokers/tradelocker_broker.py`'s `_order()` and
+`buy_bracket()` convert the desk's raw-unit position size into lots for
+the TradeLocker API call (`_units_to_lots`, forex = 100,000 units/lot)
+-- correct, that's the unit the broker needs. But both then returned
+that **lot count** as `OrderResult.quantity`. `organization.py`'s entry
+path (`result.quantity or quantity`) stores whatever comes back there
+as the journal's `record.quantity`, and `journal.py`'s
+`pnl = direction * (exit_price - entry_price) * quantity` uses it
+directly. For forex that's off by the 100,000x lot factor -- a real $50
+gain logged as $0.0005. Every AquaFunded forex trade's individual pnl
+was wrong (though the real broker-side equity was never affected --
+TradeLocker computes its own fills server-side regardless of what our
+journal logs).
+
+Fix: `_order()` and `buy_bracket()` now report back the original
+raw-unit `quantity` the desk passed in, not the lot-converted value --
+the API call itself is unchanged (still sends `lots` to
+`create_order`), only what gets reported back for journal accounting
+changed. Zero risk to real order sizes on the live account. Added
+`test_tradelocker_order_result_reports_raw_units_not_lots` asserting
+`OrderResult.quantity == 250_000` (not `2.5` lots) while the raw API
+call still receives lots -- this test would have caught the bug.
+
+Scope note: gold/silver/indices on TradeLocker still pass `quantity`
+straight through as a literal lot count in `_units_to_lots` (see that
+function's docstring -- "contract sizes vary by broker, so the desk
+quantity is passed through as lots directly... sanity-check position
+sizes for those"). That's a pre-existing, already-documented limitation
+of position *sizing* for non-forex instruments, separate from the pnl
+*reporting* bug fixed here, and I did not touch it -- fixing it for real
+would need TradeLocker's actual per-instrument contract-size data
+(e.g. `contractSize` from their instrument metadata), which this
+connector doesn't currently fetch, and guessing at a multiplier on a
+live funded account is worse than leaving the documented caveat as-is.
+
+Full suite run clean before push.

@@ -266,9 +266,19 @@ class TradeLockerBroker(Broker):
                 self._instrument_id(symbol), quantity=lots, side=side, type_="market"
             )
             if not order_id:
-                return OrderResult(False, _clean_symbol(symbol), side, lots,
+                return OrderResult(False, _clean_symbol(symbol), side, quantity,
                                    error="order rejected (no order id returned)")
-            return OrderResult(True, _clean_symbol(symbol), side, lots,
+            # BUG FOUND AND FIXED (session 53): this used to report back
+            # `lots` (the TradeLocker API's own unit, e.g. 0.01) instead of
+            # `quantity` (the desk's raw-unit sizing, e.g. 5000 EUR). The
+            # journal stores whatever comes back here as record.quantity and
+            # computes pnl = price_diff * quantity -- for forex, 1 lot =
+            # 100,000 units, so every closed trade's logged pnl was
+            # understated by a factor of 100,000 (a real $50 gain logged as
+            # $0.0005). The API call above still sends `lots` -- only what
+            # gets reported back for journal accounting changes here, so
+            # real order sizes on the live account are unaffected.
+            return OrderResult(True, _clean_symbol(symbol), side, quantity,
                                order_id=str(order_id))
         except Exception as exc:
             return OrderResult(False, _clean_symbol(symbol), side, quantity, error=str(exc))
@@ -301,10 +311,12 @@ class TradeLockerBroker(Broker):
             )
             if not order_id:
                 return OrderResult(
-                    False, _clean_symbol(symbol), "buy", lots,
+                    False, _clean_symbol(symbol), "buy", quantity,
                     error="bracket order rejected -- refusing to enter unprotected",
                 )
-            return OrderResult(True, _clean_symbol(symbol), "buy", lots,
+            # see the matching comment in _order() above -- report the
+            # desk's raw-unit quantity for journal accounting, not lots.
+            return OrderResult(True, _clean_symbol(symbol), "buy", quantity,
                                order_id=str(order_id))
         except Exception as exc:
             return OrderResult(False, _clean_symbol(symbol), "buy", quantity,

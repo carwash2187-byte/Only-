@@ -2889,6 +2889,26 @@ def test_tradelocker_bracket_attaches_stops_and_never_enters_unprotected(tl_brok
     assert len(tl_broker.api.orders) == before
 
 
+def test_tradelocker_order_result_reports_raw_units_not_lots(tl_broker):
+    # BUG FOUND AND FIXED (session 53): buy_bracket/buy used to report back
+    # `lots` (the TradeLocker API's own unit, e.g. 1.0 lot) as
+    # OrderResult.quantity. The desk's journal stores that value directly
+    # as record.quantity and computes pnl = price_diff * quantity -- for
+    # forex, 1 lot = 100,000 units, so every closed trade's logged pnl was
+    # understated by a factor of 100,000 (a real $50 gain logged as
+    # $0.0005). The API call itself still sends `lots` (order["quantity"]
+    # below stays lot-denominated); only what's reported back for journal
+    # accounting must match the desk's raw-unit sizing.
+    result = tl_broker.buy_bracket("EURUSD", 250_000, 0.005, 0.01)
+    assert result.ok
+    assert result.quantity == 250_000  # raw units, not 2.5 lots
+    assert tl_broker.api.orders[-1]["quantity"] == pytest.approx(2.5)  # API still gets lots
+
+    result = tl_broker.buy("EURUSD", 250_000)
+    assert result.ok
+    assert result.quantity == 250_000
+
+
 def test_tradelocker_sell_closes_position_instead_of_opening_short(tl_broker):
     # hedging-mode accounts: a naked sell would OPEN a short next to the
     # long; exits must go through the position endpoint instead
