@@ -3491,3 +3491,41 @@ time:**
   evidence (session 44).
 
 All new tests pass; full suite run before push.
+
+### Session 49, fourth pass: dollar floor + self-heal stacking guard
+
+User stepping away for a week; asked for a $1 minimum lot value and a
+self-healing mechanism so a repeat of the 103-position incident recovers
+on its own.
+
+- `DeskConfig.min_position_value_usd` (=1.0 on aquafunded): floors the
+  NOTIONAL value of a new entry, applied before the existing hard caps so
+  it can only lift a genuinely tiny calculated size, never push past
+  max_position_pct/buying_power, never shrink a legitimately larger size,
+  never undo a safety reduction. The 0.01-lot broker floor is unchanged
+  and separate (confirmed hardcoded in the tradelocker library); this is
+  a dollar-value floor on top, matching the user's "60 cents to a dollar"
+  ask. In practice risk_per_trade_pct=0.0025 already sizes every real
+  trade above $1 at this account's equity, so this only guards the
+  degenerate near-zero case.
+- Self-heal stacking guard: `Broker.position_lot_count(symbol)` (base
+  returns 0 = "can't tell, skip"; TradeLocker counts distinct open rows
+  via get_all_positions). `DeskConfig.max_position_lots_per_symbol` (=3
+  on aquafunded): at the very TOP of run_once, before anything else
+  touches positions, if the broker reports more distinct rows for a
+  symbol than the cap, the desk flattens that whole symbol and logs a
+  self-heal mistake, then re-reads positions. A healthy desk holds
+  exactly 1 per symbol, so 3 catches genuine stacking (the 103-position
+  failure mode) with zero risk of touching a healthy account. This is
+  defense-in-depth: the root causes (close_quantity=0, naked-order
+  fallback) were already fixed directly; this is the net under them so an
+  unknown future bug in the same family self-recovers with no human and
+  no Claude tokens.
+
+Honesty note on "self-healing": this recovers from a specific, known
+BROKEN-STATE pattern (stacked positions). It is NOT, and cannot honestly
+be sold as, code that fixes its own logic bugs -- no such thing exists.
+The genuine always-on self-improvement remains the nightly Q-table
+retrain + journal-driven probation/cooldowns, all token-free, unchanged.
+
+Full suite run before push.

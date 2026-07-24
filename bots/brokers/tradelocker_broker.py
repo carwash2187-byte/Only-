@@ -196,6 +196,24 @@ class TradeLockerBroker(Broker):
             result[symbol] = result.get(symbol, 0.0) + qty
         return result
 
+    def position_lot_count(self, symbol: str) -> int:
+        """Number of DISTINCT open position rows the broker holds for this
+        symbol (session 49 self-heal guard). positions() above nets these
+        into a single quantity; this exposes the raw row count so the desk
+        can detect the 103-stacked-positions failure mode (session 48/49
+        incident) -- an abnormal count means something upstream mis-fired
+        and the desk should flatten and recover, not keep managing a
+        broken state. Any broker that doesn't implement this returns 0 via
+        the base class, which the guard reads as 'can't tell -> skip'."""
+        try:
+            iid = self._instrument_id(symbol)
+        except Exception:
+            return 0
+        df = self.api.get_all_positions()
+        if df is None or len(df) == 0:
+            return 0
+        return int((df["tradableInstrumentId"] == iid).sum())
+
     def position_entry_price(self, symbol: str) -> Optional[float]:
         """Broker-reported average entry price for an open position, or None.
 

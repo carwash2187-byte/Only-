@@ -2660,6 +2660,57 @@ def test_tradelocker_sell_reports_failure_instead_of_opening_a_naked_position(tl
     assert tl_broker.api.orders == []
 
 
+def test_tradelocker_position_lot_count_counts_distinct_rows(tl_broker):
+    # self-heal guard's detector: counts DISTINCT open rows per symbol,
+    # not the netted quantity positions() returns.
+    tl_broker.api.positions_rows = [
+        [1, 101, "sell", 0.1, 2390.0], [2, 101, "sell", 0.1, 2391.0],
+        [3, 101, "sell", 0.1, 2392.0], [4, 1, "buy", 0.5, 1.10],
+    ]
+    assert tl_broker.position_lot_count("GOLD") == 3   # three rows on iid 101
+    assert tl_broker.position_lot_count("EURUSD") == 1
+    tl_broker.api.positions_rows = []
+    assert tl_broker.position_lot_count("GOLD") == 0
+
+
+def test_self_heal_flattens_a_stacked_symbol(tl_broker, tmp_path, journal, price_df):
+    # Defense-in-depth for the 103-position incident: 5 stacked GOLD rows
+    # (> the cap of 3) must trigger the self-heal guard -- flatten the
+    # whole symbol via close_position and log it -- instead of continuing
+    # to manage a broken state.
+    tl_broker.api.positions_rows = [
+        [1, 101, "sell", 0.1, 2390.0], [2, 101, "sell", 0.1, 2391.0],
+        [3, 101, "sell", 0.1, 2392.0], [4, 101, "sell", 0.1, 2393.0],
+        [5, 101, "sell", 0.1, 2394.0],
+    ]
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       max_position_lots_per_symbol=3))
+    report = desk.run_once(symbols=[])
+    assert any("self-heal" in n and "stacked" in n for n in report.notes), report.describe()
+    # it actually closed positions via the position endpoint, not a naked order
+    assert tl_broker.api.closed, "self-heal did not close anything"
+    assert tl_broker.api.orders == []
+
+
+def test_self_heal_leaves_a_healthy_single_position_alone(tl_broker, tmp_path, journal, price_df):
+    # A normal account holds exactly one position per symbol -- the guard
+    # must never fire on it (no false flattening of a healthy trade).
+    tl_broker.api.positions_rows = [[7, 101, "buy", 0.5, 2390.0]]
+    desk = make_desk(tmp_path, tl_broker, journal, price_df,
+                     config=DeskConfig(news_blackout=False, min_copy_score=99,
+                                       max_position_lots_per_symbol=3))
+    report = desk.run_once(symbols=[])
+    assert not any("self-heal" in n for n in report.notes), report.describe()
+
+
+def test_self_heal_off_by_default_and_on_for_funded():
+    from bots.organization import aquafunded_instant_config, funded_account_config
+    assert aquafunded_instant_config().max_position_lots_per_symbol == 3
+    assert funded_account_config().max_position_lots_per_symbol == 0
+    assert DeskConfig().max_position_lots_per_symbol == 0
+
+
 def test_tradelocker_weekend_crypto_round_trips_to_journal_name(tl_broker):
     # the weekend fallback journals "BTC-USD" (Yahoo-style); TradeLocker
     # calls it BTCUSD. Both directions must agree or the reconciler

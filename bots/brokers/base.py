@@ -82,3 +82,13 @@ class Broker(ABC):
         correct for brokers/venues that fill immediately (paper, crypto).
         """
         return False
+
+    def position_lot_count(self, symbol: str) -> int:
+        """Number of distinct open position rows for this symbol. Default 0
+        means 'this broker can't report it' -- the desk's self-heal
+        stacking guard (session 49) reads 0 as 'skip, can't tell' and does
+        nothing, so a broker without this method is never affected.
+        Brokers that hold un-netted individual positions (TradeLocker)
+        override this so the desk can detect and recover from the
+        103-stacked-positions failure mode."""
+        return 0

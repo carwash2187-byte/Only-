@@ -50,6 +50,7 @@ class DeskConfig:
     news_currencies: tuple = ("USD",)
     news_fail_closed: bool = False  # funded safety: if the news feed can't be verified fresh, block new entries instead of trading blind (0 = trade normally when the feed is down)
     max_per_correlation_group: int = 2  # cap positions per correlated cluster
+    max_position_lots_per_symbol: int = 0  # 0 = off; self-heal guard (session 49): if the broker reports MORE than this many distinct open position rows for a single symbol, something upstream mis-fired (the 103-stacked-positions failure mode) -- flatten that symbol entirely and log it, instead of continuing to manage a broken state. A normal desk holds exactly 1 position per symbol, so a small number here (e.g. 3) catches genuine stacking without ever touching a healthy account
     breakeven_at_1r: bool = True  # once +1R, stop moves to entry (risk-free trade)
     max_consecutive_losses: int = 3  # "loss-streak rule": stop entering after N straight losses today (0 = off)
     max_consecutive_wins: int = 0  # "win-streak rule" (session 49, user directive: "if I win 2 back to back, you're done trading"): stop entering after N straight wins today, quit while ahead the same way the daily profit target does but per-streak instead of per-equity (0 = off)
@@ -393,6 +394,13 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         # degenerate near-zero size, it does not raise real trades above
         # what the risk math already calculates.
         min_position_value_usd=1.0,
+        # Self-heal stacking guard (session 49, user directive: "if it bugs
+        # out like last time, it fixes itself"). A healthy desk holds
+        # exactly 1 position per symbol; >3 distinct broker rows on one
+        # symbol means a stacking bug (the 103-position incident) -- flatten
+        # and recover automatically, no human. Root causes were already
+        # fixed; this is the net under them.
+        max_position_lots_per_symbol=3,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -1259,6 +1267,58 @@ class TradingDesk:
                     "cycle (US pattern-day-trading rule)."
                 )
                 return report
+
+        # 0-heal. Self-heal stacking guard (session 49): BEFORE anything
+        #    else touches positions, detect the 103-stacked-positions
+        #    failure mode (session 48/49 incident -- a close bug let one
+        #    stuck trade balloon into 103 separate broker positions). If
+        #    the broker reports an abnormal number of distinct open rows
+        #    for any symbol, flatten that symbol entirely and log it as a
+        #    mistake, rather than continuing to manage a broken state. The
+        #    root causes were fixed directly (close_quantity, naked-order
+        #    fallback), but this is the defense-in-depth net so an unknown
+        #    future bug in the same family self-recovers with no human.
+        if cfg.max_position_lots_per_symbol > 0:
+            counter = getattr(self.broker, "position_lot_count", None)
+            if callable(counter):
+                for symbol in list(positions.keys()):
+                    try:
+                        n_lots = counter(symbol)
+                    except Exception:
+                        continue
+                    if n_lots > cfg.max_position_lots_per_symbol:
+                        report.notes.append(
+                            f"[self-heal] {symbol}: {n_lots} stacked broker positions "
+                            f"(cap {cfg.max_position_lots_per_symbol}) -- flattening the "
+                            "whole symbol to recover from a stacking bug"
+                        )
+                        try:
+                            heal = self.flatten_all(
+                                reason=f"self-heal: {n_lots} stacked positions on {symbol} "
+                                       "-- unwinding a broken state",
+                                symbols={symbol},
+                            )
+                            report.actions.extend(heal.actions)
+                        except Exception as exc:
+                            report.notes.append(f"[self-heal] flatten failed: {exc}")
+                        try:
+                            from bots.paths import data_path
+                            from datetime import datetime, timezone
+                            stamp = datetime.now(timezone.utc).isoformat()[:16]
+                            with open(data_path("mistakes_log.md"), "a", encoding="utf-8") as fh:
+                                fh.write(
+                                    f"- {stamp} **{symbol}** SELF-HEAL: {n_lots} stacked "
+                                    f"broker positions (cap {cfg.max_position_lots_per_symbol}) "
+                                    "-- flattened to recover from a stacking bug\n"
+                                )
+                        except Exception:
+                            pass
+                # positions changed underneath us -- re-read before the rest
+                # of the cycle operates on a now-stale snapshot
+                try:
+                    positions = self.broker.positions()
+                except Exception:
+                    pass
 
         # 0. Reconcile: journal entries whose position vanished at the broker
         #    (an exchange-side bracket stop/target filled between cycles, or a
