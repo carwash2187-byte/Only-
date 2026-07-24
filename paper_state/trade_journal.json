@@ -1753,7 +1753,7 @@
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding",
       "tags": [
         "mfe:0.000355",
-        "mae:-0.005952"
+        "mae:-0.006294"
       ],
       "stop_pct": null
     },
@@ -1771,7 +1771,7 @@
       "pnl_pct": null,
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
       "tags": [
-        "mfe:-0.001413",
+        "mfe:-0.001239",
         "mae:-0.006568"
       ],
       "stop_pct": null
