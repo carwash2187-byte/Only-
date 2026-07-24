@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__*",
+      "mcp__github__*",
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
+    ]
+  }
+}
