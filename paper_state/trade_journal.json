@@ -1772,7 +1772,7 @@
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
       "tags": [
         "mfe:-0.003879",
-        "mae:-0.005415"
+        "mae:-0.006568"
       ],
       "stop_pct": null
     },
@@ -1791,7 +1791,7 @@
       "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding",
       "tags": [
         "mfe:0.000936",
-        "mae:-0.000001"
+        "mae:-0.000385"
       ],
       "stop_pct": null
     },
@@ -1809,7 +1809,7 @@
       "pnl_pct": null,
       "notes": "AXP (score 2.0): Berkshire Hathaway (Warren Buffett) top-1 holding",
       "tags": [
-        "mfe:-0.000687",
+        "mfe:-0.000318",
         "mae:-0.001950"
       ],
       "stop_pct": null
