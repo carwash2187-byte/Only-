@@ -310,27 +310,31 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
     that is an ASSUMPTION, not a confirmed fact. Verify directly before
     this account is ever live over a weekend.
 
-    risk_per_trade_pct=0.0025 (session 48, evidence-law change): the
-    funded default of 1.5%/trade means 4 consecutive full stop-outs
-    breach this account's 6% max drawdown -- and the live paper journal's
-    last 100 closed trades measured a 31% win rate (organic desk trading
-    was ~flat once a one-off July-14 leverage-test burst is excluded), a
-    rate at which 4+ losing streaks are routine. The risk-sweep Monte
-    Carlo on real bootstrapped data agreed from the other side: 95% of
-    simulated months busted at 0.5%/trade risk and 100% at 0.75% under
-    these exact 3%/6% rules. Survival at a weak edge is bought with
-    smaller per-trade risk, full stop: at 0.25% it takes 24 consecutive
-    full stop-outs (with the daily 3% halt tripping every 12) to lose the
-    account, which buys the nightly self-train weeks of runway to improve
-    the edge instead of days. Raising this back up requires new journal
-    evidence of a durable edge, per CLAUDE.md's evidence law.
+    risk_per_trade_pct=0.005 (session 50, EXPLICIT USER OVERRIDE of the
+    session 48 evidence-law sizing, not an evidence-backed increase --
+    flagging that distinction honestly here since CLAUDE.md's evidence law
+    exists precisely to make an increase like this deliberate, not
+    accidental). The session-48 math this overrides, for the record: the
+    live paper journal's last 100 closed trades measured a 31% win rate,
+    and a risk-sweep Monte Carlo on real bootstrapped data found 95% of
+    simulated months busted at 0.5%/trade under these exact 3%/6%
+    AquaFunded rules (100% busted at 0.75%). That evidence was shown to
+    the user directly, including the 24-consecutive-stop-outs-to-bust
+    figure at the old 0.25% setting, before this change. The user's own
+    words: "I don't want you to not lose that count at all... as long as
+    it doesn't lose it in a week... I'm not asking you to not lose it at
+    all, you're gonna lose it, and that's fine" -- an explicit, informed
+    choice to trade survival-odds for bigger per-trade size, not a claim
+    that the risk stopped existing. If this account busts within roughly
+    a month, that is the expected/warned outcome of this exact setting,
+    not a bug to silently retune back down without being asked.
     """
     base = dict(
         max_daily_loss_pct=0.03,
         max_total_drawdown_pct=0.06,
         challenge_target_pct=0.0,  # Instant: no challenge phase, no target to lock
         news_blackout=True,  # risk discipline, not required by this firm (news trading IS permitted)
-        risk_per_trade_pct=0.0025,  # see docstring: survival-first sizing, evidence-law change
+        risk_per_trade_pct=0.005,  # session 50: explicit user override, see docstring -- was 0.0025
         # Anti-overtrade cap (session 48, explicit user directive): 4 entries
         # per day, down from the funded default of 10. The user's own read of
         # the day the desk did well was "one or two GOOD trades beat thirty
