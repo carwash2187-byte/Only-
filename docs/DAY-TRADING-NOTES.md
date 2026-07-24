@@ -3659,4 +3659,80 @@ their own body in try/except returning a safe default -- confirmed
 already resilient on inspection, no changes made. Not touching working,
 already-defensive code just to have touched something.
 
+## Session 52 (wired the dormant synthetic-scenario simulator into the nightly retrain)
+
+User asked, in effect, for a faster path to a higher win rate: run a
+"speeded-up simulator" overnight so the Q-table gets more practice reps
+than waiting on live market ticks alone provides. Investigated what
+already existed before building anything new.
+
+**Found: the exact thing requested already existed, dead.**
+`bots/learning/scenarios.py` (built as an earlier task, "300-scenario
+synthetic practice harness") manufactures 13 labelled market regimes
+(uptrend, downtrend, choppy range, flash crash, news-spike whipsaw, gap
+up/down, V-reversal, blow-off top, breakout, trend pullback, high/low
+vol) and drills the Q-learning agent on hundreds of them per run via
+`python -m bots practice --scenarios N --save`. It was fully built,
+tested, and callable by hand -- but never wired into any cron/workflow.
+The nightly self-train (`trading-selftrain.yml` / `scripts/watchdog.sh`)
+only ever ran `stress_test.py --practice`, which replays *real* recent
+history (rough + trending days), never the synthetic harness. So the
+"fast-forward simulator" the user was picturing had been sitting in the
+repo unused this whole time.
+
+**Fix: added a second practice step to both nightly self-train jobs**
+(paper account and the real AquaFunded account, same pattern as
+session 50's dual-job setup) running
+`python -m bots practice --scenarios 2000 --save` right after the
+existing real-window practice, not instead of it. Measured locally:
+2000 scenarios ≈ 5 minutes wall-clock, comfortably inside the workflow's
+180-minute timeout. `--save` hardens the live Q-table in place; the
+function's own docstring guarantee holds -- it never touches the trade
+journal or the paper/funded account balance, so this can't corrupt the
+real track record no matter how it trains.
+
+**Investigated and explicitly did NOT build: a "more realistic" cost
+model for the synthetic harness.** The user's ask included making
+synthetic training reflect "real slippage, real spread, real correlated
+moves." Checked `bots/learning/agent.py`'s training reward function
+first: every synthetic (and real-window) trade already pays
+`transaction_cost_pct=0.001` on both entry and exit (0.2% round trip).
+Compared against `bots/spreads.py`'s actual per-symbol live costs (the
+ones the paper broker itself charges) -- forex majors ~0.01-0.02%,
+indices ~0.002-0.01%, crypto ~0.05% -- the existing flat training cost
+is already *higher* than every real instrument's true spread. So
+synthetic training was already harder on the agent than live trading
+will be, not easier; there was nothing to fix there, and adding a
+"realer" cost model would have made training strictly more
+optimistic, the wrong direction. Left it alone.
+
+**Explicitly not attempted: per-symbol correlated multi-scenario
+generation.** The synthetic harness generates one independent price
+path per session with no symbol identity, so it cannot currently
+reproduce the live desk's correlated-basket moves (EUR crosses moving
+together, indices moving together) the way real multi-symbol replay
+in `stress_test.py` does. This is a real gap, not a solved one --
+flagged here rather than quietly built under time pressure, since a
+half-modeled correlation structure would be worse than none (it would
+look more realistic than it is).
+
+**Honesty check, with real numbers, against the "two nights to 60%"
+framing the user proposed:** ran `python -m bots practice --scenarios
+20 --seed 1` locally as a sanity check before wiring anything in. Result:
+27% overall win rate across those 20 sessions, wildly uneven by regime
+(0% on flash crashes and downtrends, 79% on blow-off tops in a separate
+200-scenario run). That range is the honest picture -- synthetic reps
+sharpen how the policy handles specific regime *types*, they do not
+manufacture a real edge number on a timeline. Declined to promise a
+win-rate-by-date figure for the same reason session 51's "force a trade
+to prove it works" request was declined: a real number under real
+market conditions is the only number that means anything, and this
+change makes more of those real numbers happen per week, not per
+night.
+
+Both copies of `trading-selftrain.yml` (trading branch +
+`claude/smillin-repo-install-3jsep0` default-branch mirror, per the
+standing note at the top of this file on why both must exist and stay
+identical) updated in sync so the `schedule:` trigger keeps firing.
+
 Full suite run clean before push (197 -> 208 tests).

@@ -34,6 +34,22 @@ name: Trading desk nightly self-train
 # self-train, its own concurrency group, its own state dir) so it can't
 # block or be blocked by the paper run, and never touches a broker (Q-
 # table training is pure historical-data replay, no TradeLocker needed).
+#
+# SESSION 52: added a second practice pass on the synthetic 13-regime
+# scenario harness (bots/learning/scenarios.py), 2000 sessions/night.
+# This module existed since session "13" (see task history) but was
+# never wired into anything automated -- pure dead code, despite being
+# exactly the fast-forward simulator later requested ("run a month of
+# trading in a night"). It manufactures regimes real ~60-day intraday
+# history barely shows (flash crashes, news-spike whipsaws, blow-off
+# tops) and drills the agent on them in ~5 min/2000 sessions (measured
+# locally). Deliberately kept SEPARATE from the real-window practice
+# above, not a replacement for it: synthetic price paths are
+# data-augmentation for regime *types*, not a real track record --
+# a 20-scenario local test run this session actually scored 27% win
+# rate, proof this can't be spun as a shortcut to a specific number.
+# --save hardens the live Q-table in place; never touches the journal
+# or paper/funded account.
 on:
   schedule:
     - cron: "0 7 * * *"  # ~3am ET / 7am UTC, after the NY session closes
@@ -69,6 +85,12 @@ jobs:
           BOT_DATA_DIR: paper_state
           PYTHONPATH: .
         run: python scripts/stress_test.py --practice
+
+      - name: Practice on synthetic regime scenarios (fast-forward simulator)
+        env:
+          BOT_DATA_DIR: paper_state
+          PYTHONPATH: .
+        run: python -m bots practice --scenarios 2000 --save
 
       - name: Commit and push the updated Q-table
         run: |
@@ -120,6 +142,12 @@ jobs:
           BOT_DATA_DIR: funded_state_aquafunded
           PYTHONPATH: .
         run: python scripts/stress_test.py --practice
+
+      - name: Practice on synthetic regime scenarios (fast-forward simulator)
+        env:
+          BOT_DATA_DIR: funded_state_aquafunded
+          PYTHONPATH: .
+        run: python -m bots practice --scenarios 2000 --save
 
       - name: Commit and push the updated Q-table
         run: |
