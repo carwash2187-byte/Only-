@@ -2205,6 +2205,59 @@ def test_liquidity_sweep_entry_bullish_only():
     assert liquidity_sweep_entry(no_sweep) is False
 
 
+def _quiet_baseline_df(n=40, seed=5):
+    rng = np.random.default_rng(seed)
+    close = 100 + np.cumsum(rng.normal(0.0, 0.01, n))
+    open_ = np.concatenate([[close[0]], close[:-1]])
+    return pd.DataFrame({
+        "open": open_, "close": close,
+        "high": np.maximum(open_, close) + 0.03, "low": np.minimum(open_, close) - 0.03,
+    })
+
+
+def test_bullish_candlestick_pattern_detects_hammer():
+    from bots.organization import bullish_candlestick_pattern
+
+    base = _quiet_baseline_df()
+    hammer = pd.DataFrame({"open": [100.0], "close": [100.05], "high": [100.06], "low": [98.5]})
+    df = pd.concat([base, hammer], ignore_index=True)
+    assert bullish_candlestick_pattern(df) == "hammer"
+
+    assert bullish_candlestick_pattern(_quiet_baseline_df(seed=6)) is None
+
+
+def test_bullish_candlestick_pattern_detects_engulfing():
+    from bots.organization import bullish_candlestick_pattern
+
+    base = _quiet_baseline_df()
+    bearish = pd.DataFrame({"open": [100.5], "close": [99.8], "high": [100.55], "low": [99.75]})
+    bullish = pd.DataFrame({"open": [99.7], "close": [100.6], "high": [100.65], "low": [99.65]})
+    df = pd.concat([base, bearish, bullish], ignore_index=True)
+    assert bullish_candlestick_pattern(df) == "bullish engulfing"
+
+
+def test_price_action_entry_confirm_accepts_candlestick_pattern_alone(tmp_path, journal):
+    # Body stays INSIDE the quiet baseline's own range (99.84-99.996) so
+    # this doesn't also qualify via a breakout (a hammer's long lower
+    # wick can ALSO look like a liquidity sweep -- that overlap is
+    # expected, not a bug; the point of this test is just that the
+    # price-action filter doesn't block a real recognized pattern).
+    from bots.organization import bullish_candlestick_pattern, consolidation_breakout
+
+    base = _quiet_baseline_df()
+    hammer = pd.DataFrame({"open": [99.95], "close": [99.97], "high": [99.975], "low": [98.5]})
+    hammer_df = pd.concat([base, hammer], ignore_index=True)
+    assert bullish_candlestick_pattern(hammer_df) == "hammer"
+    assert consolidation_breakout(hammer_df) != "up"
+
+    broker = PaperBroker(starting_cash=100_000, state_path=str(tmp_path / "acct.json"),
+                         price_overrides={"HAMMER": float(hammer_df["close"].iloc[-1])})
+    config = DeskConfig(news_blackout=False, min_copy_score=0, price_action_entry_confirm=True)
+    desk = make_desk(tmp_path, broker, journal, hammer_df, config=config)
+    report = desk.run_once(symbols=["HAMMER"])
+    assert not any("price-action filter" in a.reason for a in report.actions), report.describe()
+
+
 def test_breakout_strength_ranks_a_real_breakout_above_routine_bars():
     from bots.organization import breakout_strength
 

@@ -975,6 +975,134 @@ def liquidity_sweep_entry(df, lookback: int = 20) -> bool:
         return False
 
 
+def bullish_candlestick_pattern(df, lookback: int = 20) -> Optional[str]:
+    """Recognize a classic bullish reversal/continuation candlestick
+    pattern ending on the LAST closed bar (session 50, user directive:
+    "I need to know all types of candlestick reading... why limit
+    yourself to only reading one?"). This desk only ever opens LONGS
+    (buy_bracket is the only entry path), so only the bullish half of the
+    classic pattern library is implemented -- the bearish mirrors
+    (shooting star, bearish engulfing, evening star...) have no entry
+    path to serve here, same reasoning liquidity_sweep_entry's docstring
+    already gives for being bullish-only.
+
+    Six standard patterns, checked in rough order of how much history
+    they need (1-candle first): hammer, bullish engulfing, piercing
+    line, bullish harami, morning star, three white soldiers. Returns
+    the pattern name on a match, None otherwise. Every match requires
+    real bodies/wicks sized relative to this instrument's own ATR (a
+    fixed pixel-width definition would flag noise on a quiet symbol and
+    miss real patterns on a volatile one) -- a candle a fraction of a
+    normal bar's range isn't a signal, it's rounding.
+
+    Deliberately NOT wired into the Q-learning agent's state (see
+    bots/learning/agent.py's session-48 note): a prior attempt to add a
+    new state dimension there silently invalidated the entire live
+    Q-table (every state looked "unseen", the agent defaulted to hold on
+    everything, live trading quietly stopped) -- that needs a full
+    retrain + a cleared holdout-win-rate bar in the same change, not a
+    same-day addition. This is wired instead as an additional accepted
+    path for price_action_entry_confirm, same evidence-free,
+    narrowing-only footing as consolidation_breakout and
+    liquidity_sweep_entry: it can only ever refuse an entry that would
+    otherwise have been taken, never force one.
+    """
+    try:
+        cols = {str(c).lower(): c for c in df.columns}
+        if not all(k in cols for k in ("open", "high", "low", "close")):
+            return None
+        if len(df) < lookback + 3:
+            return None
+        o, h, l, c = df[cols["open"]], df[cols["high"]], df[cols["low"]], df[cols["close"]]
+        atr = atr_pct(df.iloc[:-1])
+        ref_close = float(c.iloc[-2])
+        if not atr or ref_close <= 0:
+            return None
+        bar_size = atr * ref_close  # typical single-bar range for this instrument
+        if bar_size <= 0:
+            return None
+
+        o1, h1, l1, c1 = float(o.iloc[-1]), float(h.iloc[-1]), float(l.iloc[-1]), float(c.iloc[-1])
+        body1 = abs(c1 - o1)
+        upper_wick1 = h1 - max(o1, c1)
+        lower_wick1 = min(o1, c1) - l1
+        range1 = h1 - l1
+
+        # Hammer: small body near the TOP of the bar, a long lower wick
+        # (>=2x the body -- rejection of a deeper move down) and little to
+        # no upper wick. A real, sized rejection, not a doji poking a toe
+        # below the open.
+        if (
+            range1 >= 0.5 * bar_size
+            and body1 > 0
+            and lower_wick1 >= 2 * body1
+            and upper_wick1 <= 0.3 * body1 + 0.05 * bar_size
+        ):
+            return "hammer"
+
+        o2, h2, l2, c2 = float(o.iloc[-2]), float(h.iloc[-2]), float(l.iloc[-2]), float(c.iloc[-2])
+        body2 = abs(c2 - o2)
+        prev_bearish = c2 < o2 and body2 >= 0.3 * bar_size
+        cur_bullish = c1 > o1 and body1 >= 0.3 * bar_size
+
+        # Bullish engulfing: a real bearish bar followed by a real bullish
+        # bar whose body fully engulfs the prior one.
+        if prev_bearish and cur_bullish and o1 <= c2 and c1 >= o2:
+            return "bullish engulfing"
+
+        # Piercing line: prior real bearish bar; current bar opens at/below
+        # the prior low (a gap-down/flush), then recovers to close above
+        # the midpoint of the prior body but still below the prior open
+        # (a partial reclaim, not a full engulf -- that's the pattern
+        # above instead).
+        prev_mid = (o2 + c2) / 2.0
+        if (
+            prev_bearish and cur_bullish
+            and o1 <= l2 + 0.1 * bar_size
+            and c1 > prev_mid and c1 < o2
+        ):
+            return "piercing line"
+
+        # Bullish harami: a real bearish bar followed by a small bullish
+        # bar fully CONTAINED inside the prior body (the opposite
+        # containment direction from engulfing) -- momentum stalling out.
+        if (
+            prev_bearish and c1 > o1
+            and o1 >= c2 and c1 <= o2
+            and body1 <= 0.6 * body2
+        ):
+            return "bullish harami"
+
+        # Morning star: real bearish bar, then a small-bodied "star" that
+        # gaps down from it, then a real bullish bar closing back above
+        # the midpoint of the FIRST bar's body -- the textbook 3-candle
+        # reversal.
+        o3, c3 = float(o.iloc[-3]), float(c.iloc[-3])
+        body3 = abs(c3 - o3)
+        first_bearish = c3 < o3 and body3 >= 0.4 * bar_size
+        star_small = body2 <= 0.4 * bar_size
+        star_gapped_down = max(o2, c2) < min(o3, c3) + 0.1 * bar_size
+        first_mid = (o3 + c3) / 2.0
+        if first_bearish and star_small and star_gapped_down and cur_bullish and c1 > first_mid:
+            return "morning star"
+
+        # Three white soldiers: three consecutive real bullish bars, each
+        # closing higher than the last, each opening inside (or near) the
+        # previous body -- steady, real conviction, not one big spike bar.
+        if (
+            c3 > o3 and c2 > o2 and c1 > o1
+            and c2 > c3 and c1 > c2
+            and o2 >= o3 and o2 <= c3 + 0.15 * bar_size
+            and o1 >= o2 and o1 <= c2 + 0.15 * bar_size
+            and body1 >= 0.3 * bar_size and body2 >= 0.3 * bar_size and body3 >= 0.3 * bar_size
+        ):
+            return "three white soldiers"
+
+        return None
+    except Exception:
+        return None
+
+
 def breakout_strength(df) -> float:
     """0+ score for how much the LAST closed bar looks like the start of
     a genuinely powerful move, not routine noise (session 49, user
@@ -2206,15 +2334,24 @@ class TradingDesk:
             # requirement that both fire simultaneously (which would be
             # needlessly restrictive on top of the existing RL vote,
             # min_adx, htf_confirm, and every other filter already run).
+            # Session 50: added a third independent path -- a recognized
+            # classic bullish candlestick pattern (hammer, engulfing,
+            # piercing line, harami, morning star, three white soldiers)
+            # on the current bar. Same "any ONE of these is enough"
+            # reasoning, still narrowing-only.
             try:
                 breakout = consolidation_breakout(df)
                 sweep_in = liquidity_sweep_entry(df)
-                if breakout != "up" and not sweep_in:
+                pattern = bullish_candlestick_pattern(df)
+                if breakout != "up" and not sweep_in and not pattern:
                     return DeskAction(
                         "skip", symbol,
-                        "price-action filter: no fresh consolidation breakout or "
-                        "liquidity sweep confirming entry right now",
+                        "price-action filter: no fresh consolidation breakout, "
+                        "liquidity sweep, or bullish candlestick pattern "
+                        "confirming entry right now",
                     )
+                if pattern and breakout != "up" and not sweep_in:
+                    setup_base = f"{setup_base}+{pattern}"
             except Exception:
                 pass
 

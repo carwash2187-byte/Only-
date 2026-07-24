@@ -3528,4 +3528,74 @@ be sold as, code that fixes its own logic bugs -- no such thing exists.
 The genuine always-on self-improvement remains the nightly Q-table
 retrain + journal-driven probation/cooldowns, all token-free, unchanged.
 
+## Session 50
+
+User checked back in while away for the week; asked for four things.
+
+**1. Timed session windows made a hard law, not just a ranking bonus.**
+`TIMED_SESSION_FOCUS` (2-4am ET DAX/UK100, 7-9pm ET GOLD/SILVER, 9:30-
+11:30am ET US indices) only ever gave a ranking bonus -- it could still
+get shut out entirely if the daily trade cap was already spent by
+earlier copytrade/adopted fills, which is exactly what happened on the
+AquaFunded account one night (5 cap-eligible trades used up before the
+predawn-Europe window ever got a shot). `DeskConfig.timed_session_law`
+(=3 on aquafunded) gives each window its own small budget (separate tag
+and counter from the ADX/breakout-strength high-conviction budget) to
+bypass the daily cap -- still has to clear every real signal filter
+(ADX/HTF/zone/spread/news/drawdown), so it can make the desk LOOK during
+the window, never force a blind trade.
+
+**2. risk_per_trade_pct raised 0.25% -> 0.5% on AquaFunded -- EXPLICIT
+USER OVERRIDE of the session-48 evidence-law sizing, not new evidence.**
+Shown the exact Monte Carlo finding this overrides (95% of simulated
+MONTHS busted at 0.5%/trade under this account's 3%/6% rules) before
+agreeing. User's own framing: fine losing the account within roughly a
+month in exchange for bigger per-trade size, not fine losing it in the
+first days/weeks -- which is actually the timeframe the cited Monte
+Carlo already measured at this exact setting. Documented in the preset's
+docstring as an override, not an evidence-backed change, so a future
+session doesn't mistake it for one.
+
+**3. Nightly self-train now also practices the REAL AquaFunded account's
+own Q-table**, not just the paper account's -- a real gap: the account
+actually trading real money was never getting the nightly practice the
+paper model got. Added `self-train-aquafunded` as a second, parallel job
+in `trading-selftrain.yml` (own concurrency group, `BOT_DATA_DIR=
+funded_state_aquafunded`, never touches a broker -- Q-table training is
+pure historical-data replay). Also raised `practice_on_rough_windows()`'s
+episodes 60->90 (user: "more time in the simulation"); session 48's own
+measurement put the 60-episode version at "tens of minutes" against a
+180-minute timeout, so there was real headroom. Mirrored the workflow
+file to the default branch too (required for `schedule:` to fire).
+
+**4. Classic candlestick pattern library added as a third
+price-action-confirm path.** User wanted broader "candlestick reading,"
+not just the two existing ad-hoc signals (consolidation_breakout,
+liquidity_sweep_entry). Added `bullish_candlestick_pattern()`: hammer,
+bullish engulfing, piercing line, bullish harami, morning star, three
+white soldiers -- bullish-only, since this desk only ever opens LONGS
+(same reasoning liquidity_sweep_entry's docstring already gives). Every
+match is sized relative to the instrument's own ATR, not a fixed pixel
+width, so it doesn't flag noise on a quiet symbol or miss real patterns
+on a volatile one. Wired in as a THIRD accepted path for
+`price_action_entry_confirm` (any one of breakout/sweep/pattern is
+enough) -- narrowing-only, same evidence-free footing as the other two.
+
+Deliberately NOT wired into the Q-learning agent's state representation.
+`bots/learning/agent.py` already documents why (session 48): a prior
+attempt to add a new state dimension there silently invalidated the
+entire live Q-table -- every state looked "unseen," the agent defaulted
+to hold on everything, live trading quietly stopped, and it needed a
+full retrain + a cleared holdout-win-rate bar to fix. Adding a
+candlestick dimension today, same-day, with no retrain and no evidence
+bar, would risk repeating that exact failure on an account now sized at
+0.5% risk/trade. The pattern name still gets tagged onto the trade's
+setup string, so the journal grades it from real closed trades over
+time, same as every other setup tag -- the safe way to let the data
+decide which patterns are actually worth trusting.
+
+3 new pattern tests + 1 integration test added, full suite run clean
+before push. Both workflow branches (trading branch + default branch
+mirror) updated identically.
+
 Full suite run before push.
