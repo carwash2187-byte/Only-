@@ -1,0 +1,78 @@
+name: Trading desk watchdog
+
+# Pure GitHub Actions, zero Claude/LLM involvement, same token-free law as
+# the trading cycles themselves. Session 51 incident: both trading-cycle.yml
+# and trading-cycle-aquafunded.yml got stuck in GitHub's own queue (no
+# runner assigned for 15 min, then auto-cancelled) around the same time --
+# a GitHub platform hiccup, not a bug in the trading code. Because the job
+# never reached "success", the self-chain correctly refused to re-fire
+# (that's the intended runaway-loop safety), and each workflow's own `cron:
+# */5` backup -- GitHub's scheduled triggers are documented "best effort"
+# and can be delayed under load -- didn't fire for 45+ minutes either. Both
+# accounts sat idle with nobody watching until the user noticed by hand.
+#
+# This workflow is the automated version of that manual check: every 5
+# minutes (GitHub's own floor), ask the API directly "when did each trading
+# workflow last actually run?" and if either has gone quiet longer than a
+# real cycle should ever take, re-dispatch it. A second, independent
+# 5-minute cron is not immune to the same platform-wide delay the first one
+# hit, but it meaningfully lowers the odds both are late at once, and it
+# needs no server, no Claude session, no human -- it keeps running even if
+# Claude usage hits zero, same guarantee as everything else in bots/.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restart any trading cycle that's gone quiet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # Max age a trading cycle's LAST run should ever reach before
+          # something's wrong: cycles self-chain roughly every 4-5 minutes
+          # when healthy. 15 minutes is 3x that -- generous enough to never
+          # false-positive on normal timing jitter, tight enough that a
+          # real stall gets caught within one watchdog tick either way.
+          MAX_AGE_SECONDS=900
+
+          for workflow in trading-cycle.yml trading-cycle-aquafunded.yml; do
+            last_run=$(curl -sS \
+              -H "Authorization: token ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/runs?per_page=1")
+            last_created=$(echo "$last_run" | jq -r '.workflow_runs[0].created_at // empty')
+            last_status=$(echo "$last_run" | jq -r '.workflow_runs[0].status // empty')
+
+            if [ -z "$last_created" ]; then
+              echo "[$workflow] no runs found at all -- dispatching"
+            elif [ "$last_status" = "in_progress" ] || [ "$last_status" = "queued" ]; then
+              echo "[$workflow] currently $last_status -- leaving it alone"
+              continue
+            else
+              last_epoch=$(date -d "$last_created" +%s)
+              now_epoch=$(date -u +%s)
+              age=$((now_epoch - last_epoch))
+              echo "[$workflow] last run started ${age}s ago (status: $last_status)"
+              if [ "$age" -lt "$MAX_AGE_SECONDS" ]; then
+                continue
+              fi
+              echo "[$workflow] stale (>${MAX_AGE_SECONDS}s) -- dispatching a fresh run"
+            fi
+
+            curl -sS -X POST \
+              -H "Authorization: token ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches" \
+              -d "{\"ref\":\"${{ github.ref_name }}\"}"
+          done
