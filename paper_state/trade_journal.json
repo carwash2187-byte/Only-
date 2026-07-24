@@ -1751,7 +1751,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000082",
+        "mae:-0.001621"
+      ],
       "stop_pct": null
     },
     {
@@ -1767,7 +1770,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.003879",
+        "mae:-0.005415"
+      ],
       "stop_pct": null
     },
     {
@@ -1783,7 +1789,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding",
-      "tags": [],
+      "tags": [
+        "mfe:0.000936",
+        "mae:-0.000001"
+      ],
       "stop_pct": null
     },
     {
@@ -1799,7 +1808,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "AXP (score 2.0): Berkshire Hathaway (Warren Buffett) top-1 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000687",
+        "mae:-0.001950"
+      ],
       "stop_pct": null
     },
     {
@@ -1810,12 +1822,15 @@
       "entry_price": 319.75799374999997,
       "entry_time": "2026-07-24T19:04:38.166069+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding",
-      "tags": [],
+      "exit_price": 320.08199408798214,
+      "exit_time": "2026-07-24T19:13:02.301624+00:00",
+      "pnl": 0.7588735916218388,
+      "pnl_pct": 0.10132673594251962,
+      "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding | shooting-star rejection wick (reversal) -- taking the profit (+0.1%)",
+      "tags": [
+        "mfe:0.001038",
+        "mae:0.001038"
+      ],
       "stop_pct": null
     }
   ]
