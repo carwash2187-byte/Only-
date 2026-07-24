@@ -2362,6 +2362,7 @@ def test_aquafunded_preset_enables_all_session_49_entry_and_streak_features():
     assert cfg.stacked_timeframe_confirm is True
     assert cfg.high_conviction_breakout_strength == 2.5
     assert cfg.trail_after_target is True
+    assert cfg.timed_session_law == 3
 
     # paper/generic funded desk is completely unaffected
     plain = funded_account_config()
@@ -2370,6 +2371,131 @@ def test_aquafunded_preset_enables_all_session_49_entry_and_streak_features():
     assert plain.stacked_timeframe_confirm is False
     assert plain.high_conviction_breakout_strength == 0.0
     assert plain.trail_after_target is False
+    assert plain.timed_session_law == 0
+
+
+# ---------------------------------------------------------------------------
+# Session 50: "the sessions I told you about are a LAW, not discipline" --
+# a symbol inside its own TIMED_SESSION_FOCUS window (2-4am ET DAX/UK100,
+# 7-9pm ET GOLD/SILVER, 9:30-11:30am ET US indices) gets its own small
+# budget to bypass the daily trade cap, separate from the ADX/breakout-
+# strength high-conviction budget, so the cap being spent by earlier
+# copytrade/adopted trades can't silently blank out the whole window.
+# ---------------------------------------------------------------------------
+
+def test_timed_session_law_bypasses_daily_cap_inside_its_window(tmp_path, journal, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    import bots.organization as org_mod
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+
+    # Daily cap already spent by something else (e.g. an earlier copytrade
+    # fill), matching the real incident that raised this.
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    monkeypatch.setattr(org_mod, "in_timed_session_window", lambda symbol, now=None: "predawn_europe")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DAX": 100.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, timed_session_law=3)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["DAX"])
+    buys = [a for a in report.actions if a.action == "buy" and a.ok]
+    assert len(buys) == 1, report.describe()
+
+    record = journal.open_position_for("DAX")
+    assert "session-law-override" in record.tags
+
+
+def test_timed_session_law_off_by_default_still_caps(tmp_path, journal, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    import bots.organization as org_mod
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    monkeypatch.setattr(org_mod, "in_timed_session_window", lambda symbol, now=None: "predawn_europe")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DAX": 100.0},
+    )
+    # timed_session_law left at its default (0 = off)
+    config = DeskConfig(news_blackout=False, min_copy_score=0, max_trades_per_day=1)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["DAX"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("daily trade cap" in a.reason for a in report.actions)
+
+
+def test_timed_session_law_does_not_apply_outside_its_window(tmp_path, journal, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    import bots.organization as org_mod
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+
+    # DAX is NOT inside any timed window right now.
+    monkeypatch.setattr(org_mod, "in_timed_session_window", lambda symbol, now=None: None)
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DAX": 100.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, timed_session_law=3)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["DAX"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("daily trade cap" in a.reason for a in report.actions)
+
+
+def test_timed_session_law_budget_runs_out(tmp_path, journal, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    import bots.organization as org_mod
+
+    n = 120
+    trend_close = pd.Series(100 + np.arange(n) * 0.5)
+    trending = pd.DataFrame({
+        "high": trend_close + 0.2, "low": trend_close - 0.2, "close": trend_close,
+    })
+    journal.open_trade("ALREADY", "long", 1, 100.0, setup="daytrade")
+    # Already used up today's one allowed session-law override.
+    used = journal.open_trade("PRIOR-OVERRIDE", "long", 1, 100.0, setup="daytrade")
+    used.tags.append("session-law-override")
+    journal.save()
+
+    monkeypatch.setattr(org_mod, "in_timed_session_window", lambda symbol, now=None: "predawn_europe")
+
+    broker = PaperBroker(
+        starting_cash=10_000, state_path=str(tmp_path / "acct.json"),
+        price_overrides={"DAX": 100.0},
+    )
+    config = DeskConfig(news_blackout=False, min_copy_score=0,
+                        max_trades_per_day=1, timed_session_law=1)
+    desk = make_desk(tmp_path, broker, journal, trending, config=config)
+    report = desk.run_once(symbols=["DAX"])
+    assert not [a for a in report.actions if a.action == "buy" and a.ok], report.describe()
+    assert any("daily trade cap" in a.reason for a in report.actions)
 
 
 def test_asian_session_budget_reserves_trades_for_london(price_df, tmp_path, journal, monkeypatch):

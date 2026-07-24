@@ -67,6 +67,7 @@ class DeskConfig:
     high_conviction_adx: float = 0.0  # 0 = off; ADX above this bypasses the daily trade cap (still has to pass every other filter)
     high_conviction_breakout_strength: float = 0.0  # 0 = off; session 49 user directive ("know if it's going to do a heavy breakout, add it to everything you already know"): a second, independent way to qualify for the SAME high-conviction override budget (max_high_conviction_overrides is still the hard cap) -- breakout_strength(df) at or above this bypasses the daily trade cap exactly like a strong ADX does, still has to pass every other filter
     max_high_conviction_overrides: int = 2  # hard cap on how many cap-bypass trades can happen in one day
+    timed_session_law: int = 0  # 0 = off; e.g. 3: user directive (session 50, "the sessions I told you about are a LAW, not discipline") -- a symbol currently inside one of TIMED_SESSION_FOCUS's real-world windows (2-4am ET DAX/UK100, 7-9pm ET GOLD/SILVER, 9:30-11:30am ET US indices) may bypass the daily trade cap, up to this many times per day total, EXACTLY like a high-conviction override -- separate budget/tag so it never borrows from max_high_conviction_overrides. It can only get the desk to actually LOOK for a trade in that window instead of sitting out on cap alone; every real signal-quality filter (ADX/HTF/zone/spread/news/drawdown) still has to agree, so it can never force a blind entry.
     asian_session_budget_pct: float = 0.0  # 0 = off; e.g. 0.4: only 40% of max_trades_per_day may be spent during the Asian session, saving the rest for London/NY
     weekend_crypto_caution: bool = True  # halve risk sizing on crypto trades during the weekend forex-closed window (documented thinner liquidity, session 19)
     loss_budget_pct: float = 0.8  # only ever risk this fraction of the daily/max loss limits; the rest is slippage insurance (stops are not guaranteed fills)
@@ -401,6 +402,21 @@ def aquafunded_instant_config(**overrides) -> "DeskConfig":
         # and recover automatically, no human. Root causes were already
         # fixed; this is the net under them.
         max_position_lots_per_symbol=3,
+        # Session 50, user directive ("the sessions I told you about are a
+        # LAW... it's supposed to wake up at the time and start there --
+        # not because it reaches max things and it's discipline"): the
+        # desk had TIMED_SESSION_FOCUS windows (2-4am ET DAX/UK100, 7-9pm
+        # ET GOLD/SILVER, 9:30-11:30am ET US indices) as a ranking bonus
+        # ONLY, so a symbol inside its own window could still get shut out
+        # by the daily trade cap like anything else -- which is exactly
+        # what happened the night this was raised (5 cap-eligible entries
+        # already used by earlier copytrade/adopted trades, so the
+        # predawn-Europe window never got a shot). timed_session_law=3
+        # gives each of the 3 windows its own one-shot budget per day to
+        # bypass the cap -- it still has to pass every real signal filter
+        # below (ADX/HTF/zone/spread/news/drawdown), so it can make the
+        # desk LOOK during the window, never force a blind trade.
+        timed_session_law=3,
     )
     cfg = funded_account_config(**base)
     for key, value in overrides.items():
@@ -1050,6 +1066,33 @@ def timed_session_focus(symbol: str, now=None) -> float:
         return 0.0
 
 
+def in_timed_session_window(symbol: str, now=None) -> Optional[str]:
+    """Name of the TIMED_SESSION_FOCUS window `symbol` is inside RIGHT NOW
+    (by ET clock time), or None. Same window table timed_session_focus()
+    uses for its ranking bonus -- this is the boolean/hard-law version
+    (session 50, timed_session_law) that lets a symbol bypass the daily
+    trade cap instead of just outranking other candidates for a slot."""
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        now = (now or datetime.now(tz=ZoneInfo("America/New_York"))).astimezone(
+            ZoneInfo("America/New_York")
+        )
+        compact = symbol.upper().replace("_", "").replace("/", "")
+        minute_of_day = now.hour * 60 + now.minute
+        for name, window in TIMED_SESSION_FOCUS.items():
+            if compact not in window["symbols"]:
+                continue
+            start = window["start_hour"] * 60 + window["start_minute"]
+            end = window["end_hour"] * 60 + window["end_minute"]
+            if start <= minute_of_day < end:
+                return name
+        return None
+    except Exception:
+        return None
+
+
 def tradeability_score(symbol: str, df, now=None) -> float:
     """Composite 'how good is this instrument to trade RIGHT NOW' score,
     built from the three components professional day traders actually rank
@@ -1506,6 +1549,12 @@ class TradingDesk:
             if cfg.high_conviction_adx > 0 or cfg.high_conviction_breakout_strength > 0
             else 0
         )
+        session_law_overrides_left = (
+            max(0, cfg.timed_session_law
+                - self.journal.count_trades_with_tag_today("session-law-override"))
+            if cfg.timed_session_law > 0
+            else 0
+        )
         group_counts: Dict[str, int] = {}
         for held in committed_symbols:
             group = correlation_group(held)
@@ -1561,6 +1610,7 @@ class TradingDesk:
 
         for symbol, info in ordered_candidates:
             use_high_conviction = False
+            use_session_law = False
             if trades_left_today is not None and trades_left_today <= 0:
                 if high_conviction_overrides_left > 0 and not info.get("manual"):
                     try:
@@ -1587,7 +1637,19 @@ class TradingDesk:
                                 use_high_conviction = True
                         except Exception:
                             pass
-                if not use_high_conviction:
+                if not use_high_conviction and session_law_overrides_left > 0 and not info.get("manual"):
+                    # session 50, user directive ("the sessions I told you
+                    # about are a LAW, not discipline"): a symbol inside its
+                    # own real-world timed window (2-4am ET DAX/UK100, 7-9pm
+                    # ET GOLD/SILVER, 9:30-11:30am ET US indices) gets to
+                    # bypass the daily trade cap on a separate, small budget
+                    # -- but it's still just an entry into the SAME filter
+                    # chain everything else runs through (ADX/HTF/zone/
+                    # spread/news/drawdown below), so it can get the desk to
+                    # look, never force a blind trade.
+                    if in_timed_session_window(symbol) is not None:
+                        use_session_law = True
+                if not use_high_conviction and not use_session_law:
                     report.actions.append(DeskAction("skip", symbol, cap_reason))
                     continue
             if symbol in committed_symbols:
@@ -1621,6 +1683,7 @@ class TradingDesk:
                 setup_base=info.get("setup", "copytrade"),
                 manual=bool(info.get("manual")),
                 high_conviction=use_high_conviction,
+                session_law=use_session_law,
                 df=history_cache.get(symbol),
             )
             report.actions.append(action)
@@ -1628,6 +1691,8 @@ class TradingDesk:
                 open_slots -= 1
                 if use_high_conviction:
                     high_conviction_overrides_left -= 1
+                elif use_session_law:
+                    session_law_overrides_left -= 1
                 elif trades_left_today is not None:
                     trades_left_today -= 1
                 if group:
@@ -1963,6 +2028,7 @@ class TradingDesk:
         setup_base: str = "copytrade",
         manual: bool = False,
         high_conviction: bool = False,
+        session_law: bool = False,
         df=None,
     ) -> DeskAction:
         cfg = self.config
@@ -2344,6 +2410,9 @@ class TradingDesk:
             )
             if high_conviction:
                 opened.tags.append("high-conviction-override")
+                self.journal.save()
+            if session_law:
+                opened.tags.append("session-law-override")
                 self.journal.save()
             if manual:
                 from bots.copytrader import manual as manual_mod
