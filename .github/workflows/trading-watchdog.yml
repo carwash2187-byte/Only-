@@ -19,6 +19,18 @@ name: Trading desk watchdog
 # hit, but it meaningfully lowers the odds both are late at once, and it
 # needs no server, no Claude session, no human -- it keeps running even if
 # Claude usage hits zero, same guarantee as everything else in bots/.
+#
+# BUG FOUND AND FIXED before this ever ran on a schedule: the first
+# version skipped any run whose status was "queued" or "in_progress" on
+# the assumption those were healthy. That is EXACTLY the state the stuck
+# run from the real incident was in for 15 minutes before GitHub
+# auto-cancelled it -- the watchdog would have looked at it, seen
+# "queued", and done nothing. Fixed: age is now checked regardless of
+# status. A genuinely healthy in-progress run is always young (it just
+# started), so this never false-positives on one; a run stuck queued
+# past the threshold gets a fresh dispatch alongside it -- harmless
+# under the trading workflows' own concurrency groups (cancel-in-progress:
+# false), the extra queued run just waits its turn or gets picked up.
 on:
   schedule:
     - cron: "*/5 * * * *"
@@ -41,10 +53,12 @@ jobs:
           set -e
           # Max age a trading cycle's LAST run should ever reach before
           # something's wrong: cycles self-chain roughly every 4-5 minutes
-          # when healthy. 15 minutes is 3x that -- generous enough to never
-          # false-positive on normal timing jitter, tight enough that a
-          # real stall gets caught within one watchdog tick either way.
-          MAX_AGE_SECONDS=900
+          # when healthy. 10 minutes is ~2x that -- tight enough that a
+          # real stall (queued-and-stuck, or genuinely dead) gets caught
+          # within one or two watchdog ticks, generous enough to never
+          # false-positive on normal timing jitter or a cycle's own
+          # ~4m15s internal check loop.
+          MAX_AGE_SECONDS=600
 
           for workflow in trading-cycle.yml trading-cycle-aquafunded.yml; do
             last_run=$(curl -sS \
@@ -56,10 +70,9 @@ jobs:
 
             if [ -z "$last_created" ]; then
               echo "[$workflow] no runs found at all -- dispatching"
-            elif [ "$last_status" = "in_progress" ] || [ "$last_status" = "queued" ]; then
-              echo "[$workflow] currently $last_status -- leaving it alone"
-              continue
             else
+              # Age is checked regardless of status -- a "queued" or
+              # "in_progress" run that's actually healthy is always young.
               last_epoch=$(date -d "$last_created" +%s)
               now_epoch=$(date -u +%s)
               age=$((now_epoch - last_epoch))
@@ -67,7 +80,7 @@ jobs:
               if [ "$age" -lt "$MAX_AGE_SECONDS" ]; then
                 continue
               fi
-              echo "[$workflow] stale (>${MAX_AGE_SECONDS}s) -- dispatching a fresh run"
+              echo "[$workflow] stale (>${MAX_AGE_SECONDS}s, status: $last_status) -- dispatching a fresh run"
             fi
 
             curl -sS -X POST \
