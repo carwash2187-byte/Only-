@@ -40,6 +40,29 @@ def journal(tmp_path):
     return TradeJournal(path=str(tmp_path / "journal.json"))
 
 
+def test_journal_self_heals_a_corrupt_state_file(tmp_path):
+    # Self-heal (session 49): a corrupted journal file must NOT crash the
+    # desk on every future cycle -- it backs up the broken file and starts
+    # fresh so trading continues.
+    import glob
+
+    path = str(tmp_path / "journal.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write('{"trades": [ {this is not valid json <<<<<< git conflict')
+
+    j = TradeJournal(path=path)          # must not raise
+    assert j.trades == {}                # started fresh
+    backups = glob.glob(path + ".corrupt-*.bak")
+    assert len(backups) == 1             # the broken file was preserved, not discarded
+    assert "not valid json" in open(backups[0]).read()
+
+    # and it's usable again immediately -- a new trade records and reloads
+    j.open_trade("EURUSD", "long", 1, 1.10, setup="x")
+    j.save()
+    reloaded = TradeJournal(path=path)
+    assert reloaded.open_position_for("EURUSD") is not None
+
+
 def test_close_trade_logs_losses_to_mistakes_file(journal, tmp_path, monkeypatch):
     monkeypatch.setenv("BOT_DATA_DIR", str(tmp_path))
     log_path = tmp_path / "mistakes_log.md"

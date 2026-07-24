@@ -114,11 +114,38 @@ class TradeJournal:
     def _load(self) -> None:
         if not os.path.exists(self.path):
             return
-        with open(self.path, "r", encoding="utf-8") as fh:
-            raw = json.load(fh)
-        for item in raw.get("trades", []):
-            record = TradeRecord(**item)
-            self.trades[record.trade_id] = record
+        try:
+            with open(self.path, "r", encoding="utf-8") as fh:
+                raw = json.load(fh)
+            for item in raw.get("trades", []):
+                record = TradeRecord(**item)
+                self.trades[record.trade_id] = record
+        except (json.JSONDecodeError, TypeError, KeyError) as exc:
+            # Self-heal (session 49, user directive: fix the most common
+            # failure patterns automatically). A corrupted state file
+            # (partial write from a killed process, a stray git conflict
+            # marker, an unexpected schema change) would otherwise crash
+            # the desk's construction on EVERY future cycle, forever -- the
+            # 5-minute cron backup restart can't help, since it hits the
+            # exact same broken file every time. Preserve the evidence
+            # (timestamped backup, never silently discarded) and start
+            # fresh so trading can continue instead of staying dead
+            # indefinitely with no human watching.
+            import shutil
+            from datetime import datetime, timezone
+
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            backup_path = f"{self.path}.corrupt-{stamp}.bak"
+            try:
+                shutil.copy2(self.path, backup_path)
+            except OSError:
+                pass
+            print(
+                f"[self-heal] {self.path} failed to parse ({exc}) -- backed up to "
+                f"{backup_path} and starting with an empty journal instead of crashing "
+                "every future cycle"
+            )
+            self.trades = {}
 
     def save(self) -> None:
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
