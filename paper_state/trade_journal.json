@@ -1851,6 +1851,25 @@
         "mae:-0.000695"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "83c19191bb63",
+      "symbol": "SOL-USD",
+      "side": "long",
+      "quantity": 42.1635,
+      "entry_price": 73.97697244262694,
+      "entry_time": "2026-07-25T00:54:35.993386+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000500",
+        "mae:-0.000500"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
