@@ -1870,6 +1870,25 @@
         "mae:-0.000500"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "3ede4590b49c",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 1.6791,
+      "entry_price": 1859.5092460327148,
+      "entry_time": "2026-07-25T02:04:09.681134+00:00",
+      "setup": "copytrade:trend-down|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000118",
+        "mae:-0.000441"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
