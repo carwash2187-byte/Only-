@@ -1905,7 +1905,27 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:-0.000095",
-        "mae:-0.001443"
+        "mae:-0.002656"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "05796cd992ec",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0487,
+      "entry_price": 64036.44362695312,
+      "entry_time": "2026-07-25T05:36:35.255124+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override",
+        "mfe:-0.000737",
+        "mae:-0.001174"
       ],
       "stop_pct": 0.003
     }
