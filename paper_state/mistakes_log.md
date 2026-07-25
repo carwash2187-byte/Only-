@@ -44,3 +44,4 @@
 - 2026-07-24T20:30 **NTRA** long -3.45 (-0.46%) setup=`copytrade:trend-up|rsi-oversold|pos-out` -- NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding | Friday close-out: no weekend holding on this account
 - 2026-07-24T20:30 **TSM** long -0.20 (-0.03%) setup=`copytrade:trend-down|rsi-oversold|pos-out` -- TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding | Friday close-out: no weekend holding on this account
 - 2026-07-25T00:34 **BTC-USD** long -5.18 (-0.08%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
+- 2026-07-25T04:04 **ETH-USD** long -2.75 (-0.09%) setup=`copytrade:trend-down|rsi-neutral|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.0%)
