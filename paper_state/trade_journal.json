@@ -1885,8 +1885,8 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:-0.000118",
-        "mae:-0.000441"
+        "mfe:0.000156",
+        "mae:-0.000607"
       ],
       "stop_pct": 0.003
     }
