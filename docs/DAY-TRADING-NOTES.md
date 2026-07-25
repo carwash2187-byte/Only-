@@ -3817,3 +3817,52 @@ policy choice, and is unaffected by this change). Updated
 flag RESOLVED with the citation.
 
 Full suite run clean before push.
+
+## Session 53 (continued): "trade every day" -- widened the candidate pool, declined to force trades
+
+User wants 5 qualifying trading days for AquaFunded payout eligibility
+and asked me to force a trade (or a guaranteed profitable day) every
+day, explicitly "no back talk." Checked the real rule first instead of
+guessing: AquaFunded's own help center
+(https://help.aquafunded.com/en/articles/11914131-minimum-trading-days)
+says the requirement is "a minimum trading period of 5 days, during
+which you must achieve at least 0.5% profit per day... any day with
+sufficient trading activity will count" -- a PROFIT threshold per
+qualifying day, not just placing an order. A token trade sized to be
+"not affected" (user's words) would not clear that bar at all.
+
+Declined to force trades or loosen any risk/quality filter to chase a
+guaranteed green day -- there's no code change that makes the market
+produce profit on demand, and forcing entries outside real setups is
+how funded accounts blow up, which directly contradicts the same
+message's "lose as little money as possible." This matches the
+project's existing honesty law: no feature ships with a
+guaranteed-profit framing.
+
+What IS legitimate and implemented: CLAUDE.md's standing rule for "not
+trading enough" is to widen the candidate watchlist, never lower the
+bar. The weekend crypto fallback (added earlier this session) only had
+3 symbols (BTC/ETH/SOL) -- widened to 8 (added XRP-USD, LTC-USD,
+ADA-USD, DOGE-USD, BNB-USD) in both `WEEKEND_SYMBOLS` lists
+(`scripts/run_one_cycle.py` and `run_one_cycle_aquafunded.py`) and
+`TRADELOCKER_ALIASES`. Same safety pattern as every other symbol in that
+map: an alias AquaFunded's TradeLocker doesn't recognize gets skipped
+cleanly (confirmed in code -- `broker.price()` raises, `organization.py`
+catches it and logs "no price data," never crashes the cycle or trades
+blind). This gives the existing, unchanged filters more real candidates
+per cycle -- more shots on goal at the same standard, not a lower one.
+It does not guarantee a trade or a profitable day, and I said so
+directly rather than let the ask stand unaddressed.
+
+Real evidence check while investigating: the AquaFunded journal's
+per-trade pnl field for OLDER (pre-fix) entries is still using the
+buggy pre-session-53 units and can't be trusted for historical
+day-by-day analysis (the fix only applies going forward, per the
+earlier writeup this session). Real, reliable evidence instead:
+mistakes_log.md recorded genuine "+5.1% to +6.1% daily profit target
+hit" lock-ins on 2026-07-23 (sourced from real broker-equity day-gain
+tracking, not the buggy per-trade field) -- that day is very likely
+already 1 of the 5 qualifying days on its own merits, well clear of the
+0.5% bar, with zero forcing involved.
+
+Full suite run clean before push.

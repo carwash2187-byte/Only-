@@ -75,6 +75,18 @@ TRADELOCKER_ALIASES: Dict[str, list] = {
     "BTC-USD": ["BTCUSD"],
     "ETH-USD": ["ETHUSD"],
     "SOL-USD": ["SOLUSD"],
+    # Session 53 (user directive: "trade every day" -- widened the weekend
+    # candidate pool rather than loosen any risk filter, per CLAUDE.md's
+    # "prefer widening the watchlist over lowering the bar"). Same safety
+    # pattern as everything else here: an unrecognized name is skipped
+    # cleanly (self.broker.price() raises, organization.py catches it and
+    # logs "no price data", never trades blind) -- these are candidates,
+    # not confirmed-available instruments.
+    "XRP-USD": ["XRPUSD"],
+    "LTC-USD": ["LTCUSD"],
+    "ADA-USD": ["ADAUSD"],
+    "DOGE-USD": ["DOGEUSD"],
+    "BNB-USD": ["BNBUSD"],
 }
 
 # TradeLocker name -> canonical watchlist name, for mapping open positions

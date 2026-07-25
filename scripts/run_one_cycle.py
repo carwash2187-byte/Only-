@@ -47,7 +47,12 @@ SYMBOLS = [
     "EURJPY", "GBPJPY", "AUDJPY", "EURGBP", "EURCHF",
     "US30", "NAS100", "US500", "US2000", "GOLD", "SILVER", "OIL",
 ]
-WEEKEND_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD"]
+# Widened session 53 to match the AquaFunded script -- see that script's
+# comment for the rationale (more candidates, same filter bar).
+WEEKEND_SYMBOLS = [
+    "BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "LTC-USD", "ADA-USD",
+    "DOGE-USD", "BNB-USD",
+]
 
 CHECK_INTERVAL_SECONDS = 60
 # Stop looping with enough margin before the runner's own timeout (and

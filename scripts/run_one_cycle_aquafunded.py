@@ -73,7 +73,18 @@ SYMBOLS = [
 # TradeLocker doesn't recognize a symbol name, _instrument_id raises a
 # clean error naming it (same safety pattern as DAX/UK100 above) --
 # never trades blind on an unresolved symbol.
-WEEKEND_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD"]
+#
+# Widened same session (user directive: "trade every day," wants more
+# real chances to hit a qualifying trading day toward AquaFunded's 5-day
+# minimum for payout eligibility). CLAUDE.md's rule for "not trading
+# enough" is to widen the candidate pool, not loosen the risk/quality
+# bar -- more shots on goal at the same standard, never a lower one. This
+# does NOT guarantee a trade or a profitable day; it only gives the
+# existing filters more real candidates to evaluate each cycle.
+WEEKEND_SYMBOLS = [
+    "BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "LTC-USD", "ADA-USD",
+    "DOGE-USD", "BNB-USD",
+]
 
 CHECK_INTERVAL_SECONDS = 60
 LOOP_BUDGET_SECONDS = 4 * 60 + 15  # ~4m15s of a 5-minute window, same margin as the paper script
