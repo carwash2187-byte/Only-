@@ -1898,14 +1898,14 @@
       "entry_price": 74.20708316802978,
       "entry_time": "2026-07-25T05:20:52.347891+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 73.93301622009278,
+      "exit_time": "2026-07-25T05:45:55.717352+00:00",
+      "pnl": -11.523747773296678,
+      "pnl_pct": -0.3693272073724052,
+      "notes": "user watchlist | stop loss hit (-0.3%)",
       "tags": [
         "mfe:-0.000095",
-        "mae:-0.002656"
+        "mae:-0.003195"
       ],
       "stop_pct": 0.003
     },
