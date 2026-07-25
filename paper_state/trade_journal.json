@@ -1832,6 +1832,22 @@
         "mae:0.001038"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "d9d383a600bb",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0974,
+      "entry_price": 64122.55697460937,
+      "entry_time": "2026-07-25T00:00:14.057695+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
