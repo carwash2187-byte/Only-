@@ -1860,11 +1860,11 @@
       "entry_price": 73.97697244262694,
       "entry_time": "2026-07-25T00:54:35.993386+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 74.08294274520874,
+      "exit_time": "2026-07-25T02:41:06.370585+00:00",
+      "pnl": 4.468078852907526,
+      "pnl_pct": 0.143247687872039,
+      "notes": "user watchlist | liquidity sweep above 74.13 reversed down (bull trap) -- taking the profit (+0.2%)",
       "tags": [
         "mfe:0.002744",
         "mae:-0.000500"
