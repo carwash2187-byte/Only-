@@ -1943,7 +1943,8 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.002991",
+        "breakeven-armed",
+        "mfe:0.004199",
         "mae:-0.000902"
       ],
       "stop_pct": 0.003
@@ -1981,7 +1982,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000710",
+        "mfe:0.000924",
         "mae:-0.000276"
       ],
       "stop_pct": 0.003
@@ -2000,7 +2001,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000041",
+        "mfe:0.000351",
         "mae:-0.000310"
       ],
       "stop_pct": 0.003
