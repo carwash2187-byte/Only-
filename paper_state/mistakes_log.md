@@ -49,3 +49,4 @@
 - 2026-07-25T07:37 **BTC-USD** long -5.31 (-0.17%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
 - 2026-07-26T02:07 **BNB-USD** long -0.21 (-0.01%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
 - 2026-07-26T02:10 **BTC-USD** long -0.87 (-0.03%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
+- 2026-07-26T05:09 **XRP-USD** long -1.70 (-0.05%) setup=`copytrade:trend-up|rsi-oversold|vwap-below|pos-out` -- user watchlist | breakeven stop hit (was +1R, now -0.0%) -- risk-free exit

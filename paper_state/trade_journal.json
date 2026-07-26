@@ -2014,16 +2014,16 @@
       "entry_price": 1.0994494104981423,
       "entry_time": "2026-07-26T03:07:18.181280+00:00",
       "setup": "copytrade:trend-up|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 1.098850343465805,
+      "exit_time": "2026-07-26T05:09:33.521669+00:00",
+      "pnl": -1.6982845863931084,
+      "pnl_pct": -0.054487912460277066,
+      "notes": "user watchlist | breakeven stop hit (was +1R, now -0.0%) -- risk-free exit",
       "tags": [
         "high-conviction-override",
+        "breakeven-armed",
         "mfe:0.003411",
-        "mae:-0.000864",
-        "breakeven-armed"
+        "mae:-0.000864"
       ],
       "stop_pct": 0.003
     }
