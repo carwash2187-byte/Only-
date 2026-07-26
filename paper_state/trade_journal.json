@@ -2005,6 +2005,26 @@
         "mae:-0.000603"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "9001438601aa",
+      "symbol": "XRP-USD",
+      "side": "long",
+      "quantity": 2834.8824,
+      "entry_price": 1.0994494104981423,
+      "entry_time": "2026-07-26T03:07:18.181280+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override",
+        "mfe:-0.000773",
+        "mae:-0.000773"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
