@@ -1937,14 +1937,14 @@
       "entry_price": 74.4872219467163,
       "entry_time": "2026-07-26T00:01:45.735940+00:00",
       "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 74.90253244018555,
+      "exit_time": "2026-07-26T03:53:35.948887+00:00",
+      "pnl": 17.33825788820618,
+      "pnl_pct": 0.5575593808107682,
+      "notes": "user watchlist | take profit hit (+0.6%)",
       "tags": [
         "breakeven-armed",
-        "mfe:0.005944",
+        "mfe:0.006079",
         "mae:-0.000902"
       ],
       "stop_pct": 0.003
