@@ -1142,6 +1142,25 @@
         "high-conviction-override"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "c49d2f7d1eaf",
+      "symbol": "LTC-USD",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 46.8,
+      "entry_time": "2026-07-26T00:29:34.743352+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000855",
+        "mae:0.000855"
+      ],
+      "stop_pct": null
     }
   ]
 }
