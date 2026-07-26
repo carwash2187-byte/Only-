@@ -1943,7 +1943,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.001514",
+        "mfe:0.002991",
         "mae:-0.000902"
       ],
       "stop_pct": 0.003
@@ -1962,7 +1962,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000414",
+        "mfe:0.001275",
         "mae:-0.000271"
       ],
       "stop_pct": 0.003
@@ -1981,8 +1981,8 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000295",
-        "mae:-0.000196"
+        "mfe:0.000710",
+        "mae:-0.000276"
       ],
       "stop_pct": 0.003
     },
@@ -2000,8 +2000,8 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:-0.000019",
-        "mae:-0.000290"
+        "mfe:0.000041",
+        "mae:-0.000310"
       ],
       "stop_pct": 0.003
     }
