@@ -1943,8 +1943,27 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:-0.000097",
+        "mfe:0.000843",
         "mae:-0.000902"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "9509a07f6f78",
+      "symbol": "BNB-USD",
+      "side": "long",
+      "quantity": 5.4647,
+      "entry_price": 569.2544556884766,
+      "entry_time": "2026-07-26T00:07:12.433861+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000166",
+        "mae:-0.000271"
       ],
       "stop_pct": 0.003
     }
