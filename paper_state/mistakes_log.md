@@ -47,3 +47,5 @@
 - 2026-07-25T04:04 **ETH-USD** long -2.75 (-0.09%) setup=`copytrade:trend-down|rsi-neutral|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.0%)
 - 2026-07-25T05:45 **SOL-USD** long -11.52 (-0.37%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.3%)
 - 2026-07-25T07:37 **BTC-USD** long -5.31 (-0.17%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
+- 2026-07-26T02:07 **BNB-USD** long -0.21 (-0.01%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
+- 2026-07-26T02:10 **BTC-USD** long -0.87 (-0.03%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
