@@ -2046,6 +2046,25 @@
         "mae:-0.001046"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "dd364da80bc0",
+      "symbol": "ADA-USD",
+      "side": "long",
+      "quantity": 18894.8855,
+      "entry_price": 0.16508250655978918,
+      "entry_time": "2026-07-26T08:37:49.082027+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.001711",
+        "mae:-0.001711"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
