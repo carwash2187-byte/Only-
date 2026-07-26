@@ -1983,7 +1983,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.001542",
-        "mae:-0.000276"
+        "mae:-0.000372"
       ],
       "stop_pct": 0.003
     },
@@ -2002,7 +2002,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.000631",
-        "mae:-0.000310"
+        "mae:-0.000344"
       ],
       "stop_pct": 0.003
     }
