@@ -1158,7 +1158,26 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:0.000855",
-        "mae:0.000855"
+        "mae:0.000000"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "a60eb2ecd76e",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 210.48,
+      "entry_time": "2026-07-26T00:30:26.254524+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000143",
+        "mae:-0.000950"
       ],
       "stop_pct": null
     }
