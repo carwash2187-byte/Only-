@@ -1943,7 +1943,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000843",
+        "mfe:0.001246",
         "mae:-0.000902"
       ],
       "stop_pct": 0.003
@@ -1962,8 +1962,46 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:-0.000166",
+        "mfe:0.000361",
         "mae:-0.000271"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "7570e9fbf92f",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 1.6587,
+      "entry_price": 1875.7074045410154,
+      "entry_time": "2026-07-26T00:10:36.836564+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:0.000295",
+        "mae:-0.000196"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "78685283ba4c",
+      "symbol": "BTC-USD",
+      "side": "long",
+      "quantity": 0.0483,
+      "entry_price": 64378.67325,
+      "entry_time": "2026-07-26T00:10:37.396988+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000019",
+        "mae:-0.000290"
       ],
       "stop_pct": 0.003
     }
