@@ -1189,14 +1189,33 @@
       "entry_price": 211.64,
       "entry_time": "2026-07-26T04:00:36.223510+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 212.8,
+      "exit_time": "2026-07-26T15:44:37.593811+00:00",
+      "pnl": 0.03480000000000075,
+      "pnl_pct": 0.5481005481005496,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | time stop: 704 min in the trade without reaching +1R (cap 240) -- setup went stale (+0.5%)",
+      "tags": [
+        "mfe:0.005481",
+        "mae:-0.008127"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "ce179bfa0a70",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.02,
+      "entry_price": 211.57,
+      "entry_time": "2026-07-26T15:45:31.348409+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
-        "mfe:0.002268",
-        "mae:-0.008127"
+        "mfe:0.006145",
+        "mae:0.005719"
       ],
       "stop_pct": null
     }
