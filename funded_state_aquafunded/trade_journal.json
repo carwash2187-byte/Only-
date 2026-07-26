@@ -1215,7 +1215,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "breakeven-armed",
-        "mfe:0.016165",
+        "mfe:0.016354",
         "mae:0.005199"
       ],
       "stop_pct": null
