@@ -1592,13 +1592,13 @@
       "entry_price": 0.98722,
       "entry_time": "2026-07-27T20:24:30.174067+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 0.98709,
+      "exit_time": "2026-07-27T22:01:13.448889+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.013168290755860568,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | hammer rejection wick (reversal) -- taking the profit (+0.0%)",
       "tags": [
-        "mfe:0.000020",
+        "mfe:0.000132",
         "mae:-0.001266"
       ],
       "stop_pct": null
@@ -1618,7 +1618,26 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:0.001659",
-        "mae:-0.000052"
+        "mae:-0.000262"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "d49dca5172cc",
+      "symbol": "AUDCAD",
+      "side": "short",
+      "quantity": 0.01,
+      "entry_price": 0.98715,
+      "entry_time": "2026-07-27T22:02:01.017550+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.98699,
+      "exit_time": "2026-07-27T22:02:04.583589+00:00",
+      "pnl": 1.5999999999993797e-06,
+      "pnl_pct": 0.016208276351104,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | hammer rejection wick (reversal) -- taking the profit (+0.0%)",
+      "tags": [
+        "mfe:0.000162",
+        "mae:0.000162"
       ],
       "stop_pct": null
     }
