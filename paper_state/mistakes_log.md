@@ -52,3 +52,4 @@
 - 2026-07-26T05:09 **XRP-USD** long -1.70 (-0.05%) setup=`copytrade:trend-up|rsi-oversold|vwap-below|pos-out` -- user watchlist | breakeven stop hit (was +1R, now -0.0%) -- risk-free exit
 - 2026-07-26T08:40 **XRP-USD** long -1.70 (-0.05%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.0%)
 - 2026-07-26T10:37 **ADA-USD** long -1.23 (-0.04%) setup=`copytrade:trend-up|rsi-oversold|vwap-below|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.0%)
+- 2026-07-27T01:35 **AUDUSD** long -2.24 (-0.04%) setup=`copytrade:trend-up|rsi-overbought|vwap-below|pos-out` -- user watchlist | quant desk: RL agent says exit (position red, cutting the loser early)
