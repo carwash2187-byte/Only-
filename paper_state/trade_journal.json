@@ -2117,7 +2117,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "AMZN (score 3.7): Pershing Square (Bill Ackman) top-2 holding; Bridgewater Associates (Ray Dalio's firm) top-3 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000025",
+        "mae:-0.000025"
+      ],
       "stop_pct": null
     },
     {
@@ -2133,7 +2136,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "TSM (score 2.9): Duquesne Family Office (Stanley Druckenmiller) top-3 holding; Bridgewater Associates (Ray Dalio's firm) top-10 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000025",
+        "mae:-0.000025"
+      ],
       "stop_pct": null
     },
     {
@@ -2149,7 +2155,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "NTRA (score 2.0): Duquesne Family Office (Stanley Druckenmiller) top-1 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000025",
+        "mae:-0.000025"
+      ],
       "stop_pct": null
     },
     {
@@ -2165,7 +2174,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "BN (score 2.0): Pershing Square (Bill Ackman) top-1 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000025",
+        "mae:-0.000025"
+      ],
       "stop_pct": null
     },
     {
@@ -2181,7 +2193,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "GOOGL (score 4.1): Berkshire Hathaway (Warren Buffett) top-8 holding; Pershing Square (Bill Ackman) top-9 holding; Bridgewater Associates (Ray Dalio's firm) top-5 holding",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000025",
+        "mae:-0.000025"
+      ],
       "stop_pct": null
     }
   ]
