@@ -10,3 +10,9 @@
 - 2026-07-23T21:45 **AUDUSD** short -0.00 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-24T20:07 **USDCHF** long -0.00 (-0.00%) setup=`copytrade:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-26T04:00 **BCHUSD** SELF-HEAL: 4 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:27 **BCHUSD** SELF-HEAL: 20 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:28 **BCHUSD** SELF-HEAL: 17 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:29 **BCHUSD** SELF-HEAL: 16 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:30 **BCHUSD** SELF-HEAL: 15 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:31 **BCHUSD** long -0.00 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 14 stacked positions on BCHUSD -- unwinding a broken state
+- 2026-07-27T01:31 **BCHUSD** SELF-HEAL: 14 stacked broker positions (cap 3) -- flattened to recover from a stacking bug

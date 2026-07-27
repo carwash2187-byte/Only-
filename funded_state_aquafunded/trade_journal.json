@@ -1208,16 +1208,111 @@
       "entry_price": 211.57,
       "entry_time": "2026-07-26T15:45:31.348409+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.12,
+      "exit_time": "2026-07-27T01:27:28.149073+00:00",
+      "pnl": 0.09100000000000023,
+      "pnl_pct": 2.150588457720848,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 20 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "breakeven-armed",
+        "mfe:0.037340",
+        "mae:0.005199",
+        "hwm:0.037340"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "4235feb5905f",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.17,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:27:30.883892+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.18,
+      "exit_time": "2026-07-27T01:28:25.795806+00:00",
+      "pnl": 0.020400000000000775,
+      "pnl_pct": 0.05554012774229289,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 17 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:0.000463",
+        "mae:0.000463"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "0604b27ecc08",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.16,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:28:28.549336+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.12,
+      "exit_time": "2026-07-27T01:29:25.822186+00:00",
+      "pnl": 0.009600000000000363,
+      "pnl_pct": 0.027770063871157546,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 16 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:0.000463",
+        "mae:0.000463"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "135c64ea3d51",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.15,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:29:28.542149+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.08,
+      "exit_time": "2026-07-27T01:30:25.797921+00:00",
+      "pnl": 0.003000000000001535,
+      "pnl_pct": 0.009256687957059917,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 15 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:0.000278",
+        "mae:0.000278"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "e04288c05440",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.13999999999999999,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:30:28.520700+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.04,
+      "exit_time": "2026-07-27T01:31:26.129511+00:00",
+      "pnl": -0.002800000000001432,
+      "pnl_pct": -0.009256687957048815,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 14 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:0.000231",
+        "mae:0.000231"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "43d49971b755",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.12999999999999998,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:31:28.742208+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
-        "breakeven-armed",
-        "mfe:0.037340",
-        "mae:0.005199",
-        "hwm:0.037340"
+        "mfe:0.000093",
+        "mae:0.000093"
       ],
       "stop_pct": null
     }
