@@ -1534,15 +1534,15 @@
       "entry_price": 216.06,
       "entry_time": "2026-07-27T09:01:40.423850+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 214.83,
+      "exit_time": "2026-07-27T14:31:01.617564+00:00",
+      "pnl": -0.012299999999999898,
+      "pnl_pct": -0.5692863093585077,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | breakeven stop hit (was +1R, now -0.6%) -- risk-free exit",
       "tags": [
         "breakeven-armed",
         "mfe:0.020828",
-        "mae:-0.003332"
+        "mae:-0.005693"
       ],
       "stop_pct": null
     }
