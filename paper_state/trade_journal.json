@@ -2084,6 +2084,22 @@
         "mae:-0.000075"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "35e8cc3badb5",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 8907.3752,
+      "entry_price": 0.6999895408526063,
+      "entry_time": "2026-07-27T00:22:12.912730+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
