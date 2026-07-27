@@ -1505,6 +1505,25 @@
         "mae:-0.002777"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "22c7e32b395f",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.02,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T05:42:02.730774+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.009858",
+        "mae:0.009072"
+      ],
+      "stop_pct": null
     }
   ]
 }
