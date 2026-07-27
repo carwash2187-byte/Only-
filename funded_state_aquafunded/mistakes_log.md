@@ -37,3 +37,4 @@
 - 2026-07-27T01:41 **BCHUSD** SELF-HEAL: 4 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
 - 2026-07-27T09:00 **BCHUSD** long -0.00 (-0.10%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | breakeven stop hit (was +1R, now -0.1%) -- risk-free exit
 - 2026-07-27T14:31 **BCHUSD** long -0.01 (-0.57%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | breakeven stop hit (was +1R, now -0.6%) -- risk-free exit
+- 2026-07-27T20:23 **GOLD** long -0.01 (-0.01%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)

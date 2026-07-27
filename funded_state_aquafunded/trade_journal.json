@@ -1554,11 +1554,11 @@
       "entry_price": 4080.25,
       "entry_time": "2026-07-27T20:22:49.000272+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 4079.93,
+      "exit_time": "2026-07-27T20:23:30.218504+00:00",
+      "pnl": -0.006400000000003275,
+      "pnl_pct": -0.007842656699963424,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [
         "mfe:-0.000103",
         "mae:-0.000103"
@@ -1573,14 +1573,52 @@
       "entry_price": 0.69902,
       "entry_time": "2026-07-27T20:22:50.131903+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.69902,
+      "exit_time": "2026-07-27T20:23:31.430770+00:00",
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "mfe:-0.000014",
+        "mae:-0.000014"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "111d9ad9c2c2",
+      "symbol": "AUDCAD",
+      "side": "short",
+      "quantity": 0.0,
+      "entry_price": 0.98722,
+      "entry_time": "2026-07-27T20:24:30.174067+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
-        "mfe:-0.000014",
-        "mae:-0.000014"
+        "mfe:0.000020",
+        "mae:-0.000091"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "e98417583f20",
+      "symbol": "AUDCHF",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 0.57265,
+      "entry_time": "2026-07-27T20:24:31.407891+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.000035",
+        "mae:-0.000052"
       ],
       "stop_pct": null
     }
