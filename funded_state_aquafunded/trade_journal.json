@@ -1495,11 +1495,11 @@
       "entry_price": 216.06,
       "entry_time": "2026-07-27T01:41:10.205781+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 218.08,
+      "exit_time": "2026-07-27T05:41:22.180591+00:00",
+      "pnl": 0.060600000000000306,
+      "pnl_pct": 0.9349254836619414,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | time stop: 240 min in the trade without reaching +1R (cap 240) -- setup went stale (+0.9%)",
       "tags": [
         "mfe:0.012034",
         "mae:-0.002777"
