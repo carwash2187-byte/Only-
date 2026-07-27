@@ -35,3 +35,4 @@
 - 2026-07-27T01:40 **BCHUSD** long -0.00 (-0.00%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 5 stacked positions on BCHUSD -- unwinding a broken state
 - 2026-07-27T01:40 **BCHUSD** SELF-HEAL: 5 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
 - 2026-07-27T01:41 **BCHUSD** SELF-HEAL: 4 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T09:00 **BCHUSD** long -0.00 (-0.10%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | breakeven stop hit (was +1R, now -0.1%) -- risk-free exit
