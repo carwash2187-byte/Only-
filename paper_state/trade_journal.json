@@ -2065,6 +2065,25 @@
         "mae:-0.001711"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "31ef7db9d9b1",
+      "symbol": "NZDUSD",
+      "side": "long",
+      "quantity": 10737.4595,
+      "entry_price": 0.5803592327922583,
+      "entry_time": "2026-07-27T00:12:16.563719+00:00",
+      "setup": "copytrade:trend-up|rsi-overbought|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000075",
+        "mae:-0.000075"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
