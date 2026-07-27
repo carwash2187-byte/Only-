@@ -1501,7 +1501,7 @@
       "pnl_pct": null,
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
-        "mfe:0.000139",
+        "mfe:0.002129",
         "mae:-0.000972"
       ],
       "stop_pct": null
