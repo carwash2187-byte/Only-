@@ -26,3 +26,12 @@
 - 2026-07-27T01:35 **BCHUSD** SELF-HEAL: 10 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
 - 2026-07-27T01:36 **BCHUSD** long -0.07 (-0.36%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 9 stacked positions on BCHUSD -- unwinding a broken state
 - 2026-07-27T01:36 **BCHUSD** SELF-HEAL: 9 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:37 **BCHUSD** long -0.05 (-0.30%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 8 stacked positions on BCHUSD -- unwinding a broken state
+- 2026-07-27T01:37 **BCHUSD** SELF-HEAL: 8 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:38 **BCHUSD** long -0.03 (-0.21%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 7 stacked positions on BCHUSD -- unwinding a broken state
+- 2026-07-27T01:38 **BCHUSD** SELF-HEAL: 7 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:39 **BCHUSD** long -0.00 (-0.03%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 6 stacked positions on BCHUSD -- unwinding a broken state
+- 2026-07-27T01:39 **BCHUSD** SELF-HEAL: 6 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:40 **BCHUSD** long -0.00 (-0.00%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 5 stacked positions on BCHUSD -- unwinding a broken state
+- 2026-07-27T01:40 **BCHUSD** SELF-HEAL: 5 stacked broker positions (cap 3) -- flattened to recover from a stacking bug
+- 2026-07-27T01:41 **BCHUSD** SELF-HEAL: 4 stacked broker positions (cap 3) -- flattened to recover from a stacking bug

@@ -1400,14 +1400,109 @@
       "entry_price": 216.11,
       "entry_time": "2026-07-27T01:36:24.784368+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 215.47,
+      "exit_time": "2026-07-27T01:37:10.110836+00:00",
+      "pnl": -0.05120000000000118,
+      "pnl_pct": -0.29614548146777997,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 8 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:-0.003147",
+        "mae:-0.003147"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "4f8cc6972bc9",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.07,
+      "entry_price": 216.11,
+      "entry_time": "2026-07-27T01:37:12.501543+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 215.65,
+      "exit_time": "2026-07-27T01:38:07.913595+00:00",
+      "pnl": -0.03220000000000056,
+      "pnl_pct": -0.21285456480496512,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 7 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:-0.002638",
+        "mae:-0.002638"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "9e3185028950",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.060000000000000005,
+      "entry_price": 216.11,
+      "entry_time": "2026-07-27T01:38:10.331300+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.05,
+      "exit_time": "2026-07-27T01:39:08.105000+00:00",
+      "pnl": -0.0036000000000001365,
+      "pnl_pct": -0.02776363888760125,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 6 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:-0.002129",
+        "mae:-0.002129"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "998a063b8edc",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.05,
+      "entry_price": 216.11,
+      "entry_time": "2026-07-27T01:39:10.504860+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.1,
+      "exit_time": "2026-07-27T01:40:07.870753+00:00",
+      "pnl": -0.0005000000000009664,
+      "pnl_pct": -0.004627273147939093,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 5 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:-0.000185",
+        "mae:-0.000185"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "fa57e796dc96",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.04,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:40:10.245837+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 216.09,
+      "exit_time": "2026-07-27T01:41:07.841038+00:00",
+      "pnl": 0.0012000000000000454,
+      "pnl_pct": 0.013885031935578773,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | self-heal: 4 stacked positions on BCHUSD -- unwinding a broken state",
+      "tags": [
+        "mfe:0.000185",
+        "mae:0.000185"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "dd30e534116d",
+      "symbol": "BCHUSD",
+      "side": "long",
+      "quantity": 0.03,
+      "entry_price": 216.06,
+      "entry_time": "2026-07-27T01:41:10.205781+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
       "exit_price": null,
       "exit_time": null,
       "pnl": null,
       "pnl_pct": null,
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
-        "mfe:-0.003147",
-        "mae:-0.003147"
+        "mfe:0.000139",
+        "mae:0.000139"
       ],
       "stop_pct": null
     }
