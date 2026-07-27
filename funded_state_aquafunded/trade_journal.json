@@ -1522,7 +1522,7 @@
       "tags": [
         "breakeven-armed",
         "mfe:0.015135",
-        "mae:0.001527"
+        "mae:0.000093"
       ],
       "stop_pct": null
     }
