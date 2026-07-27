@@ -1545,6 +1545,44 @@
         "mae:-0.005693"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "dc793bd1b3ec",
+      "symbol": "GOLD",
+      "side": "long",
+      "quantity": 0.02,
+      "entry_price": 4080.25,
+      "entry_time": "2026-07-27T20:22:49.000272+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.000103",
+        "mae:-0.000103"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "11e195eb2e5a",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 0.02,
+      "entry_price": 0.69902,
+      "entry_time": "2026-07-27T20:22:50.131903+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.000014",
+        "mae:-0.000014"
+      ],
+      "stop_pct": null
     }
   ]
 }
