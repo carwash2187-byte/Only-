@@ -2,7 +2,7 @@
   "q": {
     " opened outside the desk (manual trade)": {
       "hold": 0.0,
-      "buy": 0.000555840598040743,
+      "buy": 0.0004007192990853648,
       "sell": 0.0
     },
     "trend-down|rsi-neutral|vwap-below|pos-out": {
@@ -36,6 +36,26 @@
       "sell": 0.0
     },
     "trend-up|rsi-neutral|vwap-above|pos-in": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    },
+    "trend-down|rsi-neutral|vwap-below|pos-in": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    },
+    "trend-up|rsi-neutral|vwap-above|orb-up|tod-late|pos-out": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    },
+    "trend-up|rsi-oversold|vwap-below|pos-out": {
+      "hold": 0.0,
+      "buy": 0.0,
+      "sell": 0.0
+    },
+    "trend-down|rsi-oversold|vwap-below|pos-in": {
       "hold": 0.0,
       "buy": 0.0,
       "sell": 0.0
