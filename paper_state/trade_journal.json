@@ -2302,11 +2302,11 @@
       "entry_price": 0.5798208432644606,
       "entry_time": "2026-07-30T00:44:20.041100+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 0.5809801759079098,
+      "exit_time": "2026-07-30T02:44:26.970548+00:00",
+      "pnl": 2.6854549486329766,
+      "pnl_pct": 0.19994670024658934,
+      "notes": "user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (+0.2%)",
       "tags": [
         "high-conviction-override",
         "mfe:0.002366",
@@ -2330,7 +2330,7 @@
       "tags": [
         "high-conviction-override",
         "mfe:-0.000170",
-        "mae:-0.000329"
+        "mae:-0.000346"
       ],
       "stop_pct": 0.003
     }
