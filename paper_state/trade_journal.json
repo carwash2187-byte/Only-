@@ -2217,6 +2217,22 @@
         "mae:-0.001347"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "63dfd9880ff3",
+      "symbol": "AUDJPY",
+      "side": "long",
+      "quantity": 54.7016,
+      "entry_price": 113.6183629585266,
+      "entry_time": "2026-07-30T00:01:49.840532+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
