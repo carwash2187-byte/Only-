@@ -2347,7 +2347,10 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "user watchlist",
-      "tags": [],
+      "tags": [
+        "mfe:-0.000118",
+        "mae:-0.000210"
+      ],
       "stop_pct": 0.003
     }
   ]
