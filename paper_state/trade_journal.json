@@ -2329,8 +2329,8 @@
       "notes": "user watchlist",
       "tags": [
         "high-conviction-override",
-        "mfe:-0.000170",
-        "mae:-0.000346"
+        "mfe:-0.000135",
+        "mae:-0.000496"
       ],
       "stop_pct": 0.003
     }
