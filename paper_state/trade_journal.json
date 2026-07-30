@@ -2349,7 +2349,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.000261",
-        "mae:-0.000823"
+        "mae:-0.001751"
       ],
       "stop_pct": 0.003
     },
@@ -2367,8 +2367,27 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000294",
+        "mfe:0.000524",
         "mae:0.000065"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "44f1b2b81569",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 33.1554,
+      "entry_price": 187.14471968078612,
+      "entry_time": "2026-07-30T10:10:14.120821+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000356",
+        "mae:-0.000624"
       ],
       "stop_pct": 0.003
     }
