@@ -2349,7 +2349,26 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.000261",
-        "mae:-0.000704"
+        "mae:-0.000823"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "a01c29e42775",
+      "symbol": "EURUSD",
+      "side": "long",
+      "quantity": 5412.5364,
+      "entry_price": 1.1465833053410055,
+      "entry_time": "2026-07-30T10:05:47.131010+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:0.000294",
+        "mae:0.000065"
       ],
       "stop_pct": 0.003
     }
