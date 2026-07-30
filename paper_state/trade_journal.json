@@ -2271,7 +2271,7 @@
       "notes": "user watchlist",
       "tags": [
         "mfe:0.000970",
-        "mae:-0.000979"
+        "mae:-0.001049"
       ],
       "stop_pct": 0.003
     },
@@ -2291,6 +2291,26 @@
       "tags": [
         "mfe:0.000327",
         "mae:-0.000095"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "61cb9314595d",
+      "symbol": "NZDUSD",
+      "side": "long",
+      "quantity": 2316.38,
+      "entry_price": 0.5798208432644606,
+      "entry_time": "2026-07-30T00:44:20.041100+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "high-conviction-override",
+        "mfe:0.000041",
+        "mae:-0.000075"
       ],
       "stop_pct": 0.003
     }
