@@ -2226,11 +2226,11 @@
       "entry_price": 113.6183629585266,
       "entry_time": "2026-07-30T00:01:49.840532+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 113.64863766174317,
+      "exit_time": "2026-07-30T00:19:01.522339+00:00",
+      "pnl": 1.6560747054711245,
+      "pnl_pct": 0.02664595970953698,
+      "notes": "user watchlist | bearish engulfing candle (reversal) -- taking the profit (+0.0%)",
       "tags": [
         "mfe:0.000675",
         "mae:-0.000338"
@@ -2251,7 +2251,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000005",
+        "mfe:0.000157",
         "mae:-0.000251"
       ],
       "stop_pct": 0.003
@@ -2273,6 +2273,22 @@
         "mfe:0.000970",
         "mae:-0.000075"
       ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "97040eebc818",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 59.177,
+      "entry_price": 187.2467196258545,
+      "entry_time": "2026-07-30T00:20:03.822818+00:00",
+      "setup": "copytrade:trend-down|rsi-overbought|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
       "stop_pct": 0.003
     }
   ]
