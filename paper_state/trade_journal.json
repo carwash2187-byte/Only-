@@ -2231,7 +2231,48 @@
       "pnl": null,
       "pnl_pct": null,
       "notes": "user watchlist",
-      "tags": [],
+      "tags": [
+        "mfe:0.000111",
+        "mae:-0.000338"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "eb5e94633ad5",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 28.4711,
+      "entry_price": 218.21281336212158,
+      "entry_time": "2026-07-30T00:03:25.378473+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000059",
+        "mae:-0.000251"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "0455fdf74d09",
+      "symbol": "AUDUSD",
+      "side": "long",
+      "quantity": 8924.5997,
+      "entry_price": 0.6961402226343751,
+      "entry_time": "2026-07-30T00:05:26.646034+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-below|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [
+        "mfe:-0.000075",
+        "mae:-0.000075"
+      ],
       "stop_pct": 0.003
     }
   ]
