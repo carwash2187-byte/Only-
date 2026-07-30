@@ -2333,6 +2333,22 @@
         "mae:-0.001225"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "bbea8e8a87e1",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 28.4169,
+      "entry_price": 218.60686521453857,
+      "entry_time": "2026-07-30T09:01:26.871179+00:00",
+      "setup": "copytrade:trend-up|rsi-oversold|vwap-above|pos-out",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "user watchlist",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
