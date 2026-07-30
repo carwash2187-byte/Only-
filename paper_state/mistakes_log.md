@@ -62,3 +62,5 @@
 - 2026-07-29T08:32 **NZDUSD** long -8.85 (-0.14%) setup=`copytrade:trend-down|rsi-oversold|vwap-above|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
 - 2026-07-30T02:20 **EURJPY** long -2.45 (-0.02%) setup=`copytrade:trend-down|rsi-overbought|vwap-above|pos-out` -- user watchlist | time stop: 121 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.0%)
 - 2026-07-30T04:40 **AUDJPY** long -8.03 (-0.13%) setup=`copytrade:trend-down|rsi-oversold|vwap-above|pos-out` -- user watchlist | time stop: 120 min in the trade without reaching +1R (cap 120) -- setup went stale (-0.1%)
+- 2026-07-30T10:16 **GBPJPY** long -31.62 (-0.51%) setup=`copytrade:trend-up|rsi-oversold|vwap-above|pos-out` -- user watchlist | stop loss hit (-0.5%)
+- 2026-07-30T10:16 **EURJPY** long -20.57 (-0.33%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | stop loss hit (-0.3%)

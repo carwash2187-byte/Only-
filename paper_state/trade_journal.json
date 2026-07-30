@@ -2342,14 +2342,14 @@
       "entry_price": 218.60686521453857,
       "entry_time": "2026-07-30T09:01:26.871179+00:00",
       "setup": "copytrade:trend-up|rsi-oversold|vwap-above|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 217.49425486907958,
+      "exit_time": "2026-07-30T10:16:33.826715+00:00",
+      "pnl": -31.616936925873556,
+      "pnl_pct": -0.5089548968954305,
+      "notes": "user watchlist | stop loss hit (-0.5%)",
       "tags": [
         "mfe:0.000261",
-        "mae:-0.001751"
+        "mae:-0.004990"
       ],
       "stop_pct": 0.003
     },
@@ -2367,7 +2367,7 @@
       "pnl_pct": null,
       "notes": "user watchlist",
       "tags": [
-        "mfe:0.000524",
+        "mfe:0.001213",
         "mae:0.000065"
       ],
       "stop_pct": 0.003
@@ -2380,14 +2380,14 @@
       "entry_price": 187.14471968078612,
       "entry_time": "2026-07-30T10:10:14.120821+00:00",
       "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "user watchlist",
+      "exit_price": 186.52434496765136,
+      "exit_time": "2026-07-30T10:16:34.435762+00:00",
+      "pnl": -20.5687717638684,
+      "pnl_pct": -0.33149463911829047,
+      "notes": "user watchlist | stop loss hit (-0.3%)",
       "tags": [
         "mfe:-0.000356",
-        "mae:-0.000624"
+        "mae:-0.003215"
       ],
       "stop_pct": 0.003
     }
