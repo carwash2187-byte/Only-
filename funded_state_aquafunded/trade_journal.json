@@ -1678,6 +1678,25 @@
         "mae:-0.000306"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "a3f67229c17d",
+      "symbol": "AUDCAD",
+      "side": "long",
+      "quantity": 1.0,
+      "entry_price": 0.98582,
+      "entry_time": "2026-07-31T08:21:33.769902+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 0.98584,
+      "exit_time": "2026-07-31T08:22:31.481746+00:00",
+      "pnl": 2.0000000000020002e-05,
+      "pnl_pct": 0.00202876792922968,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "mfe:0.000010",
+        "mae:0.000010"
+      ],
+      "stop_pct": null
     }
   ]
 }
