@@ -1640,6 +1640,25 @@
         "mae:0.000162"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "c339376c37e9",
+      "symbol": "BTC-USD",
+      "side": "short",
+      "quantity": 0.03,
+      "entry_price": 64198.29,
+      "entry_time": "2026-07-31T03:16:39.197772+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.001281",
+        "mae:-0.001281"
+      ],
+      "stop_pct": null
     }
   ]
 }
