@@ -1773,6 +1773,25 @@
         "mae:-0.000251"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "43f050c77016",
+      "symbol": "ETH-USD",
+      "side": "long",
+      "quantity": 2.7,
+      "entry_price": 1870.22,
+      "entry_time": "2026-08-01T07:33:54.534082+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": 1870.28,
+      "exit_time": "2026-08-01T07:35:52.227950+00:00",
+      "pnl": 0.16199999999985268,
+      "pnl_pct": 0.003208178716929133,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "mfe:0.000032",
+        "mae:0.000000"
+      ],
+      "stop_pct": null
     }
   ]
 }
