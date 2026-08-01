@@ -42,3 +42,4 @@
 - 2026-07-31T03:20 **BTC-USD** short -4.94 (-0.26%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-31T03:28 **BTC-USD** long -1.92 (-0.04%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-07-31T08:40 **AUDCAD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-08-01T07:30 **ETH-USD** long -1.22 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
