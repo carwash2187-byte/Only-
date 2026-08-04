@@ -1792,6 +1792,22 @@
         "mae:0.000000"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "046e5d820947",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 5.0514,
+      "entry_price": 211.616,
+      "entry_time": "2026-08-04T04:28:11.260719+00:00",
+      "setup": "copytrade:trend-up|rsi-neutral|vwap-above|pos-out",
+      "exit_price": 211.618,
+      "exit_time": "2026-08-04T04:28:57.759533+00:00",
+      "pnl": 0.01010279999990467,
+      "pnl_pct": 0.000945108120364857,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
