@@ -1808,6 +1808,22 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "76dcdc169034",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 5.8846,
+      "entry_price": 181.645,
+      "entry_time": "2026-08-04T07:46:11.848871+00:00",
+      "setup": "copytrade+bullish harami:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": 181.628,
+      "exit_time": "2026-08-04T07:46:58.755044+00:00",
+      "pnl": -0.10003820000014316,
+      "pnl_pct": -0.009358914365942272,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
