@@ -44,3 +44,4 @@
 - 2026-07-31T08:40 **AUDCAD** short -0.00 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-01T07:30 **ETH-USD** long -1.22 (-0.02%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-04T07:46 **EURJPY** long -0.10 (-0.01%) setup=`copytrade+bullish harami:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-08-04T10:30 **EURJPY** long -0.02 (-0.00%) setup=`copytrade:trend-down|rsi-oversold|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
