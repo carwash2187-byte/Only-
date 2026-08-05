@@ -1840,6 +1840,58 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "1d83bbc63cc1",
+      "symbol": "EURJPY",
+      "side": "long",
+      "quantity": 2.941,
+      "entry_price": 181.715,
+      "entry_time": "2026-08-05T00:55:16.225520+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": 181.683,
+      "exit_time": "2026-08-05T00:55:56.961489+00:00",
+      "pnl": -0.09411200000003142,
+      "pnl_pct": -0.017609993671419133,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "93f34f77b2be",
+      "symbol": "AUDJPY",
+      "side": "long",
+      "quantity": 4.8157,
+      "entry_price": 110.968,
+      "entry_time": "2026-08-05T00:58:11.986991+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": 110.977,
+      "exit_time": "2026-08-05T00:58:56.966748+00:00",
+      "pnl": 0.04334130000000164,
+      "pnl_pct": 0.008110446254772086,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
+    },
+    {
+      "trade_id": "f37ef41c4cbf",
+      "symbol": "GBPJPY",
+      "side": "long",
+      "quantity": 2.5218,
+      "entry_price": 211.905,
+      "entry_time": "2026-08-05T00:58:20.272952+00:00",
+      "setup": "copytrade:trend-down|rsi-oversold|vwap-below|pos-out",
+      "exit_price": 211.925,
+      "exit_time": "2026-08-05T00:58:58.136613+00:00",
+      "pnl": 0.0504360000000258,
+      "pnl_pct": 0.009438191642496818,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
