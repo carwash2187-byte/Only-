@@ -1908,6 +1908,24 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "62af96160953",
+      "symbol": "AUDJPY",
+      "side": "long",
+      "quantity": 4.7813,
+      "entry_price": 111.749,
+      "entry_time": "2026-08-10T01:53:11.486638+00:00",
+      "setup": "copytrade+bullish engulfing:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": 111.761,
+      "exit_time": "2026-08-10T01:53:57.948244+00:00",
+      "pnl": 0.05737560000000217,
+      "pnl_pct": 0.010738351126193812,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
