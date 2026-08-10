@@ -47,3 +47,4 @@
 - 2026-08-04T10:30 **EURJPY** long -0.02 (-0.00%) setup=`copytrade:trend-down|rsi-oversold|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-05T00:55 **EURJPY** long -0.09 (-0.02%) setup=`copytrade:trend-down|rsi-oversold|vwap-below|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-10T00:21 **AUDJPY** long -0.09 (-0.01%) setup=`copytrade+bullish engulfing:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-08-10T04:23 **AUDJPY** long -0.12 (-0.01%) setup=`copytrade+piercing line:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)

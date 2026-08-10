@@ -1926,6 +1926,24 @@
         "high-conviction-override"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "2d5f00ea831e",
+      "symbol": "AUDJPY",
+      "side": "long",
+      "quantity": 9.5659,
+      "entry_price": 111.705,
+      "entry_time": "2026-08-10T04:23:11.037548+00:00",
+      "setup": "copytrade+piercing line:trend-up|rsi-overbought|vwap-above|pos-out",
+      "exit_price": 111.692,
+      "exit_time": "2026-08-10T04:23:56.868697+00:00",
+      "pnl": -0.12435670000005002,
+      "pnl_pct": -0.011637795980490306,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
