@@ -1976,6 +1976,24 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "0a980f614329",
+      "symbol": "USDJPY",
+      "side": "long",
+      "quantity": 3.345,
+      "entry_price": 159.705,
+      "entry_time": "2026-08-18T06:04:11.941670+00:00",
+      "setup": "copytrade+three white soldiers:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": 159.707,
+      "exit_time": "2026-08-18T06:04:58.223486+00:00",
+      "pnl": 0.006689999999936873,
+      "pnl_pct": 0.0012523089446103697,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [
+        "high-conviction-override"
+      ],
+      "stop_pct": 0.003
     }
   ]
 }
