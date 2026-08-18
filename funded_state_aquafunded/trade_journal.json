@@ -1994,6 +1994,22 @@
         "high-conviction-override"
       ],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "ed9d12e1773d",
+      "symbol": "USDCHF",
+      "side": "long",
+      "quantity": 1315.1923,
+      "entry_price": 0.81234,
+      "entry_time": "2026-08-18T12:16:10.757265+00:00",
+      "setup": "copytrade+bullish harami:trend-down|rsi-neutral|vwap-above|pos-out",
+      "exit_price": 0.81235,
+      "exit_time": "2026-08-18T12:16:58.185082+00:00",
+      "pnl": 0.01315192300008616,
+      "pnl_pct": 0.0012310116453750908,
+      "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
+      "tags": [],
+      "stop_pct": 0.003
     }
   ]
 }
