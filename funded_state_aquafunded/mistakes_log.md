@@ -49,3 +49,4 @@
 - 2026-08-10T00:21 **AUDJPY** long -0.09 (-0.01%) setup=`copytrade+bullish engulfing:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-10T04:23 **AUDJPY** long -0.12 (-0.01%) setup=`copytrade+piercing line:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-10T16:58 **USDCHF** long -0.02 (-0.00%) setup=`copytrade+hammer:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-08-18T05:20 **USDJPY** long -0.02 (-0.00%) setup=`copytrade+bullish harami:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
