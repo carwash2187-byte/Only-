@@ -2010,6 +2010,63 @@
       "notes": "user watchlist | reconciled: closed at broker (bracket stop/target or manual)",
       "tags": [],
       "stop_pct": 0.003
+    },
+    {
+      "trade_id": "c8fb7d5f6eb2",
+      "symbol": "AUDCHF",
+      "side": "long",
+      "quantity": 0.08,
+      "entry_price": 0.57423,
+      "entry_time": "2026-08-19T03:40:45.671237+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.000035",
+        "mae:-0.000209"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "7a58d670141e",
+      "symbol": "GOLD",
+      "side": "long",
+      "quantity": 0.05,
+      "entry_price": 4357.71,
+      "entry_time": "2026-08-19T03:41:45.124013+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000011",
+        "mae:-0.000076"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "bf4703c0a0e3",
+      "symbol": "NAS100",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 29445.34,
+      "entry_time": "2026-08-19T03:42:46.646556+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000007",
+        "mae:0.000007"
+      ],
+      "stop_pct": null
     }
   ]
 }
