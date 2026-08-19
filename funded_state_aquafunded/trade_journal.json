@@ -2026,7 +2026,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:-0.000035",
-        "mae:-0.000279"
+        "mae:-0.000331"
       ],
       "stop_pct": null
     },
@@ -2045,7 +2045,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:0.000291",
-        "mae:-0.000574"
+        "mae:-0.000824"
       ],
       "stop_pct": null
     },
@@ -2064,7 +2064,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:0.000343",
-        "mae:-0.000537"
+        "mae:-0.000655"
       ],
       "stop_pct": null
     }
