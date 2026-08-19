@@ -52,3 +52,4 @@
 - 2026-08-18T05:20 **USDJPY** long -0.02 (-0.00%) setup=`copytrade+bullish harami:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-19T04:12 **GOLD** long -0.15 (-0.07%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | quant desk: RL agent says exit (position red, cutting the loser early)
 - 2026-08-19T07:41 **AUDCHF** long -0.00 (-0.16%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | time stop: 241 min in the trade without reaching +1R (cap 240) -- setup went stale (-0.2%)
+- 2026-08-19T08:24 **AUDCHF** long -0.00 (-0.04%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | quant desk: RL agent says exit (position red, cutting the loser early)
