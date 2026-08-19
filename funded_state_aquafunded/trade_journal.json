@@ -2086,6 +2086,44 @@
         "mae:-0.001602"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "cc6e43e29bcb",
+      "symbol": "NAS100",
+      "side": "long",
+      "quantity": 0.03,
+      "entry_price": 29541.34,
+      "entry_time": "2026-08-19T22:44:15.862483+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000093",
+        "mae:0.000005"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "12cc71e50f4b",
+      "symbol": "GOLD",
+      "side": "long",
+      "quantity": 0.02,
+      "entry_price": 4519.33,
+      "entry_time": "2026-08-19T22:45:14.296278+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000219",
+        "mae:-0.000197"
+      ],
+      "stop_pct": null
     }
   ]
 }
