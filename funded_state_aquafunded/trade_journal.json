@@ -2019,11 +2019,11 @@
       "entry_price": 0.57423,
       "entry_time": "2026-08-19T03:40:45.671237+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 0.57329,
+      "exit_time": "2026-08-19T07:41:44.848698+00:00",
+      "pnl": -7.520000000000416e-05,
+      "pnl_pct": -0.16369747313794702,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | time stop: 241 min in the trade without reaching +1R (cap 240) -- setup went stale (-0.2%)",
       "tags": [
         "mfe:-0.000035",
         "mae:-0.002177"
@@ -2065,6 +2065,25 @@
       "tags": [
         "mfe:0.001820",
         "mae:-0.003439"
+      ],
+      "stop_pct": null
+    },
+    {
+      "trade_id": "f06daab74f04",
+      "symbol": "AUDCHF",
+      "side": "long",
+      "quantity": 0.01,
+      "entry_price": 0.57423,
+      "entry_time": "2026-08-19T07:42:42.876387+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:-0.001602",
+        "mae:-0.001602"
       ],
       "stop_pct": null
     }
