@@ -2026,7 +2026,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:-0.000035",
-        "mae:-0.000522"
+        "mae:-0.000557"
       ],
       "stop_pct": null
     },
@@ -2038,11 +2038,11 @@
       "entry_price": 4357.71,
       "entry_time": "2026-08-19T03:41:45.124013+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 4354.64,
+      "exit_time": "2026-08-19T04:12:22.794033+00:00",
+      "pnl": -0.15349999999998545,
+      "pnl_pct": -0.07044984636425111,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | quant desk: RL agent says exit (position red, cutting the loser early)",
       "tags": [
         "mfe:0.000291",
         "mae:-0.000824"
@@ -2064,7 +2064,7 @@
       "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
       "tags": [
         "mfe:0.000343",
-        "mae:-0.000769"
+        "mae:-0.000808"
       ],
       "stop_pct": null
     }

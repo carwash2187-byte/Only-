@@ -50,3 +50,4 @@
 - 2026-08-10T04:23 **AUDJPY** long -0.12 (-0.01%) setup=`copytrade+piercing line:trend-up|rsi-overbought|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-10T16:58 **USDCHF** long -0.02 (-0.00%) setup=`copytrade+hammer:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
 - 2026-08-18T05:20 **USDJPY** long -0.02 (-0.00%) setup=`copytrade+bullish harami:trend-up|rsi-neutral|vwap-above|pos-out` -- user watchlist | reconciled: closed at broker (bracket stop/target or manual)
+- 2026-08-19T04:12 **GOLD** long -0.15 (-0.07%) setup=`adopted: opened outside the desk (manual trade)` -- auto-adopted so it gets real stop-loss/breakeven/trailing protection | quant desk: RL agent says exit (position red, cutting the loser early)
