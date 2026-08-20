@@ -2124,6 +2124,25 @@
         "mae:-0.000206"
       ],
       "stop_pct": null
+    },
+    {
+      "trade_id": "3959b3a2b0e6",
+      "symbol": "GOLD",
+      "side": "long",
+      "quantity": 0.05,
+      "entry_price": 4495.9,
+      "entry_time": "2026-08-20T03:32:43.511242+00:00",
+      "setup": "adopted: opened outside the desk (manual trade)",
+      "exit_price": null,
+      "exit_time": null,
+      "pnl": null,
+      "pnl_pct": null,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "tags": [
+        "mfe:0.000494",
+        "mae:-0.000051"
+      ],
+      "stop_pct": null
     }
   ]
 }
