@@ -2133,11 +2133,11 @@
       "entry_price": 4495.9,
       "entry_time": "2026-08-20T03:32:43.511242+00:00",
       "setup": "adopted: opened outside the desk (manual trade)",
-      "exit_price": null,
-      "exit_time": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection",
+      "exit_price": 4495.87,
+      "exit_time": "2026-08-20T04:16:15.159203+00:00",
+      "pnl": -0.0014999999999872672,
+      "pnl_pct": -0.000667274627985659,
+      "notes": "auto-adopted so it gets real stop-loss/breakeven/trailing protection | quant desk: RL agent says exit (position red, cutting the loser early)",
       "tags": [
         "mfe:0.001103",
         "mae:-0.000165"
